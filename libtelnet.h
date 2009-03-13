@@ -6,6 +6,9 @@
  * all present and future rights to this code under copyright law. 
  */
 
+#if !defined(LIBTELNET_INCLUDE)
+#define LIBTELNET 1
+
 /* sub request buffer size increment (defualt 4K) */
 #define LIBTELNET_BUFFER_SIZE (4 * 1024)
 /* sub request buffer size (default 16K) */
@@ -105,3 +108,5 @@ extern void libtelnet_send_data(struct libtelnet_t *telnet,
 /* send sub-request */
 extern void libtelnet_send_subrequest(struct libtelnet_t *telnet,
 	unsigned char type, unsigned char *buffer, size_t size, void *user_data);
+
+#endif /* !defined(LIBTELNET_INCLUDE) */
