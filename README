@@ -1,0 +1,45 @@
+=====================================================================
+  libtelnet - TELNET protocol handling library
+=====================================================================
+
+Sean Middleditch
+sean@sourcemud.org
+
+---------------------------------------------------------------------
+The author or authors of this code dedicate any and all copyright
+interest in this code to the public domain. We make this dedication
+for the benefit of the public at large and to the detriment of our
+heirs and successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+code under copyright law. 
+---------------------------------------------------------------------
+
+I. INTRODUCTION
+=====================================================================
+
+libtelnet provides safe and correct handling of the core TELNET
+protocol.  It does not include any "smarts," and all use of the
+protocol (such as deciding which options to support, enabling
+and disabling options, or processing subrequests) must be implemented
+by the application author.
+
+II. LIBTELNET API
+=====================================================================
+
+FIXME: fill in notes about user-facing API
+
+III. INTEGRATING LIBTELNET
+=====================================================================
+
+FIXME: fill in notes about implementing the libtelnet_*_cb functions
+
+IV. OUTPUT PROCESSING
+=====================================================================
+
+FIXME: fill in notes about output buffering recommendations
+
+V. SAFETY AND CORRECTNESS CONSIDERATIONS
+=====================================================================
+
+FIXME: fill in notes about recommending the user of libtelnet over
+all output functions for ensuring safety
