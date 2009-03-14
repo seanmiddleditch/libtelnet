@@ -84,6 +84,8 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 		else
 			libtelnet_input_cb(telnet, byte, user_data);
 		break;
+
+	/* IAC command */
 	case LIBTELNET_STATE_IAC:
 		switch (byte) {
 		/* subrequest */
@@ -114,7 +116,8 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 			telnet->state = LIBTELNET_STATE_TEXT;
 		}
 		break;
-	/* DO negotiation */
+
+	/* negotiation commands */
 	case LIBTELNET_STATE_DO:
 		libtelnet_negotiate_cb(telnet, LIBTELNET_DO, byte, user_data);
 		telnet->state = LIBTELNET_STATE_TEXT;
@@ -131,6 +134,7 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 		libtelnet_negotiate_cb(telnet, LIBTELNET_WONT, byte, user_data);
 		telnet->state = LIBTELNET_STATE_TEXT;
 		break;
+
 	/* subrequest -- buffer bytes until end request */
 	case LIBTELNET_STATE_SB:
 		/* IAC command in subrequest -- either IAC SE or IAC IAC */
@@ -143,6 +147,7 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 		else
 			telnet->state = LIBTELNET_STATE_SB;
 		break;
+
 	/* IAC escaping inside a subrequest */
 	case LIBTELNET_STATE_SB_IAC:
 		switch (byte) {
