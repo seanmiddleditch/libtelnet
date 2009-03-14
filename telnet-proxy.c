@@ -20,6 +20,10 @@
 #include <ctype.h>
 #include <unistd.h>
 
+#ifdef HAVE_ZLIB
+#include "zlib.h"
+#endif
+
 #include "libtelnet.h"
 
 struct conn_t {
@@ -177,6 +181,15 @@ void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 	printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(cmd),
 			(int)opt, get_opt(opt));
 
+	/* FIXME: HACK: allow MCCP2 from server without passing it
+	 * through to client.  this is temporary until libtelnet supports
+	 * the server-end of MCCP2.
+	 */
+	if (cmd == LIBTELNET_WILL && opt == LIBTELNET_OPTION_COMPRESS2) {
+		libtelnet_send_negotiate(&conn->telnet, LIBTELNET_DO, opt, conn);
+		return;
+	}
+
 	libtelnet_send_negotiate(&conn->remote->telnet, cmd, opt,
 			conn->remote);
 }
@@ -201,6 +214,7 @@ void libtelnet_error_cb(struct libtelnet_t *telnet,
 	struct conn_t *conn = (struct conn_t*)user_data;
 
 	printf("%s ERROR: %d\e[0m\n", conn->name, (int)error);
+	exit(1);
 }
 
 int main(int argc, char **argv) {
@@ -245,6 +259,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
 		return 1;
 	}
+	addrlen = sizeof(addr);
 	if ((client.sock = accept(listen_sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
 		fprintf(stderr, "accept() failed: %s\n", strerror(errno));
 		return 1;

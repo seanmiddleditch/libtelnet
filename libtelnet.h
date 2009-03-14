@@ -1,4 +1,7 @@
 /*
+ * Sean Middleditch
+ * sean@sourcemud.org
+ *
  * The author or authors of this code dedicate any and all copyright interest
  * in this code to the public domain. We make this dedication for the benefit
  * of the public at large and to the detriment of our heirs and successors. We
@@ -22,11 +25,12 @@
 #define LIBTELNET_OPTION_BINARY 0
 #define LIBTELNET_OPTION_ECHO 1
 #define LIBTELNET_OPTION_NAWS 31
+#define LIBTELNET_OPTION_COMPRESS2 86
 #define LIBTELNET_OPTION_ZMP 93
 
 /* telnet states */
 enum libtelnet_state_t {
-	LIBTELNET_STATE_TEXT = 0,
+	LIBTELNET_STATE_DATA = 0,
 	LIBTELNET_STATE_IAC,
 	LIBTELNET_STATE_DO,
 	LIBTELNET_STATE_DONT,
@@ -47,6 +51,10 @@ enum libtelnet_error_t {
 
 /* state tracker */
 struct libtelnet_t {
+	/* zlib (mccp2) compression */
+#ifdef HAVE_ZLIB
+	z_stream *zlib;
+#endif
 	/* sub-request buffer */
 	unsigned char *buffer;
 	/* current size of the buffer */
