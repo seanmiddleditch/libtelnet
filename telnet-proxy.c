@@ -263,6 +263,9 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
+	/* stop listening now that we have a client */
+	close(listen_sock);
+	
 	/* create server socket */
 	if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		fprintf(stderr, "socket() failed: %s\n", strerror(errno));
@@ -343,7 +346,6 @@ int main(int argc, char **argv) {
 	libtelnet_free(&client.telnet);
 	close(server.sock);
 	close(client.sock);
-	close(listen_sock);
 
 	return 0;
 }
