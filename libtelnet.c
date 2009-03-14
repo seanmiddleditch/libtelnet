@@ -79,126 +79,142 @@ static enum libtelnet_error_t _buffer_byte(
 }
 
 /* push a single byte into the state tracker */
-void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
-		void *user_data) {
-	switch (telnet->state) {
-	/* regular data */
-	case LIBTELNET_STATE_TEXT:
-		/* enter IAC state on IAC byte */
-		if (byte == LIBTELNET_IAC)
-			telnet->state = LIBTELNET_STATE_IAC;
-		/* regular input byte */
-		else
-			libtelnet_input_cb(telnet, &byte, 1, user_data);
-		break;
-
-	/* IAC command */
-	case LIBTELNET_STATE_IAC:
-		switch (byte) {
-		/* subrequest */
-		case LIBTELNET_SB:
-			telnet->state = LIBTELNET_STATE_SB;
-			break;
-		/* negotiation commands */
-		case LIBTELNET_WILL:
-			telnet->state = LIBTELNET_STATE_WILL;
-			break;
-		case LIBTELNET_WONT:
-			telnet->state = LIBTELNET_STATE_WONT;
-			break;
-		case LIBTELNET_DO:
-			telnet->state = LIBTELNET_STATE_DO;
-			break;
-		case LIBTELNET_DONT:
-			telnet->state = LIBTELNET_STATE_DONT;
-			break;
-		/* IAC escaping */
-		case LIBTELNET_IAC:
-			libtelnet_input_cb(telnet, &byte, 1, user_data);
-			telnet->state = LIBTELNET_STATE_TEXT;
-			break;
-		/* some other command */
-		default:
-			libtelnet_command_cb(telnet, byte, user_data);
-			telnet->state = LIBTELNET_STATE_TEXT;
-		}
-		break;
-
-	/* negotiation commands */
-	case LIBTELNET_STATE_DO:
-		libtelnet_negotiate_cb(telnet, LIBTELNET_DO, byte, user_data);
-		telnet->state = LIBTELNET_STATE_TEXT;
-		break;
-	case LIBTELNET_STATE_DONT:
-		libtelnet_negotiate_cb(telnet, LIBTELNET_DONT, byte, user_data);
-		telnet->state = LIBTELNET_STATE_TEXT;
-		break;
-	case LIBTELNET_STATE_WILL:
-		libtelnet_negotiate_cb(telnet, LIBTELNET_WILL, byte, user_data);
-		telnet->state = LIBTELNET_STATE_TEXT;
-		break;
-	case LIBTELNET_STATE_WONT:
-		libtelnet_negotiate_cb(telnet, LIBTELNET_WONT, byte, user_data);
-		telnet->state = LIBTELNET_STATE_TEXT;
-		break;
-
-	/* subrequest -- buffer bytes until end request */
-	case LIBTELNET_STATE_SB:
-		/* IAC command in subrequest -- either IAC SE or IAC IAC */
-		if (byte == LIBTELNET_IAC)
-			telnet->state = LIBTELNET_STATE_SB_IAC;
-		/* buffer the byte, or bail if we can't */
-		else if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
-				LIBTELNET_ERROR_OK)
-			telnet->state = LIBTELNET_STATE_TEXT;
-		else
-			telnet->state = LIBTELNET_STATE_SB;
-		break;
-
-	/* IAC escaping inside a subrequest */
-	case LIBTELNET_STATE_SB_IAC:
-		switch (byte) {
-		/* end subrequest */
-		case LIBTELNET_SE:
-			/* zero-size buffer is a protocol error */
-			if (telnet->length == 0) {
-				libtelnet_error_cb(telnet, LIBTELNET_ERROR_PROTOCOL,
-					user_data);
-			/* process */
-			} else {
-				libtelnet_subrequest_cb(telnet, telnet->buffer[0],
-					telnet->buffer + 1, telnet->length - 1, user_data);
-				telnet->length = 0;
-			}
-			
-			/* return to default state */
-			telnet->state = LIBTELNET_STATE_TEXT;
-			break;
-		/* escaped IAC byte */
-		case LIBTELNET_IAC:
-			/* push IAC into buffer */
-			if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
-					LIBTELNET_ERROR_OK)
-				telnet->state = LIBTELNET_STATE_TEXT;
-			else
-				telnet->state = LIBTELNET_STATE_SB;
-			break;
-		/* something else -- protocol error */
-		default:
-			libtelnet_error_cb(telnet, LIBTELNET_ERROR_PROTOCOL, user_data);
-			telnet->state = LIBTELNET_STATE_TEXT;
-			break;
-		}
-		break;
-	}
-}
-
-/* push a byte buffer into the state tracker */
-void libtelnet_push_buffer(struct libtelnet_t *telnet, unsigned char *buffer,
+void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
-	unsigned int i;
-	for (i = 0; i != size; ++i)
-		libtelnet_push_byte(telnet, buffer[i], user_data);
+	unsigned char byte;
+	unsigned int i, start;
+	for (i = start = 0; i != size; ++i) {
+		byte = buffer[i];
+		switch (telnet->state) {
+		/* regular data */
+		case LIBTELNET_STATE_TEXT:
+			/* on an IAC byte, pass through all pending bytes and
+			 * switch states */
+			if (byte == LIBTELNET_IAC) {
+				if (i != start)
+					libtelnet_input_cb(telnet, &buffer[start], i - start,
+							user_data);
+				telnet->state = LIBTELNET_STATE_IAC;
+			}
+			break;
+
+		/* IAC command */
+		case LIBTELNET_STATE_IAC:
+			switch (byte) {
+			/* subrequest */
+			case LIBTELNET_SB:
+				telnet->state = LIBTELNET_STATE_SB;
+				break;
+			/* negotiation commands */
+			case LIBTELNET_WILL:
+				telnet->state = LIBTELNET_STATE_WILL;
+				break;
+			case LIBTELNET_WONT:
+				telnet->state = LIBTELNET_STATE_WONT;
+				break;
+			case LIBTELNET_DO:
+				telnet->state = LIBTELNET_STATE_DO;
+				break;
+			case LIBTELNET_DONT:
+				telnet->state = LIBTELNET_STATE_DONT;
+				break;
+			/* IAC escaping */
+			case LIBTELNET_IAC:
+				libtelnet_input_cb(telnet, &byte, 1, user_data);
+				start = i + 1;
+				telnet->state = LIBTELNET_STATE_TEXT;
+				break;
+			/* some other command */
+			default:
+				libtelnet_command_cb(telnet, byte, user_data);
+				start = i + 1;
+				telnet->state = LIBTELNET_STATE_TEXT;
+			}
+			break;
+
+		/* negotiation commands */
+		case LIBTELNET_STATE_DO:
+			libtelnet_negotiate_cb(telnet, LIBTELNET_DO, byte, user_data);
+			start = i + 1;
+			telnet->state = LIBTELNET_STATE_TEXT;
+			break;
+		case LIBTELNET_STATE_DONT:
+			libtelnet_negotiate_cb(telnet, LIBTELNET_DONT, byte, user_data);
+			start = i + 1;
+			telnet->state = LIBTELNET_STATE_TEXT;
+			break;
+		case LIBTELNET_STATE_WILL:
+			libtelnet_negotiate_cb(telnet, LIBTELNET_WILL, byte, user_data);
+			start = i + 1;
+			telnet->state = LIBTELNET_STATE_TEXT;
+			break;
+		case LIBTELNET_STATE_WONT:
+			libtelnet_negotiate_cb(telnet, LIBTELNET_WONT, byte, user_data);
+			start = i + 1;
+			telnet->state = LIBTELNET_STATE_TEXT;
+			break;
+
+		/* subrequest -- buffer bytes until end request */
+		case LIBTELNET_STATE_SB:
+			/* IAC command in subrequest -- either IAC SE or IAC IAC */
+			if (byte == LIBTELNET_IAC) {
+				telnet->state = LIBTELNET_STATE_SB_IAC;
+			/* buffer the byte, or bail if we can't */
+			} else if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
+					LIBTELNET_ERROR_OK) {
+				start = i + 1;
+				telnet->state = LIBTELNET_STATE_TEXT;
+			} else {
+				telnet->state = LIBTELNET_STATE_SB;
+			}
+			break;
+
+		/* IAC escaping inside a subrequest */
+		case LIBTELNET_STATE_SB_IAC:
+			switch (byte) {
+			/* end subrequest */
+			case LIBTELNET_SE:
+				/* zero-size buffer is a protocol error */
+				if (telnet->length == 0) {
+					libtelnet_error_cb(telnet, LIBTELNET_ERROR_PROTOCOL,
+						user_data);
+				/* process */
+				} else {
+					libtelnet_subrequest_cb(telnet, telnet->buffer[0],
+						telnet->buffer + 1, telnet->length - 1, user_data);
+					telnet->length = 0;
+				}
+				
+				/* return to default state */
+				start = i + 1;
+				telnet->state = LIBTELNET_STATE_TEXT;
+				break;
+			/* escaped IAC byte */
+			case LIBTELNET_IAC:
+				/* push IAC into buffer */
+				if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
+						LIBTELNET_ERROR_OK) {
+					start = i + 1;
+					telnet->state = LIBTELNET_STATE_TEXT;
+				} else {
+					telnet->state = LIBTELNET_STATE_SB;
+				}
+				break;
+			/* something else -- protocol error */
+			default:
+				libtelnet_error_cb(telnet, LIBTELNET_ERROR_PROTOCOL,
+						user_data);
+				start = i + 1;
+				telnet->state = LIBTELNET_STATE_TEXT;
+				break;
+			}
+			break;
+		}
+	}
+
+	/* pass through any remaining bytes */ 
+	if (i != start)
+		libtelnet_input_cb(telnet, &buffer[start], i - start, user_data);
 }
 
 /* send an iac command */

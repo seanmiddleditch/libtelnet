@@ -80,12 +80,8 @@ extern void libtelnet_init(struct libtelnet_t *telnet);
 /* free up any memory allocated by a state tracker */
 extern void libtelnet_free(struct libtelnet_t *telnet);
 
-/* push a single byte into the state tracker */
-extern void libtelnet_push_byte(struct libtelnet_t *telnet,
-	unsigned char byte, void *user_data);
-
 /* push a byte buffer into the state tracker */
-extern void libtelnet_push_buffer(struct libtelnet_t *telnet,
+extern void libtelnet_push(struct libtelnet_t *telnet,
 	unsigned char *buffer, unsigned int size, void *user_data);
 
 /* send an iac command */
