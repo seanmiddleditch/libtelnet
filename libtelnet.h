@@ -10,7 +10,7 @@
  */
 
 #if !defined(LIBTELNET_INCLUDE)
-#define LIBTELNET 1
+#define LIBTELNET_INCLUDE 1
 
 /* telnet special values */
 #define LIBTELNET_IAC 255
