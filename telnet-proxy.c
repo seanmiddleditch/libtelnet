@@ -120,9 +120,9 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
 			printf("%c", (char)buffer[i]);
 		else if (buffer[i] == '\n')
-			printf("<%02X>\n", (int)buffer[i]);
+			printf("<\e[1m0x%02X\e[22m>\n", (int)buffer[i]);
 		else
-			printf("<%02X>", (int)buffer[i]);
+			printf("<\e[1m0x%02X\e[22m>", (int)buffer[i]);
 	}
 }
 
@@ -191,7 +191,7 @@ void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
 
 	printf("%s SUB %d (%s)", conn->name, (int)type, get_opt(type));
 	if (size > 0) {
-		printf(": ");
+		printf(" [%u]: ", size);
 		print_buffer(buffer, size);
 	}
 	printf("\e[0m\n");
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* initialize connection structs */
-	server.name = "\e[31mSERVER";
+	server.name = "\e[35mSERVER";
 	server.remote = &client;
 	client.name = "\e[34mCLIENT";
 	client.remote = &server;
