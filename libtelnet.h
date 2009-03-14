@@ -9,10 +9,10 @@
 #if !defined(LIBTELNET_INCLUDE)
 #define LIBTELNET 1
 
-/* sub request buffer size increment (defualt 4K) */
-#define LIBTELNET_BUFFER_SIZE (4 * 1024)
-/* sub request buffer size (default 16K) */
-#define LIBTELNET_BUFFER_SIZE_MAX (16 * 1024)
+/* sub request buffer size, normal (defualt 1K) */
+#define LIBTELNET_BUFFER_SIZE_SMALL (1 * 1024)
+/* sub request buffer size, enlarged (default 16K) */
+#define LIBTELNET_BUFFER_SIZE_LARGE (16 * 1024)
 
 /* telnet special values */
 #define LIBTELNET_IAC 255
@@ -83,7 +83,7 @@ struct libtelnet_t {
 extern void libtelnet_init(struct libtelnet_t *telnet);
 
 /* free up any memory allocated by a state tracker */
-extern void libtelnet_close(struct libtelnet_t *telnet);
+extern void libtelnet_free(struct libtelnet_t *telnet);
 
 /* push a single byte into the state tracker */
 extern void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
