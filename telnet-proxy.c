@@ -11,18 +11,12 @@
 
 #include "libtelnet.h"
 
-static int server_sock;
-static int client_sock;
-
-static struct libtelnet_t server_telnet;
-static struct libtelnet_t client_telnet;
-
-static const char *get_name(int sock) {
-	if (sock == server_sock)
-		return "\e[31mSERVER";
-	else
-		return "\e[34mCLIENT";
-}
+struct conn_t {
+	const char *name;
+	int sock;
+	struct libtelnet_t telnet;
+	struct conn_t *remote;
+};
 
 static const char *get_cmd(unsigned char cmd) {
 	static char buffer[4];
@@ -105,20 +99,6 @@ static const char *get_opt(unsigned char opt) {
 	}
 }
 
-static struct libtelnet_t *other_telnet(struct libtelnet_t *telnet) {
-	if (telnet == &server_telnet)
-		return &client_telnet;
-	else
-		return &server_telnet;
-}
-
-static void* other_socket(int sock) {
-	if (sock == server_sock)
-		return (void*)&client_sock;
-	else
-		return (void*)&server_sock;
-}
-
 static void print_buffer(unsigned char *buffer, unsigned int size) {
 	unsigned int i;
 	for (i = 0; i != size; ++i) {
@@ -133,70 +113,70 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 
 void libtelnet_data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s DATA: ", get_name(sock));
+	printf("%s DATA: ", conn->name);
 	print_buffer(buffer, size);
 	printf("\e[0m\n");
 
-	libtelnet_send_data(other_telnet(telnet), buffer, size,
-			other_socket(sock));
+	libtelnet_send_data(&conn->remote->telnet, buffer, size,
+			conn->remote);
 }
 
 void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
 	/* DONT SPAM
-	printf("%s SEND: ", get_name(sock));
+	printf("%s SEND: ", conn->name);
 	print_buffer(buffer, size);
 	printf("\e[0m\n");
 	*/
 
 	/* send data */
-	send(sock, buffer, size, 0);
+	send(conn->sock, buffer, size, 0);
 }
 
 void libtelnet_command_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s IAC %s\e[0m\n", get_name(sock), get_cmd(cmd));
+	printf("%s IAC %s\e[0m\n", conn->name, get_cmd(cmd));
 
-	libtelnet_send_command(other_telnet(telnet), cmd, other_socket(sock));
+	libtelnet_send_command(&conn->remote->telnet, cmd, conn->remote);
 }
 
 void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s IAC %s %d (%s)\e[0m\n", get_name(sock), get_cmd(cmd),
+	printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(cmd),
 			(int)opt, get_opt(opt));
 
-	libtelnet_send_negotiate(other_telnet(telnet), cmd, opt,
-			other_socket(sock));
+	libtelnet_send_negotiate(&conn->remote->telnet, cmd, opt,
+			conn->remote);
 }
 
 void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
 		unsigned char *buffer, unsigned int size, void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s SUB %d (%s)", get_name(sock), (int)type, get_opt(type));
+	printf("%s SUB %d (%s)", conn->name, (int)type, get_opt(type));
 	if (size > 0) {
 		printf(": ");
 		print_buffer(buffer, size);
 	}
 	printf("\e[0m\n");
 
-	libtelnet_send_subrequest(other_telnet(telnet), type, buffer, size,
-			other_socket(sock));
+	libtelnet_send_subrequest(&conn->remote->telnet, type, buffer, size,
+			conn->remote);
 }
 
 void libtelnet_error_cb(struct libtelnet_t *telnet,
 		enum libtelnet_error_t error, void *user_data) {
-	int sock = *(int*)user_data;
+	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s ERROR: %d\e[0m\n", get_name(sock), (int)error);
+	printf("%s ERROR: %d\e[0m\n", conn->name, (int)error);
 }
 
 int main(int argc, char **argv) {
@@ -206,10 +186,13 @@ int main(int argc, char **argv) {
 	struct sockaddr_in addr;
 	socklen_t addrlen;
 	struct pollfd pfd[2];
+	struct conn_t server;
+	struct conn_t client;
 
 	/* check usage */
 	if (argc != 4) {
-		fprintf(stderr, "Usage:\n ./telnet-proxy <remote ip> <remote port> <local port>\n");
+		fprintf(stderr, "Usage:\n ./telnet-proxy <remote ip> <remote port> "
+				"<local port>\n");
 		return 1;
 	}
 	
@@ -240,13 +223,13 @@ int main(int argc, char **argv) {
 	}
 
 	/* wait for client connection */
-	if ((client_sock = accept(listen_sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
+	if ((client.sock = accept(listen_sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
 		fprintf(stderr, "accept() failed: %s\n", strerror(errno));
 		return 1;
 	}
 	
 	/* create server socket */
-	if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		fprintf(stderr, "socket() failed: %s\n", strerror(errno));
 		return 1;
 	}
@@ -254,7 +237,7 @@ int main(int argc, char **argv) {
 	/* bind */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	if (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+	if (bind(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
 		return 1;
 	}
@@ -267,20 +250,26 @@ int main(int argc, char **argv) {
 	}
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(strtol(argv[2], 0, 10));
-	if (connect(server_sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+	if (connect(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		fprintf(stderr, "server() failed: %s\n", strerror(errno));
 		return 1;
 	}
 
+	/* initialize connection structs */
+	server.name = "\e[31mSERVER";
+	server.remote = &client;
+	client.name = "\e[34mCLIENT";
+	client.remote = &server;
+
 	/* initialize telnet boxes */
-	libtelnet_init(&server_telnet);
-	libtelnet_init(&client_telnet);
+	libtelnet_init(&server.telnet);
+	libtelnet_init(&client.telnet);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
-	pfd[0].fd = server_sock;
+	pfd[0].fd = server.sock;
 	pfd[0].events = POLLIN | POLLHUP;
-	pfd[1].fd = client_sock;
+	pfd[1].fd = client.sock;
 	pfd[1].events = POLLIN | POLLHUP;
 
 	/* loop while both connections are open */
@@ -288,7 +277,7 @@ int main(int argc, char **argv) {
 		/* read from server */
 		if (pfd[0].revents & POLLIN) {
 			if ((rs = recv(pfd[0].fd, buffer, sizeof(buffer), 0)) > 0)
-				libtelnet_push(&server_telnet, buffer, rs, (void*)&pfd[0].fd);
+				libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
 		}
 		if (pfd[0].revents & POLLHUP)
 			break;
@@ -296,17 +285,17 @@ int main(int argc, char **argv) {
 		/* read from client */
 		if (pfd[1].revents & POLLIN) {
 			if ((rs = recv(pfd[1].fd, buffer, sizeof(buffer), 0)) > 0)
-				libtelnet_push(&client_telnet, buffer, rs, (void*)&pfd[1].fd);
+				libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
 		}
 		if (pfd[1].revents & POLLHUP)
 			break;
 	}
 
 	/* clean up */
-	libtelnet_free(&server_telnet);
-	libtelnet_free(&client_telnet);
-	close(server_sock);
-	close(client_sock);
+	libtelnet_free(&server.telnet);
+	libtelnet_free(&client.telnet);
+	close(server.sock);
+	close(client.sock);
 	close(listen_sock);
 
 	return 0;
