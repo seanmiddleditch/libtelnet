@@ -50,11 +50,11 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 	}
 }
 
-void libtelnet_input_cb(struct libtelnet_t *telnet, unsigned char *buffer,
+void libtelnet_data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 	int sock = *(int*)user_data;
 
-	printf("%s INPUT: ", get_name(sock));
+	printf("%s DATA: ", get_name(sock));
 	print_buffer(buffer, size);
 	printf("\e[0m\n");
 
@@ -62,12 +62,12 @@ void libtelnet_input_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 			other_socket(sock));
 }
 
-void libtelnet_output_cb(struct libtelnet_t *telnet, unsigned char *buffer,
+void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 	int sock = *(int*)user_data;
 
 	/* DONT SPAM
-	printf("%s OUTPUT: ", get_name(sock));
+	printf("%s SEND: ", get_name(sock));
 	print_buffer(buffer, size);
 	printf("\e[0m\n");
 	*/

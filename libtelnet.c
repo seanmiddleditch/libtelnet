@@ -92,7 +92,7 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 			 * switch states */
 			if (byte == LIBTELNET_IAC) {
 				if (i != start)
-					libtelnet_input_cb(telnet, &buffer[start], i - start,
+					libtelnet_data_cb(telnet, &buffer[start], i - start,
 							user_data);
 				telnet->state = LIBTELNET_STATE_IAC;
 			}
@@ -120,7 +120,7 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 				break;
 			/* IAC escaping */
 			case LIBTELNET_IAC:
-				libtelnet_input_cb(telnet, &byte, 1, user_data);
+				libtelnet_data_cb(telnet, &byte, 1, user_data);
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_TEXT;
 				break;
@@ -214,21 +214,21 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 
 	/* pass through any remaining bytes */ 
 	if (i != start)
-		libtelnet_input_cb(telnet, &buffer[start], i - start, user_data);
+		libtelnet_data_cb(telnet, &buffer[start], i - start, user_data);
 }
 
 /* send an iac command */
 void libtelnet_send_command(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
 	unsigned char bytes[2] = { LIBTELNET_IAC, cmd };
-	libtelnet_output_cb(telnet, bytes, 2, user_data);
+	libtelnet_send_cb(telnet, bytes, 2, user_data);
 }
 
 /* send negotiation */
 void libtelnet_send_negotiate(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
 	unsigned char bytes[3] = { LIBTELNET_IAC, cmd, opt };
-	libtelnet_output_cb(telnet, bytes, 3, user_data);
+	libtelnet_send_cb(telnet, bytes, 3, user_data);
 }
 
 /* send non-command data (escapes IAC bytes) */
@@ -240,7 +240,7 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 		if (buffer[i] == LIBTELNET_IAC) {
 			/* dump prior text if any */
 			if (i != l)
-				libtelnet_output_cb(telnet, buffer + l, i - l, user_data);
+				libtelnet_send_cb(telnet, buffer + l, i - l, user_data);
 			l = i + 1;
 
 			/* send escape */
@@ -250,7 +250,7 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 
 	/* send whatever portion of buffer is left */
 	if (i != l)
-		libtelnet_output_cb(telnet, buffer + l, i - l, user_data);
+		libtelnet_send_cb(telnet, buffer + l, i - l, user_data);
 }
 
 /* send sub-request */

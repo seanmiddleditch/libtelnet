@@ -40,7 +40,7 @@ enum libtelnet_state_t {
 enum libtelnet_error_t {
 	LIBTELNET_ERROR_OK = 0,
 	LIBTELNET_ERROR_NOMEM, /* memory allocation failure */
-	LIBTELNET_ERROR_OVERFLOW, /* input exceeds buffer size */
+	LIBTELNET_ERROR_OVERFLOW, /* data exceeds buffer size */
 	LIBTELNET_ERROR_PROTOCOL, /* invalid sequence of special bytes */
 	LIBTELNET_ERROR_UNKNOWN, /* some crazy unexplainable unknown error */
 };
@@ -60,9 +60,9 @@ struct libtelnet_t {
 /* libtelnet callback declarations
  * APPLICATION MUST IMPLEMENT THESE FUNCTIONS!!
  */
-extern void libtelnet_input_cb(struct libtelnet_t *telnet,
+extern void libtelnet_data_cb(struct libtelnet_t *telnet,
 	unsigned char *buffer, unsigned int size, void *user_data);
-extern void libtelnet_output_cb(struct libtelnet_t *telnet,
+extern void libtelnet_send_cb(struct libtelnet_t *telnet,
 	unsigned char *buffer, unsigned int size, void *user_data);
 extern void libtelnet_command_cb(struct libtelnet_t *telnet,
 	unsigned char cmd, void *user_data);
