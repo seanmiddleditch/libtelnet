@@ -30,8 +30,9 @@ static const unsigned int _buffer_sizes_count =
 	sizeof(_buffer_sizes) / sizeof(_buffer_sizes[0]);
 
 /* initialize a telnet state tracker */
-void libtelnet_init(struct libtelnet_t *telnet) {
+void libtelnet_init(struct libtelnet_t *telnet, enum libtelnet_mode_t mode) {
 	memset(telnet, 0, sizeof(struct libtelnet_t));
+	telnet->mode = mode;
 }
 
 /* free up any memory allocated by a state tracker */
@@ -203,8 +204,13 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 					telnet->buffer + 1, telnet->length - 1, user_data);
 				telnet->length = 0;
 
-				/* if this was MCCP2, enable compression stream */
-				if (telnet->buffer[0] == LIBTELNET_OPTION_COMPRESS2) {
+#ifdef HAVE_ZLIB
+				/* if we are a client and just received the COMPRESS2
+				 * begin marker, setup our zlib box and start handling
+				 * the compressed stream
+				 */
+				if (telnet->mode == LIBTELNET_MODE_CLIENT &&
+						telnet->buffer[0] == LIBTELNET_OPTION_COMPRESS2) {
 					/* allocate zstream box */
 					if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
 							== 0) {
@@ -222,6 +228,9 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 						break;
 					}
 
+					/* notify app that compression was enabled */
+					libtelnet_compress_cb(telnet, 1, user_data);
+
 					/* any remaining bytes in the buffer are compressed.
 					 * we have to re-invoke libtelnet_push to get those
 					 * bytes inflated and abort trying to process the
@@ -232,6 +241,8 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 							user_data);
 					return;
 				}
+#endif /* HAVE_ZLIB */
+
 				break;
 			/* escaped IAC byte */
 			case LIBTELNET_IAC:
@@ -264,10 +275,11 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 /* push a bytes into the state tracker */
 void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
-	/* if COMPRESS2 has been negotiated and we have a zlib box, we
-	 * need to inflate the buffer before processing
+#ifdef HAVE_ZLIB
+	/* if we are a client and we have a zlib box, then COMPRESS2 has been
+	 * negotiated and we need to inflate the buffer before processing
 	 */
-	if (telnet->zlib) {
+	if (telnet->mode == LIBTELNET_MODE_CLIENT && telnet->zlib != 0) {
 		unsigned char inflate_buffer[4096];
 		int rs;
 
@@ -298,6 +310,8 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 
 			/* on error (or on end of stream) disable further inflation */
 			if (rs != Z_OK) {
+				libtelnet_compress_cb(telnet, 0, user_data);
+
 				inflateEnd(telnet->zlib);
 				free(telnet->zlib);
 				telnet->zlib = 0;
@@ -305,24 +319,67 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 			}
 		}
 
-	/* COMPRESS2 is not negotiated, just ignore */
-	} else {
+	/* COMPRESS2 is not negotiated, just process */
+	} else
+#endif /* HAVE_ZLIB */
 		_process(telnet, buffer, size, user_data);
-	}
+}
+
+static void _send(struct libtelnet_t *telnet, unsigned char *buffer,
+		unsigned int size, void *user_data) {
+#ifdef HAVE_ZLIB
+	/* if we are a server and we have a zlib box, then COMPRESS2 has been
+	 * negotiated and we need to deflate the buffer before sending it out
+	 */
+	if (telnet->mode == LIBTELNET_MODE_SERVER && telnet->zlib != 0) {
+		unsigned char deflate_buffer[1024];
+
+		/* initialize zlib state */
+		telnet->zlib->next_in = buffer;
+		telnet->zlib->avail_in = size;
+		telnet->zlib->next_out = deflate_buffer;
+		telnet->zlib->avail_out = sizeof(deflate_buffer);
+
+		/* deflate until buffer exhausted and all output is produced */
+		while (telnet->zlib->avail_in > 0 || telnet->zlib->avail_out == 0) {
+			/* reset output buffer */
+
+			/* compress */
+			if (deflate(telnet->zlib, Z_SYNC_FLUSH) != Z_OK) {
+				libtelnet_error_cb(telnet, LIBTELNET_ERROR_UNKNOWN,
+						user_data);
+				deflateEnd(telnet->zlib);
+				free(telnet->zlib);
+				telnet->zlib = 0;
+				break;
+			}
+
+			libtelnet_send_cb(telnet, deflate_buffer, sizeof(deflate_buffer) -
+					telnet->zlib->avail_out, user_data);
+
+			/* prepare output buffer for next run */
+			telnet->zlib->next_out = deflate_buffer;
+			telnet->zlib->avail_out = sizeof(deflate_buffer);
+		}
+
+	/* COMPRESS2 is not negotiated, just send */
+	} else
+#endif /* HAVE_ZLIB */
+		libtelnet_send_cb(telnet, buffer, size, user_data);
 }
 
 /* send an iac command */
 void libtelnet_send_command(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
 	unsigned char bytes[2] = { LIBTELNET_IAC, cmd };
-	libtelnet_send_cb(telnet, bytes, 2, user_data);
+	_send(telnet, bytes, 2, user_data);
 }
 
 /* send negotiation */
 void libtelnet_send_negotiate(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
 	unsigned char bytes[3] = { LIBTELNET_IAC, cmd, opt };
-	libtelnet_send_cb(telnet, bytes, 3, user_data);
+	_send(telnet, bytes, 3, user_data);
 }
 
 /* send non-command data (escapes IAC bytes) */
@@ -334,7 +391,7 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 		if (buffer[i] == LIBTELNET_IAC) {
 			/* dump prior text if any */
 			if (i != l)
-				libtelnet_send_cb(telnet, buffer + l, i - l, user_data);
+				_send(telnet, buffer + l, i - l, user_data);
 			l = i + 1;
 
 			/* send escape */
@@ -344,7 +401,7 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 
 	/* send whatever portion of buffer is left */
 	if (i != l)
-		libtelnet_send_cb(telnet, buffer + l, i - l, user_data);
+		_send(telnet, buffer + l, i - l, user_data);
 }
 
 /* send sub-request */
@@ -354,4 +411,31 @@ void libtelnet_send_subrequest(struct libtelnet_t *telnet, unsigned char type,
 	libtelnet_send_data(telnet, &type, 1, user_data);
 	libtelnet_send_data(telnet, buffer, size, user_data);
 	libtelnet_send_command(telnet, LIBTELNET_SE, user_data);
+
+#ifdef HAVE_ZLIB
+	/* if we're a server and we just sent the COMPRESS2 marker, we must
+	 * make sure all further data is compressed
+	 */
+	if (telnet->mode == LIBTELNET_MODE_SERVER && type ==
+			LIBTELNET_OPTION_COMPRESS2) {
+		/* allocate zstream box */
+		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
+				== 0) {
+			libtelnet_error_cb(telnet,
+				LIBTELNET_ERROR_NOMEM, user_data);
+		}
+
+		/* initialize */
+		memset(telnet->zlib, 0, sizeof(z_stream));
+		if (deflateInit(telnet->zlib, Z_DEFAULT_COMPRESSION) != Z_OK) {
+			free(telnet->zlib);
+			telnet->zlib = 0;
+			libtelnet_error_cb(telnet,
+				LIBTELNET_ERROR_UNKNOWN, user_data);
+		}
+
+		/* notify app that compression was enabled */
+		libtelnet_compress_cb(telnet, 1, user_data);
+	}
+#endif /* HAVE_ZLIB */
 }

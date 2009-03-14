@@ -181,15 +181,6 @@ void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 	printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(cmd),
 			(int)opt, get_opt(opt));
 
-	/* FIXME: HACK: allow MCCP2 from server without passing it
-	 * through to client.  this is temporary until libtelnet supports
-	 * the server-end of MCCP2.
-	 */
-	if (cmd == LIBTELNET_WILL && opt == LIBTELNET_OPTION_COMPRESS2) {
-		libtelnet_send_negotiate(&conn->telnet, LIBTELNET_DO, opt, conn);
-		return;
-	}
-
 	libtelnet_send_negotiate(&conn->remote->telnet, cmd, opt,
 			conn->remote);
 }
@@ -207,6 +198,13 @@ void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
 
 	libtelnet_send_subrequest(&conn->remote->telnet, type, buffer, size,
 			conn->remote);
+}
+
+void libtelnet_compress_cb(struct libtelnet_t *telnet, char enabled,
+		void *user_data) {
+	struct conn_t *conn = (struct conn_t*)user_data;
+
+	printf("%s COMPRESSION %s\e[0m\n", conn->name, enabled ? "ON" : "OFF");
 }
 
 void libtelnet_error_cb(struct libtelnet_t *telnet,
@@ -296,9 +294,13 @@ int main(int argc, char **argv) {
 	client.name = "\e[34mCLIENT";
 	client.remote = &server;
 
-	/* initialize telnet boxes */
-	libtelnet_init(&server.telnet);
-	libtelnet_init(&client.telnet);
+	/* initialize telnet boxes
+	 * NOTE: we set the server connect to the CLIENT mode because we
+	 * are acting as a client of the server; likewise, we set the
+	 * client connection to SERVER mode becauser we are acting as a
+	 * server to the client. */
+	libtelnet_init(&server.telnet, LIBTELNET_MODE_CLIENT);
+	libtelnet_init(&client.telnet, LIBTELNET_MODE_SERVER);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
