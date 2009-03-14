@@ -14,6 +14,18 @@ relinquishment in perpetuity of all present and future rights to this
 code under copyright law. 
 ---------------------------------------------------------------------
 
+*** TODO ***
+
+ - RFC 1143 option negotiation algorithm
+ - automatic MCCP2 handling (controllable by host app)
+ - efficient one-byte sub-requests
+ ? MCCP1
+ ? ZMP parsing
+ ? MSSP parsing
+ ? ENVIRON/NEW-ENVIRON parsing
+ ? telnet-status testing tool
+ ? few options to make telnet-proxy even more useful
+
 I. INTRODUCTION
 =====================================================================
 
