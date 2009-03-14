@@ -192,14 +192,14 @@ void libtelnet_push_buffer(struct libtelnet_t *telnet, unsigned char *buffer,
 /* send an iac command */
 void libtelnet_send_command(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
-	unsigned char bytes[2] = { IAC, cmd };
+	unsigned char bytes[2] = { LIBTELNET_IAC, cmd };
 	libtelnet_output_cb(telnet, bytes, 2, user_data);
 }
 
 /* send negotiation */
 void libtelnet_send_negotiate(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
-	unsigned char bytes[3] = { IAC, cmd, opt };
+	unsigned char bytes[3] = { LIBTELNET_IAC, cmd, opt };
 	libtelnet_output_cb(telnet, bytes, 3, user_data);
 }
 
@@ -228,8 +228,8 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 /* send sub-request */
 void libtelnet_send_subrequest(struct libtelnet_t *telnet, unsigned char type,
 		unsigned char *buffer, size_t size, void *user_data)  {
-	libtelnet_send_command(telnet, SB, user_data);
+	libtelnet_send_command(telnet, LIBTELNET_SB, user_data);
 	libtelnet_send_data(telnet, &type, 1, user_data);
 	libtelnet_send_data(telnet, buffer, size, user_data);
-	libtelnet_send_command(telnet, SE, user_data);
+	libtelnet_send_command(telnet, LIBTELNET_SE, user_data);
 }
