@@ -185,8 +185,9 @@ void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 			conn->remote);
 }
 
-void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
-		unsigned char *buffer, unsigned int size, void *user_data) {
+void libtelnet_subnegotiation_cb(struct libtelnet_t *telnet,
+		unsigned char type, unsigned char *buffer, unsigned int size,
+		void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
 	printf("%s SUB %d (%s)", conn->name, (int)type, get_opt(type));
@@ -196,7 +197,7 @@ void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
 	}
 	printf("\e[0m\n");
 
-	libtelnet_send_subrequest(&conn->remote->telnet, type, buffer, size,
+	libtelnet_send_subnegotiation(&conn->remote->telnet, type, buffer, size,
 			conn->remote);
 }
 

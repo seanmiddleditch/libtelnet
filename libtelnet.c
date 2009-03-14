@@ -118,7 +118,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 		/* IAC command */
 		case LIBTELNET_STATE_IAC:
 			switch (byte) {
-			/* subrequest */
+			/* subnegotiation */
 			case LIBTELNET_SB:
 				telnet->state = LIBTELNET_STATE_SB;
 				break;
@@ -171,9 +171,9 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 			telnet->state = LIBTELNET_STATE_DATA;
 			break;
 
-		/* subrequest -- buffer bytes until end request */
+		/* subnegotiation -- buffer bytes until end request */
 		case LIBTELNET_STATE_SB:
-			/* IAC command in subrequest -- either IAC SE or IAC IAC */
+			/* IAC command in subnegotiation -- either IAC SE or IAC IAC */
 			if (byte == LIBTELNET_IAC) {
 				telnet->state = LIBTELNET_STATE_SB_IAC;
 			/* buffer the byte, or bail if we can't */
@@ -184,10 +184,10 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 			}
 			break;
 
-		/* IAC escaping inside a subrequest */
+		/* IAC escaping inside a subnegotiation */
 		case LIBTELNET_STATE_SB_IAC:
 			switch (byte) {
-			/* end subrequest */
+			/* end subnegotiation */
 			case LIBTELNET_SE:
 				/* return to default state */
 				start = i + 1;
@@ -201,7 +201,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				}
 
 				/* invoke callback */
-				libtelnet_subrequest_cb(telnet, telnet->buffer[0],
+				libtelnet_subnegotiation_cb(telnet, telnet->buffer[0],
 					telnet->buffer + 1, telnet->length - 1, user_data);
 				telnet->length = 0;
 
@@ -406,8 +406,9 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 }
 
 /* send sub-request */
-void libtelnet_send_subrequest(struct libtelnet_t *telnet, unsigned char type,
-		unsigned char *buffer, unsigned int size, void *user_data)  {
+void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
+		unsigned char type, unsigned char *buffer, unsigned int size,
+		void *user_data)  {
 	libtelnet_send_command(telnet, LIBTELNET_SB, user_data);
 	libtelnet_send_data(telnet, &type, 1, user_data);
 	libtelnet_send_data(telnet, buffer, size, user_data);
