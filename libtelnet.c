@@ -160,7 +160,7 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 			if (byte == LIBTELNET_IAC) {
 				telnet->state = LIBTELNET_STATE_SB_IAC;
 			/* buffer the byte, or bail if we can't */
-			} else if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
+			} else if (_buffer_byte(telnet, byte, user_data) !=
 					LIBTELNET_ERROR_OK) {
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_TEXT;
