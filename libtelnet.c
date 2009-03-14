@@ -6,11 +6,23 @@
  * all present and future rights to this code under copyright law. 
  */
 
+#include <malloc.h>
 #include "libtelnet.h"
+
+/* buffer sizes */
+static const unsigned int _buffer_sizes[] = {
+	0,
+	512,
+	2048,
+	8192,
+	16384,
+};
+static const unsigned int _buffer_sizes_count =
+	sizeof(_buffer_sizes) / sizeof(_buffer_sizes[0]);
 
 /* initialize a telnet state tracker */
 void libtelnet_init(struct libtelnet_t *telnet) {
-	telnet->state = LIBTELNET_TEXT;
+	telnet->state = LIBTELNET_STATE_TEXT;
 	telnet->buffer = 0;
 	telnet->size = 0;
 	telnet->length = 0;
@@ -27,43 +39,38 @@ void libtelnet_free(struct libtelnet_t *telnet) {
 }
 
 /* push a byte into the telnet buffer */
-static enum libtelnet_error_t _libtelnet_buffer_byte(
+static enum libtelnet_error_t _buffer_byte(
 		struct libtelnet_t *telnet, unsigned char byte, void *user_data) {
+	unsigned char *new_buffer;
+	int i;
+
 	/* check if we're out of room */
 	if (telnet->length == telnet->size) {
-		/* if we already have a large buffer, we're out of space, give up */
-		if (telnet->size == LIBTELNET_BUFFER_SIZE_LARGE) {
+		/* find the next buffer size */
+		for (i = 0; i != _buffer_sizes_count; ++i) {
+			if (_buffer_sizes[i] == telnet->size)
+				break;
+		}
+
+		/* overflow -- can't grow any more */
+		if (i >= _buffer_sizes_count - 1) {
 			libtelnet_error_cb(telnet, LIBTELNET_ERROR_OVERFLOW, user_data);
 			libtelnet_free(telnet);
 			return LIBTELNET_ERROR_OVERFLOW;
-
-		/* if we have a small buffer, try to resize to a larger one */
-		} else if (telnet->size == LIBTELNET_BUFFER_SIZE_SMALL) {
-			unsigned char *new_buffer = (unsigned char *)realloc(
-					telnet->buffer, LIBTELNET_BUFFER_SIZE_LARGE);
-			if (new_buffer == 0) {
-				libtelnet_error_cb(telnet, LIBTELNET_ERROR_NOMEM,
-					user_data);
-				libtelnet_free(telnet);
-				return LIBTELNET_ERROR_NOMEM;
-			}
-
-			telnet->buffer = new_buffer;
-			telnet->size = LIBTELNET_BUFFER_SIZE_LARGE;
-
-		/* we have no buffer at all, so allocate one */
-		} else {
-			telnet->buffer = (unsigned char *)realloc(
-					telnet->buffer, LIBTELNET_BUFFER_SIZE_SMALL);
-			if (telnet->buffer == 0) {
-				libtelnet_error_cb(telnet, LIBTELNET_ERROR_NOMEM,
-					user_data);
-				libtelnet_free(telnet);
-				return LIBTELNET_ERROR_NOMEM;
-			}
-
-			telnet->size = LIBTELNET_BUFFER_SIZE_SMALL;
 		}
+
+		/* (re)allocate buffer */
+		new_buffer = (unsigned char *)realloc(telnet->buffer,
+				_buffer_sizes[i + 1]);
+		if (new_buffer == 0) {
+			libtelnet_error_cb(telnet, LIBTELNET_ERROR_NOMEM,
+				user_data);
+			libtelnet_free(telnet);
+			return LIBTELNET_ERROR_NOMEM;
+		}
+
+		telnet->buffer = new_buffer;
+		telnet->size = _buffer_sizes[i + 1];
 	}
 
 	/* push the byte, all set */
@@ -82,7 +89,7 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 			telnet->state = LIBTELNET_STATE_IAC;
 		/* regular input byte */
 		else
-			libtelnet_input_cb(telnet, byte, user_data);
+			libtelnet_input_cb(telnet, &byte, 1, user_data);
 		break;
 
 	/* IAC command */
@@ -107,8 +114,8 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 			break;
 		/* IAC escaping */
 		case LIBTELNET_IAC:
-			telbet->input_cb(telnet, LIBTELNET_IAC, user_data);
-			libtelnet->state = LIBTELNET_STATE_TEXT;
+			libtelnet_input_cb(telnet, &byte, 1, user_data);
+			telnet->state = LIBTELNET_STATE_TEXT;
 			break;
 		/* some other command */
 		default:
@@ -141,7 +148,7 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 		if (byte == LIBTELNET_IAC)
 			telnet->state = LIBTELNET_STATE_SB_IAC;
 		/* buffer the byte, or bail if we can't */
-		else if (_libtelnet_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
+		else if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
 				LIBTELNET_ERROR_OK)
 			telnet->state = LIBTELNET_STATE_TEXT;
 		else
@@ -170,7 +177,7 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 		/* escaped IAC byte */
 		case LIBTELNET_IAC:
 			/* push IAC into buffer */
-			if (_libtelnet_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
+			if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
 					LIBTELNET_ERROR_OK)
 				telnet->state = LIBTELNET_STATE_TEXT;
 			else
@@ -188,8 +195,8 @@ void libtelnet_push_byte(struct libtelnet_t *telnet, unsigned char byte,
 
 /* push a byte buffer into the state tracker */
 void libtelnet_push_buffer(struct libtelnet_t *telnet, unsigned char *buffer,
-		size_t size, void *user_data) {
-	size_t i;
+		unsigned int size, void *user_data) {
+	unsigned int i;
 	for (i = 0; i != size; ++i)
 		libtelnet_push_byte(telnet, buffer[i], user_data);
 }
@@ -210,8 +217,8 @@ void libtelnet_send_negotiate(struct libtelnet_t *telnet, unsigned char cmd,
 
 /* send non-command data (escapes IAC bytes) */
 void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
-		size_t size, void *user_data) {
-	size_t i, l;
+		unsigned int size, void *user_data) {
+	unsigned int i, l;
 	for (l = i = 0; i != size; ++i) {
 		/* dump prior portion of text, send escaped bytes */
 		if (buffer[i] == LIBTELNET_IAC) {
@@ -232,7 +239,7 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 
 /* send sub-request */
 void libtelnet_send_subrequest(struct libtelnet_t *telnet, unsigned char type,
-		unsigned char *buffer, size_t size, void *user_data)  {
+		unsigned char *buffer, unsigned int size, void *user_data)  {
 	libtelnet_send_command(telnet, LIBTELNET_SB, user_data);
 	libtelnet_send_data(telnet, &type, 1, user_data);
 	libtelnet_send_data(telnet, buffer, size, user_data);
