@@ -47,7 +47,10 @@ void libtelnet_free(struct libtelnet_t *telnet) {
 
 	/* free zlib box */
 	if (telnet->zlib != 0) {
-		inflateEnd(telnet->zlib);
+		if (telnet->mode == LIBTELNET_MODE_SERVER)
+			deflateEnd(telnet->zlib);
+		else
+			inflateEnd(telnet->zlib);
 		free(telnet->zlib);
 		telnet->zlib = 0;
 	}
@@ -178,8 +181,6 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 					LIBTELNET_ERROR_OK) {
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_DATA;
-			} else {
-				telnet->state = LIBTELNET_STATE_SB;
 			}
 			break;
 
@@ -237,7 +238,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 					 * remaining compressed bytes in the current _process
 					 * buffer argument
 					 */
-					libtelnet_push(telnet, &buffer[i + 1], size - i - 1,
+					libtelnet_push(telnet, &buffer[start], size - start,
 							user_data);
 					return;
 				}
