@@ -269,7 +269,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 	}
 
 	/* pass through any remaining bytes */ 
-	if (i != start)
+	if (telnet->state == LIBTELNET_STATE_DATA && i != start)
 		libtelnet_data_cb(telnet, &buffer[start], i - start, user_data);
 }
 
