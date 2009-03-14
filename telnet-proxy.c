@@ -17,11 +17,92 @@ static int client_sock;
 static struct libtelnet_t server_telnet;
 static struct libtelnet_t client_telnet;
 
-static const char* get_name(int sock) {
+static const char *get_name(int sock) {
 	if (sock == server_sock)
 		return "\e[31mSERVER";
 	else
 		return "\e[34mCLIENT";
+}
+
+static const char *get_cmd(unsigned char cmd) {
+	static char buffer[4];
+
+	switch (cmd) {
+	case 255: return "IAC";
+	case 254: return "DONT";
+	case 253: return "DO";
+	case 252: return "WONT";
+	case 251: return "WILL";
+	case 250: return "SB";
+	case 249: return "GA";
+	case 248: return "EL";
+	case 247: return "EC";
+	case 246: return "AYT";
+	case 245: return "AO";
+	case 244: return "IP";
+	case 243: return "BREAK";
+	case 242: return "DM";
+	case 241: return "NOP";
+	case 240: return "SE";
+	case 239: return "EOR";
+	case 238: return "ABORT";
+	case 237: return "SUSP";
+	case 236: return "xEOF";
+	default:
+		snprintf(buffer, sizeof(buffer), "%d", (int)cmd);
+		return buffer;
+	}
+}
+
+static const char *get_opt(unsigned char opt) {
+	switch (opt) {
+	case 0: return "BINARY";
+	case 1: return "ECHO";
+	case 2: return "RCP";
+	case 3: return "SGA";
+	case 4: return "NAMS";
+	case 5: return "STATUS";
+	case 6: return "TM";
+	case 7: return "RCTE";
+	case 8: return "NAOL";
+	case 9: return "NAOP";
+	case 10: return "NAOCRD";
+	case 11: return "NAOHTS";
+	case 12: return "NAOHTD";
+	case 13: return "NAOFFD";
+	case 14: return "NAOVTS";
+	case 15: return "NAOVTD";
+	case 16: return "NAOLFD";
+	case 17: return "XASCII";
+	case 18: return "LOGOUT";
+	case 19: return "BM";
+	case 20: return "DET";
+	case 21: return "SUPDUP";
+	case 22: return "SUPDUPOUTPUT";
+	case 23: return "SNDLOC";
+	case 24: return "TTYPE";
+	case 25: return "EOR";
+	case 26: return "TUID";
+	case 27: return "OUTMRK";
+	case 28: return "TTYLOC";
+	case 29: return "3270REGIME";
+	case 30: return "X3PAD";
+	case 31: return "NAWS";
+	case 32: return "TSPEED";
+	case 33: return "LFLOW";
+	case 34: return "LINEMODE";
+	case 35: return "XDISPLOC";
+	case 36: return "ENVIRON";
+	case 37: return "AUTHENTICATION";
+	case 38: return "ENCRYPT";
+	case 39: return "NEW-ENVIRON";
+	case 70: return "MSSP";
+	case 85: return "COMPRESS";
+	case 86: return "COMPRESS2";
+	case 93: return "ZMP";
+	case 255: return "EXOPL";
+	default: return "unknown";
+	}
 }
 
 static struct libtelnet_t *other_telnet(struct libtelnet_t *telnet) {
@@ -80,7 +161,7 @@ void libtelnet_command_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
 	int sock = *(int*)user_data;
 
-	printf("%s IAC %d\e[0m\n", get_name(sock), (int)cmd);
+	printf("%s IAC %s\e[0m\n", get_name(sock), get_cmd(cmd));
 
 	libtelnet_send_command(other_telnet(telnet), cmd, other_socket(sock));
 }
@@ -89,7 +170,8 @@ void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
 	int sock = *(int*)user_data;
 
-	printf("%s IAC %d %d\e[0m\n", get_name(sock), (int)cmd, (int)opt);
+	printf("%s IAC %s %d (%s)\e[0m\n", get_name(sock), get_cmd(cmd),
+			(int)opt, get_opt(opt));
 
 	libtelnet_send_negotiate(other_telnet(telnet), cmd, opt,
 			other_socket(sock));
@@ -99,8 +181,11 @@ void libtelnet_subrequest_cb(struct libtelnet_t *telnet, unsigned char type,
 		unsigned char *buffer, unsigned int size, void *user_data) {
 	int sock = *(int*)user_data;
 
-	printf("%s SUBREQ %d: ", get_name(sock), (int)type);
-	print_buffer(buffer, size);
+	printf("%s SUB %d (%s)", get_name(sock), (int)type, get_opt(type));
+	if (size > 0) {
+		printf(": ");
+		print_buffer(buffer, size);
+	}
 	printf("\e[0m\n");
 
 	libtelnet_send_subrequest(other_telnet(telnet), type, buffer, size,
