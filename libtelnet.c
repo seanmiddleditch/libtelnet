@@ -211,7 +211,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				 * the compressed stream
 				 */
 				if (telnet->mode == LIBTELNET_MODE_CLIENT &&
-						telnet->buffer[0] == LIBTELNET_OPTION_COMPRESS2) {
+						telnet->buffer[0] == LIBTELNET_TELOPT_COMPRESS2) {
 					/* allocate zstream box */
 					if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
 							== 0) {
@@ -419,7 +419,7 @@ void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 	 * make sure all further data is compressed
 	 */
 	if (telnet->mode == LIBTELNET_MODE_SERVER && opt ==
-			LIBTELNET_OPTION_COMPRESS2) {
+			LIBTELNET_TELOPT_COMPRESS2) {
 		/* allocate zstream box */
 		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
 				== 0) {
