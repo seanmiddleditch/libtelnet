@@ -126,6 +126,7 @@ void libtelnet_data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
+	int rs;
 
 	/* DONT SPAM
 	printf("%s SEND: ", conn->name);
@@ -134,7 +135,19 @@ void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 	*/
 
 	/* send data */
-	send(conn->sock, buffer, size, 0);
+	while (size > 0) {
+		if ((rs = send(conn->sock, buffer, size, 0)) == -1) {
+			fprintf(stderr, "send() failed: %s\n", strerror(errno));
+			exit(1);
+		} else if (rs == 0) {
+			fprintf(stderr, "send() unexpectedly returned 0\n");
+			exit(1);
+		}
+
+		/* update pointer and size to see if we've got more to send */
+		buffer += rs;
+		size -= rs;
+	}
 }
 
 void libtelnet_command_cb(struct libtelnet_t *telnet, unsigned char cmd,
@@ -202,11 +215,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	/* re-use addr */
+	/* reuse address option */
 	rs = 1;
 	setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &rs, sizeof(rs));
 
-	/* bind */
+	/* bind to listening addr/port */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
@@ -216,13 +229,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	/* listen */
+	/* wait for client */
 	if (listen(listen_sock, 5) == -1) {
 		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
 		return 1;
 	}
-
-	/* wait for client connection */
 	if ((client.sock = accept(listen_sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
 		fprintf(stderr, "accept() failed: %s\n", strerror(errno));
 		return 1;
@@ -234,15 +245,13 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	/* bind */
+	/* connect to server */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	if (bind(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
 		return 1;
 	}
-
-	/* connect */
 	memset(&addr, 0, sizeof(addr));
 	if (inet_pton(AF_INET, argv[1], &addr.sin_addr) != 1) {
 		fprintf(stderr, "inet_pton() failed: %s\n", strerror(errno));
@@ -268,27 +277,37 @@ int main(int argc, char **argv) {
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
 	pfd[0].fd = server.sock;
-	pfd[0].events = POLLIN | POLLHUP;
+	pfd[0].events = POLLIN;
 	pfd[1].fd = client.sock;
-	pfd[1].events = POLLIN | POLLHUP;
+	pfd[1].events = POLLIN;
 
 	/* loop while both connections are open */
 	while (poll(pfd, 2, -1) != -1) {
 		/* read from server */
 		if (pfd[0].revents & POLLIN) {
-			if ((rs = recv(pfd[0].fd, buffer, sizeof(buffer), 0)) > 0)
+			if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
 				libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
+			} else if (rs == 0) {
+				printf("%s DISCONNECTED\e[0m\n", server.name);
+				break;
+			} else {
+				fprintf(stderr, "recv(server) failed: %s\n", strerror(errno));
+				exit(1);
+			}
 		}
-		if (pfd[0].revents & POLLHUP)
-			break;
 
 		/* read from client */
 		if (pfd[1].revents & POLLIN) {
-			if ((rs = recv(pfd[1].fd, buffer, sizeof(buffer), 0)) > 0)
+			if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
 				libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
+			} else if (rs == 0) {
+				printf("%s DISCONNECTED\e[0m\n", client.name);
+				break;
+			} else {
+				fprintf(stderr, "recv(client) failed: %s\n", strerror(errno));
+				exit(1);
+			}
 		}
-		if (pfd[1].revents & POLLHUP)
-			break;
 	}
 
 	/* clean up */
