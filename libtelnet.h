@@ -85,7 +85,7 @@ extern void libtelnet_command_cb(struct libtelnet_t *telnet,
 extern void libtelnet_negotiate_cb(struct libtelnet_t *telnet,
 		unsigned char cmd, unsigned char opt, void *user_data);
 extern void libtelnet_subnegotiation_cb(struct libtelnet_t *telnet,
-		unsigned char type, unsigned char *data, unsigned int size,
+		unsigned char opt, unsigned char *data, unsigned int size,
 		void *user_data);
 #ifdef HAVE_ZLIB
 extern void libtelnet_compress_cb(struct libtelnet_t *telnet,
@@ -119,7 +119,7 @@ extern void libtelnet_send_data(struct libtelnet_t *telnet,
 
 /* send sub-request */
 extern void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
-		unsigned char type, unsigned char *buffer, unsigned int size,
+		unsigned char opt, unsigned char *buffer, unsigned int size,
 		void *user_data);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */

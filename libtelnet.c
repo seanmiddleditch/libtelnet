@@ -407,10 +407,10 @@ void libtelnet_send_data(struct libtelnet_t *telnet, unsigned char *buffer,
 
 /* send sub-request */
 void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
-		unsigned char type, unsigned char *buffer, unsigned int size,
+		unsigned char opt, unsigned char *buffer, unsigned int size,
 		void *user_data)  {
 	libtelnet_send_command(telnet, LIBTELNET_SB, user_data);
-	libtelnet_send_data(telnet, &type, 1, user_data);
+	libtelnet_send_data(telnet, &opt, 1, user_data);
 	libtelnet_send_data(telnet, buffer, size, user_data);
 	libtelnet_send_command(telnet, LIBTELNET_SE, user_data);
 
@@ -418,7 +418,7 @@ void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 	/* if we're a server and we just sent the COMPRESS2 marker, we must
 	 * make sure all further data is compressed
 	 */
-	if (telnet->mode == LIBTELNET_MODE_SERVER && type ==
+	if (telnet->mode == LIBTELNET_MODE_SERVER && opt ==
 			LIBTELNET_OPTION_COMPRESS2) {
 		/* allocate zstream box */
 		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
