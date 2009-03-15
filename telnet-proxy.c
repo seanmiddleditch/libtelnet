@@ -27,6 +27,20 @@
 
 #include "libtelnet.h"
 
+#ifdef ENABLE_COLOR
+# define COLOR_SERVER "\e[35m"
+# define COLOR_CLIENT "\e[34m"
+# define COLOR_BOLD "\e[1m"
+# define COLOR_UNBOLD "\e[22m"
+# define COLOR_NORMAL "\e[0m"
+#else
+# define COLOR_SERVER ""
+# define COLOR_CLIENT ""
+# define COLOR_BOLD ""
+# define COLOR_UNBOLD ""
+# define COLOR_NORMAL ""
+#endif
+
 struct conn_t {
 	const char *name;
 	int sock;
@@ -121,9 +135,10 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
 			printf("%c", (char)buffer[i]);
 		else if (buffer[i] == '\n')
-			printf("<\e[1m0x%02X\e[22m>\n", (int)buffer[i]);
+			printf("<" COLOR_BOLD "[1m0x%02X" COLOR_UNBOLD ">\n",
+					(int)buffer[i]);
 		else
-			printf("<\e[1m0x%02X\e[22m>", (int)buffer[i]);
+			printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">", (int)buffer[i]);
 	}
 }
 
@@ -155,7 +170,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 	case LIBTELNET_EV_DATA:
 		printf("%s DATA: ", conn->name);
 		print_buffer(ev->buffer, ev->size);
-		printf("\e[0m\n");
+		printf(COLOR_NORMAL "\n");
 
 		libtelnet_send_data(&conn->remote->telnet, ev->buffer, ev->size,
 				conn->remote);
@@ -165,22 +180,23 @@ static void _event_handler(struct libtelnet_t *telnet,
 		/* DONT SPAM
 		printf("%s SEND: ", conn->name);
 		print_buffer(ev->buffer, ev->size);
-		printf("\e[0m\n");
+		printf(COLOR_BOLD "\n");
 		*/
 
 		_send(conn->sock, ev->buffer, ev->size);
 		break;
 	/* IAC command */
 	case LIBTELNET_EV_IAC:
-		printf("%s IAC %s\e[0m\n", conn->name, get_cmd(ev->command));
+		printf("%s IAC %s" COLOR_NORMAL "\n", conn->name,
+				get_cmd(ev->command));
 
 		libtelnet_send_command(&conn->remote->telnet, ev->command,
 				conn->remote);
 		break;
 	/* negotiation */
 	case LIBTELNET_EV_NEGOTIATE:
-		printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(ev->command),
-				(int)ev->telopt, get_opt(ev->telopt));
+		printf("%s IAC %s %d (%s)" COLOR_NORMAL "\n", conn->name,
+				get_cmd(ev->command), (int)ev->telopt, get_opt(ev->telopt));
 
 		libtelnet_send_negotiate(&conn->remote->telnet, ev->command,
 				ev->telopt, conn->remote);
@@ -193,19 +209,20 @@ static void _event_handler(struct libtelnet_t *telnet,
 			printf(" [%u]: ", ev->size);
 			print_buffer(ev->buffer, ev->size);
 		}
-		printf("\e[0m\n");
+		printf(COLOR_NORMAL "\n");
 
 		libtelnet_send_subnegotiation(&conn->remote->telnet, ev->telopt,
 				ev->buffer, ev->size, conn->remote);
 		break;
 	/* compression notification */
 	case LIBTELNET_EV_COMPRESS:
-		printf("%s COMPRESSION %s\e[0m\n", conn->name,
+		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,
 				ev->command ? "ON" : "OFF");
 		break;
 	/* error */
 	case LIBTELNET_EV_ERROR:
-		printf("%s ERROR: %.*s\e[0m\n", conn->name, ev->size, ev->buffer);
+		printf("%s ERROR: %.*s" COLOR_NORMAL "\n", conn->name, ev->size,
+				ev->buffer);
 		exit(1);
 	}
 }
@@ -297,9 +314,9 @@ int main(int argc, char **argv) {
 	freeaddrinfo(ai);
 
 	/* initialize connection structs */
-	server.name = "\e[35mSERVER";
+	server.name = COLOR_SERVER "SERVER";
 	server.remote = &client;
-	client.name = "\e[34mCLIENT";
+	client.name = COLOR_CLIENT "CLIENT";
 	client.remote = &server;
 
 	/* initialize telnet boxes */
@@ -320,7 +337,7 @@ int main(int argc, char **argv) {
 			if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
 				libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
 			} else if (rs == 0) {
-				printf("%s DISCONNECTED\e[0m\n", server.name);
+				printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
 				break;
 			} else {
 				fprintf(stderr, "recv(server) failed: %s\n", strerror(errno));
@@ -333,7 +350,7 @@ int main(int argc, char **argv) {
 			if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
 				libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
 			} else if (rs == 0) {
-				printf("%s DISCONNECTED\e[0m\n", client.name);
+				printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
 				break;
 			} else {
 				fprintf(stderr, "recv(client) failed: %s\n", strerror(errno));
