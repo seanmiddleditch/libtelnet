@@ -208,11 +208,11 @@ static void _compress_cb(struct libtelnet_t *telnet, char enabled,
 	printf("%s COMPRESSION %s\e[0m\n", conn->name, enabled ? "ON" : "OFF");
 }
 
-static void _error_cb(struct libtelnet_t *telnet,
-		enum libtelnet_error_t error, void *user_data) {
+static void _error_cb(struct libtelnet_t *telnet, enum libtelnet_error_t error,
+		const char *msg, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s ERROR: %d\e[0m\n", conn->name, (int)error);
+	printf("%s ERROR: %s\e[0m\n", conn->name, msg);
 	exit(1);
 }
 

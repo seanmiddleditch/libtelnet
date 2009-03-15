@@ -115,24 +115,23 @@ enum libtelnet_error_t {
 /* libtelnet callback declarations */
 struct libtelnet_cb_t {
 	/* received (processed) data */
-	void (*data)(struct libtelnet_t *telnet,
-			unsigned char *buffer, unsigned int size, void *user_data);
+	void (*data)(struct libtelnet_t *telnet, unsigned char *buffer,
+			unsigned int size, void *user_data);
 	/* processed data to buffer for sending */
-	void (*send)(struct libtelnet_t *telnet,
-			unsigned char *buffer, unsigned int size, void *user_data);
+	void (*send)(struct libtelnet_t *telnet, unsigned char *buffer,
+			unsigned int size, void *user_data);
 	/* unknown command notification */
-	void (*command)(struct libtelnet_t *telnet,
-			unsigned char cmd, void *user_data);
-	/* negotiation notification */
-	void (*negotiate)(struct libtelnet_t *telnet,
-			unsigned char cmd, unsigned char opt, void *user_data);
-	/* unknown subnegotiation notification */
-	void (*subnegotiation)(struct libtelnet_t *telnet,
-			unsigned char opt, unsigned char *data, unsigned int size,
+	void (*command)(struct libtelnet_t *telnet, unsigned char cmd,
 			void *user_data);
+	/* negotiation notification */
+	void (*negotiate)(struct libtelnet_t *telnet, unsigned char cmd,
+			unsigned char opt, void *user_data);
+	/* unknown subnegotiation notification */
+	void (*subnegotiation)(struct libtelnet_t *telnet, unsigned char opt,
+			unsigned char *data, unsigned int size, void *user_data);
 	/* error handler */
-	void (*error)(struct libtelnet_t *telnet,
-			enum libtelnet_error_t error, void *user_data);
+	void (*error)(struct libtelnet_t *telnet, enum libtelnet_error_t error,
+			const char *msg, void *user_data);
 
 	#ifdef HAVE_ZLIB
 	void (*compress)(struct libtelnet_t *telnet,

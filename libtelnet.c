@@ -11,12 +11,29 @@
 
 #include <malloc.h>
 #include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdarg.h>
 
 #ifdef HAVE_ZLIB
 #include "zlib.h"
 #endif
 
 #include "libtelnet.h"
+
+#ifdef ERROR
+#  undef ERROR
+#endif
+
+#define ERROR(telnet, code, user_data, msg) \
+		_error(telnet, __FILE__, __LINE__, code, user_data, "%s", msg)
+#define ERROR_NOMEM(telnet, user_data, msg) \
+		_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_NOMEM, user_data, \
+		"%s: %s", msg, strerror(errno))
+#define ERROR_ZLIB(telnet, user_data, rs, msg) \
+		_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_UNKNOWN, \
+		user_data, "%s: %s", msg, zError(rs))
 
 /* buffer sizes */
 static const unsigned int _buffer_sizes[] = {
@@ -28,6 +45,30 @@ static const unsigned int _buffer_sizes[] = {
 };
 static const unsigned int _buffer_sizes_count =
 	sizeof(_buffer_sizes) / sizeof(_buffer_sizes[0]);
+
+/* error generation function */
+static void _error(struct libtelnet_t *telnet, const char *file, unsigned line,
+		enum libtelnet_error_t err, void *user_data, const char *fmt, ...) {
+	char buffer[512];
+	va_list va;
+
+	/* format error intro */
+	snprintf(buffer, sizeof(buffer), "%s:%u: ",
+			file, line);
+
+	va_start(va, fmt);
+	vsnprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer),
+			fmt, va);
+	va_end(va);
+
+	/* invoke user's custom error handler if possible; otherwise,
+	 * print to stderr
+	 */
+	if (telnet->cb->error)
+		telnet->cb->error(telnet, err, buffer, user_data);
+	else
+		fprintf(stderr, "**ERROR**: libtelnet: %s\n", buffer);
+}
 
 /* initialize a telnet state tracker */
 void libtelnet_init(struct libtelnet_t *telnet, struct libtelnet_cb_t *cb,
@@ -59,8 +100,8 @@ void libtelnet_free(struct libtelnet_t *telnet) {
 }
 
 /* push a byte into the telnet buffer */
-static enum libtelnet_error_t _buffer_byte(
-		struct libtelnet_t *telnet, unsigned char byte, void *user_data) {
+static enum libtelnet_error_t _buffer_byte(struct libtelnet_t *telnet,
+		unsigned char byte, void *user_data) {
 	unsigned char *new_buffer;
 	int i;
 
@@ -74,7 +115,8 @@ static enum libtelnet_error_t _buffer_byte(
 
 		/* overflow -- can't grow any more */
 		if (i >= _buffer_sizes_count - 1) {
-			telnet->cb->error(telnet, LIBTELNET_ERROR_OVERFLOW, user_data);
+			_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_OVERFLOW,
+					user_data, "subnegotiation buffer size limit reached");
 			libtelnet_free(telnet);
 			return LIBTELNET_ERROR_OVERFLOW;
 		}
@@ -83,8 +125,7 @@ static enum libtelnet_error_t _buffer_byte(
 		new_buffer = (unsigned char *)realloc(telnet->buffer,
 				_buffer_sizes[i + 1]);
 		if (new_buffer == 0) {
-			telnet->cb->error(telnet, LIBTELNET_ERROR_NOMEM,
-				user_data);
+			ERROR_NOMEM(telnet, user_data, "realloc() failed");
 			libtelnet_free(telnet);
 			return LIBTELNET_ERROR_NOMEM;
 		}
@@ -197,8 +238,8 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 
 				/* zero-size buffer is a protocol error */
 				if (telnet->length == 0) {
-					telnet->cb->error(telnet, LIBTELNET_ERROR_PROTOCOL,
-						user_data);
+					ERROR(telnet, LIBTELNET_ERROR_PROTOCOL, user_data,
+							"subnegotiation has zero data");
 					break;
 				}
 
@@ -214,20 +255,21 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				 */
 				if (telnet->mode == LIBTELNET_MODE_CLIENT &&
 						telnet->buffer[0] == LIBTELNET_TELOPT_COMPRESS2) {
+					int rs;
+
 					/* allocate zstream box */
 					if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
 							== 0) {
-						telnet->cb->error(telnet,
-							LIBTELNET_ERROR_NOMEM, user_data);
+						ERROR_NOMEM(telnet, user_data, "malloc() failed");
 					}
 
 					/* initialize */
 					memset(telnet->zlib, 0, sizeof(z_stream));
-					if (inflateInit(telnet->zlib) != Z_OK) {
+					if ((rs = inflateInit(telnet->zlib)) != Z_OK) {
 						free(telnet->zlib);
 						telnet->zlib = 0;
-						telnet->cb->error(telnet,
-							LIBTELNET_ERROR_UNKNOWN, user_data);
+						ERROR_ZLIB(telnet, user_data, rs,
+								"inflateInit() failed");
 						break;
 					}
 
@@ -260,8 +302,9 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				break;
 			/* something else -- protocol error */
 			default:
-				telnet->cb->error(telnet, LIBTELNET_ERROR_PROTOCOL,
-						user_data);
+				_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_PROTOCOL,
+						user_data, "unexpected byte after IAC inside SB: %d",
+						byte);
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_DATA;
 				break;
@@ -304,8 +347,7 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 				_process(telnet, inflate_buffer, sizeof(inflate_buffer) -
 						telnet->zlib->avail_out, user_data);
 			else
-				telnet->cb->error(telnet, LIBTELNET_ERROR_UNKNOWN,
-						user_data);
+				ERROR_ZLIB(telnet, user_data, rs, "inflate() failed");
 
 			/* prepare output buffer for next run */
 			telnet->zlib->next_out = inflate_buffer;
@@ -336,6 +378,7 @@ static void _send(struct libtelnet_t *telnet, unsigned char *buffer,
 	 */
 	if (telnet->mode == LIBTELNET_MODE_SERVER && telnet->zlib != 0) {
 		unsigned char deflate_buffer[1024];
+		int rs;
 
 		/* initialize zlib state */
 		telnet->zlib->next_in = buffer;
@@ -345,12 +388,9 @@ static void _send(struct libtelnet_t *telnet, unsigned char *buffer,
 
 		/* deflate until buffer exhausted and all output is produced */
 		while (telnet->zlib->avail_in > 0 || telnet->zlib->avail_out == 0) {
-			/* reset output buffer */
-
 			/* compress */
-			if (deflate(telnet->zlib, Z_SYNC_FLUSH) != Z_OK) {
-				telnet->cb->error(telnet, LIBTELNET_ERROR_UNKNOWN,
-						user_data);
+			if ((rs = deflate(telnet->zlib, Z_SYNC_FLUSH)) != Z_OK) {
+				ERROR_ZLIB(telnet, user_data, rs, "deflate() failed");
 				deflateEnd(telnet->zlib);
 				free(telnet->zlib);
 				telnet->zlib = 0;
@@ -422,20 +462,21 @@ void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 	 */
 	if (telnet->mode == LIBTELNET_MODE_SERVER && opt ==
 			LIBTELNET_TELOPT_COMPRESS2) {
+		int rs;
+
 		/* allocate zstream box */
-		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
-				== 0) {
-			telnet->cb->error(telnet,
-				LIBTELNET_ERROR_NOMEM, user_data);
+		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream))) == 0) {
+			ERROR_NOMEM(telnet, user_data, "malloc() failed");
+			return;
 		}
 
 		/* initialize */
 		memset(telnet->zlib, 0, sizeof(z_stream));
-		if (deflateInit(telnet->zlib, Z_DEFAULT_COMPRESSION) != Z_OK) {
+		if ((rs = deflateInit(telnet->zlib, Z_DEFAULT_COMPRESSION)) != Z_OK) {
 			free(telnet->zlib);
 			telnet->zlib = 0;
-			telnet->cb->error(telnet,
-				LIBTELNET_ERROR_UNKNOWN, user_data);
+			ERROR_ZLIB(telnet, user_data, rs, "delateInit() failed");
+			return;
 		}
 
 		/* notify app that compression was enabled */
