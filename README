@@ -377,7 +377,7 @@ You can then connect to the host telnet-proxy is running on (e.g.
 mud.example.com.
 
 telnet-proxy will display status information about the data
-passing through both ends of the tunnel.  Once either end
-disconnects, telnet-proxy will close.  telnet-proxy can only
-support a single tunnel at a time and must be restarted for each
-connection.
+passing through both ends of the tunnel.  telnet-proxy can only
+support a single tunnel at a time.  It will continue running until
+an error occurs or a terminating signal is sent to the proxy
+process.

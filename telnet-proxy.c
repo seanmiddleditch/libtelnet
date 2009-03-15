@@ -229,6 +229,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 
 int main(int argc, char **argv) {
 	unsigned char buffer[512];
+	short listen_port;
 	int listen_sock;
 	int rs;
 	struct sockaddr_in addr;
@@ -245,125 +246,144 @@ int main(int argc, char **argv) {
 				"<local port>\n");
 		return 1;
 	}
-	
-	/* create listening socket */
-	if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		fprintf(stderr, "socket() failed: %s\n", strerror(errno));
-		return 1;
-	}
 
-	/* reuse address option */
-	rs = 1;
-	setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &rs, sizeof(rs));
+	/* parse listening port */
+	listen_port = strtol(argv[3], 0, 10);
 
-	/* bind to listening addr/port */
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(strtol(argv[3], 0, 10));
-	if (bind(listen_sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
-		return 1;
-	}
+	/* loop forever, until user kills process */
+	for (;;) {
+		/* create listening socket */
+		if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+			fprintf(stderr, "socket() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* wait for client */
-	if (listen(listen_sock, 1) == -1) {
-		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
-		return 1;
-	}
-	addrlen = sizeof(addr);
-	if ((client.sock = accept(listen_sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
-		fprintf(stderr, "accept() failed: %s\n", strerror(errno));
-		return 1;
-	}
-	
-	/* stop listening now that we have a client */
-	close(listen_sock);
+		/* reuse address option */
+		rs = 1;
+		setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &rs, sizeof(rs));
 
-	/* look up server host */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	if ((rs = getaddrinfo(argv[1], argv[2], &hints, &ai)) != 0) {
-		fprintf(stderr, "getaddrinfo() failed for %s: %s\n", argv[1],
-				gai_strerror(rs));
-		return 1;
-	}
-	
-	/* create server socket */
-	if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		fprintf(stderr, "socket() failed: %s\n", strerror(errno));
-		return 1;
-	}
+		/* bind to listening addr/port */
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = INADDR_ANY;
+		addr.sin_port = htons(listen_port);
+		if (bind(listen_sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+			fprintf(stderr, "bind() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* bind server socket */
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	if (bind(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
-		return 1;
-	}
+		printf("LISTENING ON PORT %d\n", listen_port);
 
-	/* connect */
-	if (connect(server.sock, ai->ai_addr, ai->ai_addrlen) == -1) {
-		fprintf(stderr, "server() failed: %s\n", strerror(errno));
-		return 1;
-	}
+		/* wait for client */
+		if (listen(listen_sock, 1) == -1) {
+			fprintf(stderr, "listen() failed: %s\n", strerror(errno));
+			return 1;
+		}
+		addrlen = sizeof(addr);
+		if ((client.sock = accept(listen_sock, (struct sockaddr *)&addr,
+				&addrlen)) == -1) {
+			fprintf(stderr, "accept() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* free address lookup info */
-	freeaddrinfo(ai);
+		printf("CLIENT CONNECTION RECEIVED\n");
+		
+		/* stop listening now that we have a client */
+		close(listen_sock);
 
-	/* initialize connection structs */
-	server.name = COLOR_SERVER "SERVER";
-	server.remote = &client;
-	client.name = COLOR_CLIENT "CLIENT";
-	client.remote = &server;
+		/* look up server host */
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		if ((rs = getaddrinfo(argv[1], argv[2], &hints, &ai)) != 0) {
+			fprintf(stderr, "getaddrinfo() failed for %s: %s\n", argv[1],
+					gai_strerror(rs));
+			return 1;
+		}
+		
+		/* create server socket */
+		if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+			fprintf(stderr, "socket() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* initialize telnet boxes */
-	libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY);
-	libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY);
+		/* bind server socket */
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		if (bind(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+			fprintf(stderr, "bind() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* initialize poll descriptors */
-	memset(pfd, 0, sizeof(pfd));
-	pfd[0].fd = server.sock;
-	pfd[0].events = POLLIN;
-	pfd[1].fd = client.sock;
-	pfd[1].events = POLLIN;
+		/* connect */
+		if (connect(server.sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+			fprintf(stderr, "server() failed: %s\n", strerror(errno));
+			return 1;
+		}
 
-	/* loop while both connections are open */
-	while (poll(pfd, 2, -1) != -1) {
-		/* read from server */
-		if (pfd[0].revents & POLLIN) {
-			if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
-				libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
-			} else if (rs == 0) {
-				printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
-				break;
-			} else {
-				fprintf(stderr, "recv(server) failed: %s\n", strerror(errno));
-				exit(1);
+		/* free address lookup info */
+		freeaddrinfo(ai);
+
+		printf("SERVER CONNECTION ESTABLISHED\n");
+
+		/* initialize connection structs */
+		server.name = COLOR_SERVER "SERVER";
+		server.remote = &client;
+		client.name = COLOR_CLIENT "CLIENT";
+		client.remote = &server;
+
+		/* initialize telnet boxes */
+		libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY);
+		libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY);
+
+		/* initialize poll descriptors */
+		memset(pfd, 0, sizeof(pfd));
+		pfd[0].fd = server.sock;
+		pfd[0].events = POLLIN;
+		pfd[1].fd = client.sock;
+		pfd[1].events = POLLIN;
+
+		/* loop while both connections are open */
+		while (poll(pfd, 2, -1) != -1) {
+			/* read from server */
+			if (pfd[0].revents & POLLIN) {
+				if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
+					libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
+				} else if (rs == 0) {
+					printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
+					break;
+				} else {
+					fprintf(stderr, "recv(server) failed: %s\n",
+							strerror(errno));
+					exit(1);
+				}
+			}
+
+			/* read from client */
+			if (pfd[1].revents & POLLIN) {
+				if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
+					libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
+				} else if (rs == 0) {
+					printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
+					break;
+				} else {
+					fprintf(stderr, "recv(client) failed: %s\n",
+							strerror(errno));
+					exit(1);
+				}
 			}
 		}
 
-		/* read from client */
-		if (pfd[1].revents & POLLIN) {
-			if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
-				libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
-			} else if (rs == 0) {
-				printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
-				break;
-			} else {
-				fprintf(stderr, "recv(client) failed: %s\n", strerror(errno));
-				exit(1);
-			}
-		}
+		/* clean up */
+		libtelnet_free(&server.telnet);
+		libtelnet_free(&client.telnet);
+		close(server.sock);
+		close(client.sock);
+
+		/* all done */
+		printf("BOTH CONNECTIONS CLOSED\n");
 	}
 
-	/* clean up */
-	libtelnet_free(&server.telnet);
-	libtelnet_free(&client.telnet);
-	close(server.sock);
-	close(client.sock);
-
+	/* not that we can reach this, but GCC will cry if it's not here */
 	return 0;
 }
