@@ -287,17 +287,16 @@ If you do not have zlib installed and wish to disable MCCP2 support
 then you must first edit the Makefile and remove the -DHAVE_ZLIB and
 the -lz from the compile flags.
 
-To run telnet-proxy, you simply give it the server's IP address
-(telnet-proxy does not support hostname resolution, nor IPv6), the
-server's port number, and the port number that telnet-proxy should
-listen on.  For example, to connect to the server on 209.85.171.100
-port 7800 and to listen on port 5000, run:
+To run telnet-proxy, you simply give it the server's host name or
+IP address, the server's port number, and the port number that
+telnet-proxy should listen on.  For example, to connect to the server
+on mud.example.com port 7800 and to listen on port 5000, run:
 
- $ ./telnet-proxy 209.85.171.100 7800 5000
+ $ ./telnet-proxy mud.example.com 7800 5000
 
 You can then connect to the host telnet-proxy is running on (e.g.
-127.0.0.1, or the machine's public IP) on port 500 and you will
-automatically be proxied into 209.85.171.100.
+127.0.0.1) on port 500 and you will automatically be proxied into
+mud.example.com.
 
 telnet-proxy will display status information about the data
 passing through both ends of the tunnel.  Once either end

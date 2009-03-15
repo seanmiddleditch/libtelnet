@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <poll.h>
 #include <errno.h>
 #include <stdio.h>
@@ -226,6 +227,8 @@ int main(int argc, char **argv) {
 	struct conn_t server;
 	struct conn_t client;
 	struct libtelnet_cb_t cb_table;
+	struct addrinfo *ai;
+	struct addrinfo hints;
 
 	/* check usage */
 	if (argc != 4) {
@@ -255,7 +258,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* wait for client */
-	if (listen(listen_sock, 5) == -1) {
+	if (listen(listen_sock, 1) == -1) {
 		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
 		return 1;
 	}
@@ -267,6 +270,16 @@ int main(int argc, char **argv) {
 	
 	/* stop listening now that we have a client */
 	close(listen_sock);
+
+	/* look up server host */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	if ((rs = getaddrinfo(argv[1], argv[2], &hints, &ai)) != 0) {
+		fprintf(stderr, "getaddrinfo() failed for %s: %s\n", argv[1],
+				gai_strerror(rs));
+		return 1;
+	}
 	
 	/* create server socket */
 	if ((server.sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -274,24 +287,22 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	/* connect to server */
+	/* bind server socket */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	if (bind(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
 		return 1;
 	}
-	memset(&addr, 0, sizeof(addr));
-	if (inet_pton(AF_INET, argv[1], &addr.sin_addr) != 1) {
-		fprintf(stderr, "inet_pton() failed: %s\n", strerror(errno));
-		return 1;
-	}
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(strtol(argv[2], 0, 10));
-	if (connect(server.sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+
+	/* connect */
+	if (connect(server.sock, ai->ai_addr, ai->ai_addrlen) == -1) {
 		fprintf(stderr, "server() failed: %s\n", strerror(errno));
 		return 1;
 	}
+
+	/* free address lookup info */
+	freeaddrinfo(ai);
 
 	/* initialize connection structs */
 	server.name = "\e[35mSERVER";
