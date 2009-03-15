@@ -126,7 +126,7 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 	}
 }
 
-void libtelnet_data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
+static void _data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
@@ -138,7 +138,7 @@ void libtelnet_data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 			conn->remote);
 }
 
-void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
+static void _send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 	int rs;
@@ -165,7 +165,7 @@ void libtelnet_send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 	}
 }
 
-void libtelnet_command_cb(struct libtelnet_t *telnet, unsigned char cmd,
+static void _command_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
@@ -174,7 +174,7 @@ void libtelnet_command_cb(struct libtelnet_t *telnet, unsigned char cmd,
 	libtelnet_send_command(&conn->remote->telnet, cmd, conn->remote);
 }
 
-void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
+static void _negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
@@ -185,7 +185,7 @@ void libtelnet_negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
 			conn->remote);
 }
 
-void libtelnet_subnegotiation_cb(struct libtelnet_t *telnet,
+static void _subnegotiation_cb(struct libtelnet_t *telnet,
 		unsigned char type, unsigned char *buffer, unsigned int size,
 		void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
@@ -201,14 +201,14 @@ void libtelnet_subnegotiation_cb(struct libtelnet_t *telnet,
 			conn->remote);
 }
 
-void libtelnet_compress_cb(struct libtelnet_t *telnet, char enabled,
+static void _compress_cb(struct libtelnet_t *telnet, char enabled,
 		void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
 	printf("%s COMPRESSION %s\e[0m\n", conn->name, enabled ? "ON" : "OFF");
 }
 
-void libtelnet_error_cb(struct libtelnet_t *telnet,
+static void _error_cb(struct libtelnet_t *telnet,
 		enum libtelnet_error_t error, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
@@ -225,6 +225,7 @@ int main(int argc, char **argv) {
 	struct pollfd pfd[2];
 	struct conn_t server;
 	struct conn_t client;
+	struct libtelnet_cb_t cb_table;
 
 	/* check usage */
 	if (argc != 4) {
@@ -298,13 +299,23 @@ int main(int argc, char **argv) {
 	client.name = "\e[34mCLIENT";
 	client.remote = &server;
 
+	/* initialize libtelnet callback table */
+	memset(&cb_table, 0, sizeof(cb_table));
+	cb_table.data = _data_cb;
+	cb_table.send = _send_cb;
+	cb_table.command = _command_cb;
+	cb_table.negotiate = _negotiate_cb;
+	cb_table.subnegotiation = _subnegotiation_cb;
+	cb_table.compress = _compress_cb;
+	cb_table.error = _error_cb;
+
 	/* initialize telnet boxes
 	 * NOTE: we set the server connect to the CLIENT mode because we
 	 * are acting as a client of the server; likewise, we set the
 	 * client connection to SERVER mode becauser we are acting as a
 	 * server to the client. */
-	libtelnet_init(&server.telnet, LIBTELNET_MODE_CLIENT);
-	libtelnet_init(&client.telnet, LIBTELNET_MODE_SERVER);
+	libtelnet_init(&server.telnet, &cb_table, LIBTELNET_MODE_CLIENT);
+	libtelnet_init(&client.telnet, &cb_table, LIBTELNET_MODE_SERVER);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));

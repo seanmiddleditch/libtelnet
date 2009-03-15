@@ -50,13 +50,7 @@ part is a single function for pushing received data into the
 libtelnet processor.  The third part is the libtelnet_send_*()
 functions, which generate TELNET commands and ensure data is properly
 formatted before sending over the wire.  The final part is the
-libtelnet_*_cb() functions.
-
-The libtelnet_*_cb() functions (callback fuctions from here out) are
-not actually implemented by libtelnet, but are used by it.  The
-libtelnet.h header includes declarations for the functions but it is
-the application's responsibility to provide implementations of these
-functions.
+callback structure libtelnet_cb_t.
 
 IIa. Initialization
 
@@ -66,12 +60,21 @@ IIa. Initialization
    its own libtelnet_t structure, which is passed to all libtelnet
    API calls.
 
+ struct libtelnet_cb_t;
+   An instance of this structure must be initialized and have all
+   mandatory and desired optional callbacks set.  See section IId
+   for more information.
+
  void libtelnet_init(struct libtelnet_t *telnet,
-     enum libtelnet_mode_t mode);
+     struct libtelnet_cb_t *cb, enum libtelnet_mode_t mode);
    The libtelnet_init() function is responsible for initializing
    the data in a libtelnet_t structure.  It must be called
    immediately after establishing a connection and before any other
    libtelnet API calls are made.
+
+   The cb parameter must be a pointer to a fully initialized
+   instance of libtelnet_cb_t.  A single instance of the structure
+   can be shared between any number of libtelnet_t instances.
 
    The mode parameter must be one of LIBTELNET_MODE_SERVER or
    LIBTELNET_MODE_CLIENT.  These slightly alter the behavior of
@@ -96,8 +99,9 @@ IIb. Receiving Data
 IIc. Sending Data
 
  Note that all of the libtelnet_send_*() functions will invoke
- the libtelnet_send_cb() callback function.  The user_data parameter
- to each of these functions is passed through to the callback.
+ the send callback function attached to the libtelnet_t instance.
+ The user_data parameter to each of these functions is passed
+ through to the callback.
 
  void libtelnet_send_command(struct libtelnet_t *telnet,
      unsigned char cmd, void *user_data);
@@ -124,12 +128,39 @@ IIc. Sending Data
 
 IId. Callbacks
 
- The application is responsible for implementing these functions.
- The function definitions are included in libtelnet.h.  If any of
- these functions are not implemented and linked into the application
- then libtelnet.o will generate linker errors for undefined symbols.
+ The libtelnet_cb_t structure containers a number of callback
+ entry points.  Of these, only the send and data callbacks are
+ absolutely required.  All others are optional.  The declarations
+ below show the signature of the callback functions.
 
- void libtelnet_data_cb(struct libtelnet_t *telnet,
+ An example of initializing a libtelnet_cb_t structure:
+
+  /* illustrative data callback */
+  void my_data_cb(libtelnet_t *telnet, unsigned char *buffer,
+      unsigned int size, void *user_data) {
+    /* print number of bytes received and then show the
+     * whole buffer */
+    printf("RECV(%d): %.*s\n", size, size, buffer);
+  }
+
+  /* illustrative variable definitions */
+  libtelnet_t conn;
+  libtelnet_cb_t callbacks;
+
+  /* clear all callbacks and set just the ones we want */
+  memset(&callbacks, 0, sizeof(callbacks));
+  callbacks->send = my_send_cb;
+  callbacks->data = my_data_cb;
+
+  /* initialize the connection with our callbacks */
+  libtelnet_init(&conn, &callbacks, LIBTELNET_MODE_SERVER);
+
+ Remember that a single libtelnet_cb_t structure can be shared
+ between any number of libtelnet_t instances.  There is no reason
+ to make multiple copies of the data if all of your connections
+ use the same callback functions.
+
+ void libtelnet_cb_t->data(struct libtelnet_t *telnet,
      unsigned char *buffer, unsigned int size, void *user_data);
    Regular data has been received by the remote end.  For a server,
    this would be input typed by the client; for a client, this is
@@ -141,7 +172,7 @@ IId. Callbacks
    line-based processing of data, it is your responsibility to
    buffer data and find the line breaks.
 
- void libtelnet_send_cb(struct libtelnet_t *telnet,
+ void libtelnet_cb_t->send(struct libtelnet_t *telnet,
      unsigned char *buffer, unsigned int size, void *user_data);
    This is called whenever libtelnet has generated output to be
    send to the remote end of the connection.  In most cases this
@@ -152,14 +183,14 @@ IId. Callbacks
    parameter to libtelnet calls so that it is available in this
    callback.
 
- void libtelnet_command_cb(struct libtelnet_t *telnet,
+ void libtelnet_cb_t->command(struct libtelnet_t *telnet,
      unsigned char cmd, void *user_data);
    Called whenever a "simpler" TELNET command has arrived, such
    as GO-AHEAD commands (255 249).  The necessary processing
    depends on the specific commands; see the TELNET RFC for
    more information.
 
- void libtelnet_negotiate_cb(struct libtelnet_t *telnet,
+ void libtelnet_cb_t->negotiate(struct libtelnet_t *telnet,
      unsigned char cmd, unsigned char opt, void *user_data);
    This function is called whenever a TELNET negotiation command
    has been received.  The cmd parameter will be one of
@@ -171,7 +202,7 @@ IId. Callbacks
 
     http://www.faqs.org/rfcs/rfc1143.html
 
- void libtelnet_subnegotiation_cb(struct libtelnet_t *telnet,
+ void libtelnet_cb_t->subnegotiation(struct libtelnet_t *telnet,
      unsigned char opt, unsigned char *data, unsigned int size,
      void *user_data);
    Called whenever a TELNET sub-negotiation has been received.
@@ -183,7 +214,7 @@ IId. Callbacks
    The opt parameter is the option under sub-negotiation.  The
    remaining data (if any) is passed in the buffer.
 
- void libtelnet_compress_cb(struct libtelnet_t *telnet,
+ void libtelnet_cb_t->compress(struct libtelnet_t *telnet,
      char enabled, void *user_data);
    The callback is invoked whenever the COMPRESS2 (MCCP2)
    feature is enabled or disabled.  For servers, this is called
