@@ -190,4 +190,8 @@ extern void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 		unsigned char opt, unsigned char *buffer, unsigned int size,
 		void *user_data);
 
+/* begin sending compressed data (server only) */
+extern void libtelnet_begin_compress2(struct libtelnet_t *telnet,
+		void *user_data);
+
 #endif /* !defined(LIBTELNET_INCLUDE) */

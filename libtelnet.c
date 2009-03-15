@@ -510,3 +510,28 @@ void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 	}
 #endif /* HAVE_ZLIB */
 }
+
+void libtelnet_begin_compress2(struct libtelnet_t *telnet, void *user_data) {
+#ifdef HAVE_ZLIB
+	z_stream *zlib;
+
+	/* don't do this if we've already got a compression stream */
+	if (telnet->z_deflate != 0)
+		return;
+	
+	/* only supported by servers */
+	if (telnet->mode != LIBTELNET_MODE_SERVER)
+		return;
+
+	/* attempt to create output stream first, bail if we can't */
+	if ((zlib = _init_zlib(telnet, 1, user_data)) == 0)
+		return;
+
+	/* send compression marker */
+	libtelnet_send_subnegotiation(telnet, LIBTELNET_TELOPT_COMPRESS2, 0, 0,
+			user_data);
+
+	/* set our deflate stream */
+	telnet->z_deflate = zlib;
+#endif /* HAVE_ZLIB */
+}
