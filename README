@@ -76,11 +76,13 @@ IIa. Initialization
    instance of libtelnet_cb_t.  A single instance of the structure
    can be shared between any number of libtelnet_t instances.
 
-   The mode parameter must be one of LIBTELNET_MODE_SERVER or
-   LIBTELNET_MODE_CLIENT.  These slightly alter the behavior of
-   libtelnet in certain instances.  If you are implementing a
-   TELNET server, use the SERVER mode.  If you are implementing a
-   client, use the CLIENT mode.
+   The mode parameter must be one of LIBTELNET_MODE_SERVER,
+   LIBTELNET_MODE_CLIENT, or LIBTELNET_MODE_PROXY.  These slightly
+   alter the behavior of libtelnet in certain instances.  If you are
+   implementing a TELNET server, use the SERVER mode.  If you are
+   implementing a client, use the CLIENT mode.  The PROXY mode
+   enables special behavior for telnet-proxy (or similar
+   applications).
  
  boid libtelnet_free(struct libtelnet_t *telnet);
    Releases any internal memory allocated by libtelnet.  This must

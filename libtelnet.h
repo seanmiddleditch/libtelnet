@@ -106,11 +106,11 @@ enum libtelnet_state_t {
 
 /* error codes */
 enum libtelnet_error_t {
-	LIBTELNET_ERROR_OK = 0,
-	LIBTELNET_ERROR_NOMEM, /* memory allocation failure */
-	LIBTELNET_ERROR_OVERFLOW, /* data exceeds buffer size */
-	LIBTELNET_ERROR_PROTOCOL, /* invalid sequence of special bytes */
-	LIBTELNET_ERROR_UNKNOWN /* some crazy unexplainable unknown error */
+	LIBTELNET_EOK = 0,
+	LIBTELNET_ENOMEM, /* memory allocation failure */
+	LIBTELNET_EOVERFLOW, /* data exceeds buffer size */
+	LIBTELNET_EPROTOCOL, /* invalid sequence of special bytes */
+	LIBTELNET_EUNKNOWN /* some crazy unexplainable unknown error */
 };
 
 /* libtelnet callback declarations */

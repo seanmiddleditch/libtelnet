@@ -29,10 +29,10 @@
 #define ERROR(telnet, code, user_data, msg) \
 		_error(telnet, __FILE__, __LINE__, code, user_data, "%s", msg)
 #define ERROR_NOMEM(telnet, user_data, msg) \
-		_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_NOMEM, user_data, \
+		_error(telnet, __FILE__, __LINE__, LIBTELNET_ENOMEM, user_data, \
 		"%s: %s", msg, strerror(errno))
 #define ERROR_ZLIB(telnet, user_data, rs, msg) \
-		_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_UNKNOWN, \
+		_error(telnet, __FILE__, __LINE__, LIBTELNET_EUNKNOWN, \
 		user_data, "%s: %s", msg, zError(rs))
 
 /* buffer sizes */
@@ -151,10 +151,10 @@ static enum libtelnet_error_t _buffer_byte(struct libtelnet_t *telnet,
 
 		/* overflow -- can't grow any more */
 		if (i >= _buffer_sizes_count - 1) {
-			_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_OVERFLOW,
+			_error(telnet, __FILE__, __LINE__, LIBTELNET_EOVERFLOW,
 					user_data, "subnegotiation buffer size limit reached");
 			libtelnet_free(telnet);
-			return LIBTELNET_ERROR_OVERFLOW;
+			return LIBTELNET_EOVERFLOW;
 		}
 
 		/* (re)allocate buffer */
@@ -163,7 +163,7 @@ static enum libtelnet_error_t _buffer_byte(struct libtelnet_t *telnet,
 		if (new_buffer == 0) {
 			ERROR_NOMEM(telnet, user_data, "realloc() failed");
 			libtelnet_free(telnet);
-			return LIBTELNET_ERROR_NOMEM;
+			return LIBTELNET_ENOMEM;
 		}
 
 		telnet->buffer = new_buffer;
@@ -172,7 +172,7 @@ static enum libtelnet_error_t _buffer_byte(struct libtelnet_t *telnet,
 
 	/* push the byte, all set */
 	telnet->buffer[telnet->length++] = byte;
-	return LIBTELNET_ERROR_OK;
+	return LIBTELNET_EOK;
 }
 
 static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
@@ -257,7 +257,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				telnet->state = LIBTELNET_STATE_SB_IAC;
 			/* buffer the byte, or bail if we can't */
 			} else if (_buffer_byte(telnet, byte, user_data) !=
-					LIBTELNET_ERROR_OK) {
+					LIBTELNET_EOK) {
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_DATA;
 			}
@@ -274,7 +274,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 
 				/* zero-size buffer is a protocol error */
 				if (telnet->length == 0) {
-					ERROR(telnet, LIBTELNET_ERROR_PROTOCOL, user_data,
+					ERROR(telnet, LIBTELNET_EPROTOCOL, user_data,
 							"subnegotiation has zero data");
 					break;
 				}
@@ -318,7 +318,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 			case LIBTELNET_IAC:
 				/* push IAC into buffer */
 				if (_buffer_byte(telnet, LIBTELNET_IAC, user_data) !=
-						LIBTELNET_ERROR_OK) {
+						LIBTELNET_EOK) {
 					start = i + 1;
 					telnet->state = LIBTELNET_STATE_DATA;
 				} else {
@@ -327,7 +327,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				break;
 			/* something else -- protocol error */
 			default:
-				_error(telnet, __FILE__, __LINE__, LIBTELNET_ERROR_PROTOCOL,
+				_error(telnet, __FILE__, __LINE__, LIBTELNET_EPROTOCOL,
 						user_data, "unexpected byte after IAC inside SB: %d",
 						byte);
 				start = i + 1;
