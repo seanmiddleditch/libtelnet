@@ -217,6 +217,11 @@ static void _event_handler(struct libtelnet_t *telnet,
 		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,
 				ev->command ? "ON" : "OFF");
 		break;
+	/* warning */
+	case LIBTELNET_EV_WARNING:
+		printf("%s WARNING: %.*s" COLOR_NORMAL "\n", conn->name, ev->size,
+				ev->buffer);
+		break;
 	/* error */
 	case LIBTELNET_EV_ERROR:
 		printf("%s ERROR: %.*s" COLOR_NORMAL "\n", conn->name, ev->size,

@@ -108,10 +108,11 @@ enum libtelnet_state_t {
 /* error codes */
 enum libtelnet_error_t {
 	LIBTELNET_EOK = 0,
+	LIBTELNET_EBADVAL, /* invalid parameter, or API misuse */
 	LIBTELNET_ENOMEM, /* memory allocation failure */
 	LIBTELNET_EOVERFLOW, /* data exceeds buffer size */
 	LIBTELNET_EPROTOCOL, /* invalid sequence of special bytes */
-	LIBTELNET_EUNKNOWN /* some crazy unexplainable unknown error */
+	LIBTELNET_ECOMPRESS /* error handling compressed streams */
 };
 
 /* event codes */
@@ -122,6 +123,7 @@ enum libtelnet_event_type_t {
 	LIBTELNET_EV_NEGOTIATE,
 	LIBTELNET_EV_SUBNEGOTIATION,
 	LIBTELNET_EV_COMPRESS,
+	LIBTELNET_EV_WARNING,
 	LIBTELNET_EV_ERROR
 };
 

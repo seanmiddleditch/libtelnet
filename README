@@ -267,25 +267,30 @@ IId. Event Handling
 
    The event->command value will be 1 if compression has started and
    will be 0 if compression has ended.
-
- LIBTELNET_EV_ERROR
-   This event is called whenever an error occurs while trying to
-   process the TELNET protocol.  This includes both invalid protocol
-   sequences (which are rare) and out of memory conditions.
-
-   With few exceptions, an error is non-recoverable, and the only
-   solid course of action is to close the connection.  This is
-   especially true for any errors involving the COMPRESS2 option.
+ 
+ LIBTELNET_EV_WARNING
+   The WARNING event is sent whenever something has gone wrong
+   inside of libtelnet (possibly due to malformed data sent by the
+   other end) but which recovery is (likely) possible.  It may be
+   safe to continue using the connection, but some data may have
+   been lost or incorrectly interpreted.
 
    The event->buffer value will contain a NUL terminated string
    explaining the error, and the event->size value containers the
    length of the string.
 
-   FIXME: we should pass the error code in one of the fields, and
-   better document which errors are definitely non-recoverable and
-   which are maybe-recoverable (mostly those are just IAC-in-SB
-   errors... every other error is related to MCCP2 and usually
-   results in being unable to further read the stream).
+ LIBTELNET_EV_ERROR
+   Similar to the WARNING event, the ERROR event is sent whenever
+   something has gone wrong.  ERROR events are non-recoverable,
+   however, and the application should immediately close the
+   connection.  Whatever has happened is likely going only to
+   result in garbage from libtelnet.  This is most likely to
+   happen when a COMPRESS2 stream fails, but other problems can
+   occur.
+
+   The event->buffer value will contain a NUL terminated string
+   explaining the error, and the event->size value containers the
+   length of the string.
 
 III. INTEGRATING LIBTELNET WITH COMMON MUDS
 =====================================================================
