@@ -101,7 +101,8 @@ enum libtelnet_state_t {
 	LIBTELNET_STATE_WILL,
 	LIBTELNET_STATE_WONT,
 	LIBTELNET_STATE_SB,
-	LIBTELNET_STATE_SB_IAC
+	LIBTELNET_STATE_SB_DATA,
+	LIBTELNET_STATE_SB_DATA_IAC
 };
 
 /* error codes */
@@ -160,6 +161,8 @@ struct libtelnet_t {
 	enum libtelnet_state_t state;
 	/* processing mode */
 	enum libtelnet_mode_t mode;
+	/* current subnegotiation telopt */
+	unsigned char sb_telopt;
 };
 
 /* initialize a telnet state tracker */

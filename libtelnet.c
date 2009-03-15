@@ -263,11 +263,18 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 			telnet->state = LIBTELNET_STATE_DATA;
 			break;
 
-		/* subnegotiation -- buffer bytes until end request */
+		/* subnegotiation -- determine subnegotiation telopt */
 		case LIBTELNET_STATE_SB:
+			telnet->sb_telopt = byte;
+			telnet->length = 0;
+			telnet->state = LIBTELNET_STATE_SB_DATA;
+			break;
+
+		/* subnegotiation -- buffer bytes until end request */
+		case LIBTELNET_STATE_SB_DATA:
 			/* IAC command in subnegotiation -- either IAC SE or IAC IAC */
 			if (byte == LIBTELNET_IAC) {
-				telnet->state = LIBTELNET_STATE_SB_IAC;
+				telnet->state = LIBTELNET_STATE_SB_DATA_IAC;
 			/* buffer the byte, or bail if we can't */
 			} else if (_buffer_byte(telnet, byte, user_data) !=
 					LIBTELNET_EOK) {
@@ -277,7 +284,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 			break;
 
 		/* IAC escaping inside a subnegotiation */
-		case LIBTELNET_STATE_SB_IAC:
+		case LIBTELNET_STATE_SB_DATA_IAC:
 			switch (byte) {
 			/* end subnegotiation */
 			case LIBTELNET_SE:
@@ -285,25 +292,17 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				start = i + 1;
 				telnet->state = LIBTELNET_STATE_DATA;
 
-				/* zero-size buffer is a protocol error */
-				if (telnet->length == 0) {
-					ERROR(telnet, LIBTELNET_EPROTOCOL, user_data,
-							"subnegotiation has zero data");
-					break;
-				}
-
 				/* invoke callback */
 				_event(telnet, LIBTELNET_EV_SUBNEGOTIATION, 0,
-						telnet->buffer[0], telnet->buffer + 1,
-						telnet->length - 1, user_data);
-				telnet->length = 0;
+						telnet->sb_telopt, telnet->buffer, telnet->length,
+						user_data);
 
 #ifdef HAVE_ZLIB
 				/* if we are a client or a proxy and just received the
 				 * COMPRESS2 begin marker, setup our zlib box and start
 				 * handling the compressed stream if it's not already.
 				 */
-				if (telnet->buffer[0] == LIBTELNET_TELOPT_COMPRESS2 &&
+				if (telnet->sb_telopt == LIBTELNET_TELOPT_COMPRESS2 &&
 						telnet->z_inflate == 0 &&
 						(telnet->mode == LIBTELNET_MODE_CLIENT ||
 						 telnet->mode == LIBTELNET_MODE_PROXY)) {
@@ -337,7 +336,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 					start = i + 1;
 					telnet->state = LIBTELNET_STATE_DATA;
 				} else {
-					telnet->state = LIBTELNET_STATE_SB;
+					telnet->state = LIBTELNET_STATE_SB_DATA;
 				}
 				break;
 			/* something else -- protocol error */
