@@ -172,8 +172,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 		print_buffer(ev->buffer, ev->size);
 		printf(COLOR_NORMAL "\n");
 
-		libtelnet_send_data(&conn->remote->telnet, ev->buffer, ev->size,
-				conn->remote);
+		libtelnet_send_data(&conn->remote->telnet, ev->buffer, ev->size);
 		break;
 	/* data must be sent */
 	case LIBTELNET_EV_SEND:
@@ -190,8 +189,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 		printf("%s IAC %s" COLOR_NORMAL "\n", conn->name,
 				get_cmd(ev->command));
 
-		libtelnet_send_command(&conn->remote->telnet, ev->command,
-				conn->remote);
+		libtelnet_send_command(&conn->remote->telnet, ev->command);
 		break;
 	/* negotiation */
 	case LIBTELNET_EV_NEGOTIATE:
@@ -199,7 +197,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 				get_cmd(ev->command), (int)ev->telopt, get_opt(ev->telopt));
 
 		libtelnet_send_negotiate(&conn->remote->telnet, ev->command,
-				ev->telopt, conn->remote);
+				ev->telopt);
 		break;
 	/* subnegotiation */
 	case LIBTELNET_EV_SUBNEGOTIATION:
@@ -212,7 +210,7 @@ static void _event_handler(struct libtelnet_t *telnet,
 		printf(COLOR_NORMAL "\n");
 
 		libtelnet_send_subnegotiation(&conn->remote->telnet, ev->telopt,
-				ev->buffer, ev->size, conn->remote);
+				ev->buffer, ev->size);
 		break;
 	/* compression notification */
 	case LIBTELNET_EV_COMPRESS:
@@ -333,8 +331,10 @@ int main(int argc, char **argv) {
 		client.remote = &server;
 
 		/* initialize telnet boxes */
-		libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY);
-		libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY);
+		libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY,
+				&server);
+		libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY,
+				&client);
 
 		/* initialize poll descriptors */
 		memset(pfd, 0, sizeof(pfd));
@@ -348,7 +348,7 @@ int main(int argc, char **argv) {
 			/* read from server */
 			if (pfd[0].revents & POLLIN) {
 				if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
-					libtelnet_push(&server.telnet, buffer, rs, (void*)&server);
+					libtelnet_push(&server.telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
 					break;
@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
 			/* read from client */
 			if (pfd[1].revents & POLLIN) {
 				if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
-					libtelnet_push(&client.telnet, buffer, rs, (void*)&client);
+					libtelnet_push(&client.telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
 					break;

@@ -20,7 +20,6 @@ code under copyright law.
 
  - RFC 1143 option negotiation algorithm
  - automatic MCCP2 handling (controllable by host app)
- ? MCCP1
  ? ZMP parsing
  ? MSSP parsing
  ? ENVIRON/NEW-ENVIRON parsing
@@ -59,7 +58,8 @@ IIa. Initialization
    API calls.
 
  void libtelnet_init(struct libtelnet_t *telnet,
-     libtelnet_event_handler_t handler, enum libtelnet_mode_t mode);
+     libtelnet_event_handler_t handler, enum libtelnet_mode_t mode,
+     void *user_data);
    The libtelnet_init() function is responsible for initializing
    the data in a libtelnet_t structure.  It must be called
    immediately after establishing a connection and before any other
@@ -68,6 +68,11 @@ IIa. Initialization
    The handler parameter must be a function matching the
    libtelnet_event_handler_t definition.  More information about
    events can be found in section IId.
+
+   The user_data parameter is passed to the event handler whenver it
+   is invoked.  This will usually be a structure container
+   information about the connection, including a socket descriptor
+   for implementing LIBTELNET_EV_SEND event handling.
 
    The mode parameter must be one of LIBTELNET_MODE_SERVER,
    LIBTELNET_MODE_CLIENT, or LIBTELNET_MODE_PROXY.  These slightly
@@ -98,8 +103,7 @@ IIb. Receiving Data
 IIc. Sending Data
 
  All of the libtelnet_send_*() functions will invoke the
- LIBTELNET_EV_SEND event.  The user_data parameter to each of these
- functions is passed through to the callback.
+ LIBTELNET_EV_SEND event.
 
  Note: it is very important that ALL data sent to the remote end of
  the connection be passed through libtelnet.  All user input or
@@ -108,25 +112,24 @@ IIc. Sending Data
  data directly!
 
  void libtelnet_send_command(struct libtelnet_t *telnet,
-     unsigned char cmd, void *user_data);
+     unsigned char cmd);
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
  void libtelnet_send_negotiate(struct libtelnet_t *telnet,
-     unsigned char cmd, unsigned char opt, void *user_data);
+     unsigned char cmd, unsigned char opt);
    Sends a TELNET negotiation command.  The cmd parameter must be
    one of LIBTELNET_WILL, LIBTELNET_DONT, LIBTELNET_DO, or
    LIBTELNET_DONT.  The opt parameter is the option to
    negotiate.
 
  void libtelnet_send_data(struct libtelnet_t *telnet,
-     unsigned char *buffer, unsigned int size, void *user_data);
+     unsigned char *buffer, unsigned int size);
    Sends raw data, which would be either the process output from
    a server or the user input from a client.
 
  void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
-     unsigned char opt, unsigned char *buffer, unsigned int size,
-     void *user_data);
+     unsigned char opt, unsigned char *buffer, unsigned int size);
    Sends a TELNET sub-negotiation command.  The opt parameter
    is the sub-negotiation option.
 
@@ -141,9 +144,10 @@ IId. Event Handling
  meet the following prototype:
 
   void (libtelnet_t *telnet, libtelnet_event_t *event,
-      void *user_data); 
-
- The libtelnet_event_t structure has the following definition:
+      void *user_data);
+ 
+ The event structure is detailed below.  The user_data value is the
+ pointer passed to libtelnet_init().
 
   struct libtelnet_event_t {
     enum libtelnet_event_type_t type;

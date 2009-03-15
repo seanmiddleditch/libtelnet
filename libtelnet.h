@@ -144,6 +144,8 @@ typedef void (*libtelnet_event_handler_t)(struct libtelnet_t *telnet,
 
 /* state tracker */
 struct libtelnet_t {
+	/* user data */
+	void *ud;
 	/* event handler */
 	libtelnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
@@ -167,34 +169,33 @@ struct libtelnet_t {
 
 /* initialize a telnet state tracker */
 extern void libtelnet_init(struct libtelnet_t *telnet,
-		libtelnet_event_handler_t eh, enum libtelnet_mode_t mode);
+		libtelnet_event_handler_t eh, enum libtelnet_mode_t mode,
+		void *user_data);
 
 /* free up any memory allocated by a state tracker */
 extern void libtelnet_free(struct libtelnet_t *telnet);
 
 /* push a byte buffer into the state tracker */
 extern void libtelnet_push(struct libtelnet_t *telnet,
-		unsigned char *buffer, unsigned int size, void *user_data);
+		unsigned char *buffer, unsigned int size);
 
 /* send an iac command */
 extern void libtelnet_send_command(struct libtelnet_t *telnet,
-		unsigned char cmd, void *user_data);
+		unsigned char cmd);
 
 /* send negotiation */
 extern void libtelnet_send_negotiate(struct libtelnet_t *telnet,
-		unsigned char cmd, unsigned char opt, void *user_data);
+		unsigned char cmd, unsigned char opt);
 
 /* send non-command data (escapes IAC bytes) */
 extern void libtelnet_send_data(struct libtelnet_t *telnet,
-		unsigned char *buffer, unsigned int size, void *user_data);
+		unsigned char *buffer, unsigned int size);
 
 /* send sub-request */
 extern void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
-		unsigned char opt, unsigned char *buffer, unsigned int size,
-		void *user_data);
+		unsigned char opt, unsigned char *buffer, unsigned int size);
 
 /* begin sending compressed data (server only) */
-extern void libtelnet_begin_compress2(struct libtelnet_t *telnet,
-		void *user_data);
+extern void libtelnet_begin_compress2(struct libtelnet_t *telnet);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
