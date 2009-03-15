@@ -70,6 +70,40 @@ static void _error(struct libtelnet_t *telnet, const char *file, unsigned line,
 		fprintf(stderr, "**ERROR**: libtelnet: %s\n", buffer);
 }
 
+/* initialize the zlib box for a telnet box; if deflate is non-zero, it
+ * initializes zlib for delating (compression), otherwise for inflating
+ * (decompression)
+ */
+z_stream *_init_zlib(struct libtelnet_t *telnet, int deflate,
+		void *user_data) {
+	z_stream *zlib;
+	int rs;
+
+	/* allocate zstream box */
+	if ((zlib = (z_stream *)calloc(1, sizeof(z_stream)))
+			== 0) {
+		ERROR_NOMEM(telnet, user_data, "malloc() failed");
+		return 0;
+	}
+
+	/* initialize */
+	if (deflate) {
+		if ((rs = deflateInit(zlib, Z_DEFAULT_COMPRESSION)) != Z_OK) {
+			free(zlib);
+			ERROR_ZLIB(telnet, user_data, rs, "deflateInit() failed");
+			return 0;
+		}
+	} else {
+		if ((rs = inflateInit(zlib)) != Z_OK) {
+			free(zlib);
+			ERROR_ZLIB(telnet, user_data, rs, "inflateInit() failed");
+			return 0;
+		}
+	}
+
+	return zlib;
+}
+
 /* initialize a telnet state tracker */
 void libtelnet_init(struct libtelnet_t *telnet, struct libtelnet_cb_t *cb,
 		enum libtelnet_mode_t mode) {
@@ -88,14 +122,16 @@ void libtelnet_free(struct libtelnet_t *telnet) {
 		telnet->length = 0;
 	}
 
-	/* free zlib box */
-	if (telnet->zlib != 0) {
-		if (telnet->mode == LIBTELNET_MODE_SERVER)
-			deflateEnd(telnet->zlib);
-		else
-			inflateEnd(telnet->zlib);
-		free(telnet->zlib);
-		telnet->zlib = 0;
+	/* free zlib box(es) */
+	if (telnet->z_inflate != 0) {
+		inflateEnd(telnet->z_inflate);
+		free(telnet->z_inflate);
+		telnet->z_inflate = 0;
+	}
+	if (telnet->z_deflate != 0) {
+		deflateEnd(telnet->z_deflate);
+		free(telnet->z_deflate);
+		telnet->z_deflate = 0;
 	}
 }
 
@@ -249,29 +285,18 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 				telnet->length = 0;
 
 #ifdef HAVE_ZLIB
-				/* if we are a client and just received the COMPRESS2
-				 * begin marker, setup our zlib box and start handling
-				 * the compressed stream
+				/* if we are a client or a proxy and just received the
+				 * COMPRESS2 begin marker, setup our zlib box and start
+				 * handling the compressed stream if it's not already.
 				 */
-				if (telnet->mode == LIBTELNET_MODE_CLIENT &&
-						telnet->buffer[0] == LIBTELNET_TELOPT_COMPRESS2) {
-					int rs;
+				if (telnet->buffer[0] == LIBTELNET_TELOPT_COMPRESS2 &&
+						telnet->z_inflate == 0 &&
+						(telnet->mode == LIBTELNET_MODE_CLIENT ||
+						 telnet->mode == LIBTELNET_MODE_PROXY)) {
 
-					/* allocate zstream box */
-					if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream)))
-							== 0) {
-						ERROR_NOMEM(telnet, user_data, "malloc() failed");
-					}
-
-					/* initialize */
-					memset(telnet->zlib, 0, sizeof(z_stream));
-					if ((rs = inflateInit(telnet->zlib)) != Z_OK) {
-						free(telnet->zlib);
-						telnet->zlib = 0;
-						ERROR_ZLIB(telnet, user_data, rs,
-								"inflateInit() failed");
+					if ((telnet->z_inflate = _init_zlib(telnet, 0, user_data))
+							== 0)
 						break;
-					}
 
 					/* notify app that compression was enabled */
 					telnet->cb->compress(telnet, 1, user_data);
@@ -322,44 +347,42 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 #ifdef HAVE_ZLIB
-	/* if we are a client and we have a zlib box, then COMPRESS2 has been
-	 * negotiated and we need to inflate the buffer before processing
-	 */
-	if (telnet->mode == LIBTELNET_MODE_CLIENT && telnet->zlib != 0) {
+	/* if we have an inflate (decompression) zlib stream, use it */
+	if (telnet->z_inflate != 0) {
 		unsigned char inflate_buffer[4096];
 		int rs;
 
 		/* initialize zlib state */
-		telnet->zlib->next_in = buffer;
-		telnet->zlib->avail_in = size;
-		telnet->zlib->next_out = inflate_buffer;
-		telnet->zlib->avail_out = sizeof(inflate_buffer);
+		telnet->z_inflate->next_in = buffer;
+		telnet->z_inflate->avail_in = size;
+		telnet->z_inflate->next_out = inflate_buffer;
+		telnet->z_inflate->avail_out = sizeof(inflate_buffer);
 
 		/* inflate until buffer exhausted and all output is produced */
-		while (telnet->zlib->avail_in > 0 || telnet->zlib->avail_out == 0) {
+		while (telnet->z_inflate->avail_in > 0 || telnet->z_inflate->avail_out == 0) {
 			/* reset output buffer */
 
 			/* decompress */
-			rs = inflate(telnet->zlib, Z_SYNC_FLUSH);
+			rs = inflate(telnet->z_inflate, Z_SYNC_FLUSH);
 
 			/* process the decompressed bytes on success */
 			if (rs == Z_OK || rs == Z_STREAM_END)
 				_process(telnet, inflate_buffer, sizeof(inflate_buffer) -
-						telnet->zlib->avail_out, user_data);
+						telnet->z_inflate->avail_out, user_data);
 			else
 				ERROR_ZLIB(telnet, user_data, rs, "inflate() failed");
 
 			/* prepare output buffer for next run */
-			telnet->zlib->next_out = inflate_buffer;
-			telnet->zlib->avail_out = sizeof(inflate_buffer);
+			telnet->z_inflate->next_out = inflate_buffer;
+			telnet->z_inflate->avail_out = sizeof(inflate_buffer);
 
 			/* on error (or on end of stream) disable further inflation */
 			if (rs != Z_OK) {
 				telnet->cb->compress(telnet, 0, user_data);
 
-				inflateEnd(telnet->zlib);
-				free(telnet->zlib);
-				telnet->zlib = 0;
+				inflateEnd(telnet->z_inflate);
+				free(telnet->z_inflate);
+				telnet->z_inflate = 0;
 				break;
 			}
 		}
@@ -373,36 +396,34 @@ void libtelnet_push(struct libtelnet_t *telnet, unsigned char *buffer,
 static void _send(struct libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size, void *user_data) {
 #ifdef HAVE_ZLIB
-	/* if we are a server and we have a zlib box, then COMPRESS2 has been
-	 * negotiated and we need to deflate the buffer before sending it out
-	 */
-	if (telnet->mode == LIBTELNET_MODE_SERVER && telnet->zlib != 0) {
+	/* if we have a deflate (compression) zlib box, use it */
+	if (telnet->z_deflate != 0) {
 		unsigned char deflate_buffer[1024];
 		int rs;
 
-		/* initialize zlib state */
-		telnet->zlib->next_in = buffer;
-		telnet->zlib->avail_in = size;
-		telnet->zlib->next_out = deflate_buffer;
-		telnet->zlib->avail_out = sizeof(deflate_buffer);
+		/* initialize z_deflate state */
+		telnet->z_deflate->next_in = buffer;
+		telnet->z_deflate->avail_in = size;
+		telnet->z_deflate->next_out = deflate_buffer;
+		telnet->z_deflate->avail_out = sizeof(deflate_buffer);
 
 		/* deflate until buffer exhausted and all output is produced */
-		while (telnet->zlib->avail_in > 0 || telnet->zlib->avail_out == 0) {
+		while (telnet->z_deflate->avail_in > 0 || telnet->z_deflate->avail_out == 0) {
 			/* compress */
-			if ((rs = deflate(telnet->zlib, Z_SYNC_FLUSH)) != Z_OK) {
+			if ((rs = deflate(telnet->z_deflate, Z_SYNC_FLUSH)) != Z_OK) {
 				ERROR_ZLIB(telnet, user_data, rs, "deflate() failed");
-				deflateEnd(telnet->zlib);
-				free(telnet->zlib);
-				telnet->zlib = 0;
+				deflateEnd(telnet->z_deflate);
+				free(telnet->z_deflate);
+				telnet->z_deflate = 0;
 				break;
 			}
 
 			telnet->cb->send(telnet, deflate_buffer, sizeof(deflate_buffer) -
-					telnet->zlib->avail_out, user_data);
+					telnet->z_deflate->avail_out, user_data);
 
 			/* prepare output buffer for next run */
-			telnet->zlib->next_out = deflate_buffer;
-			telnet->zlib->avail_out = sizeof(deflate_buffer);
+			telnet->z_deflate->next_out = deflate_buffer;
+			telnet->z_deflate->avail_out = sizeof(deflate_buffer);
 		}
 
 	/* COMPRESS2 is not negotiated, just send */
@@ -457,27 +478,15 @@ void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 	libtelnet_send_command(telnet, LIBTELNET_SE, user_data);
 
 #ifdef HAVE_ZLIB
-	/* if we're a server and we just sent the COMPRESS2 marker, we must
-	 * make sure all further data is compressed
+	/* if we're a proxy and we just sent the COMPRESS2 marker, we must
+	 * make sure all further data is compressed if not already.
 	 */
-	if (telnet->mode == LIBTELNET_MODE_SERVER && opt ==
-			LIBTELNET_TELOPT_COMPRESS2) {
-		int rs;
+	if (telnet->mode == LIBTELNET_MODE_PROXY &&
+			telnet->z_deflate == 0 &&
+			opt == LIBTELNET_TELOPT_COMPRESS2) {
 
-		/* allocate zstream box */
-		if ((telnet->zlib = (z_stream *)malloc(sizeof(z_stream))) == 0) {
-			ERROR_NOMEM(telnet, user_data, "malloc() failed");
+		if ((telnet->z_deflate = _init_zlib(telnet, 1, user_data)) == 0)
 			return;
-		}
-
-		/* initialize */
-		memset(telnet->zlib, 0, sizeof(z_stream));
-		if ((rs = deflateInit(telnet->zlib, Z_DEFAULT_COMPRESSION)) != Z_OK) {
-			free(telnet->zlib);
-			telnet->zlib = 0;
-			ERROR_ZLIB(telnet, user_data, rs, "delateInit() failed");
-			return;
-		}
 
 		/* notify app that compression was enabled */
 		telnet->cb->compress(telnet, 1, user_data);

@@ -320,13 +320,9 @@ int main(int argc, char **argv) {
 	cb_table.compress = _compress_cb;
 	cb_table.error = _error_cb;
 
-	/* initialize telnet boxes
-	 * NOTE: we set the server connect to the CLIENT mode because we
-	 * are acting as a client of the server; likewise, we set the
-	 * client connection to SERVER mode becauser we are acting as a
-	 * server to the client. */
-	libtelnet_init(&server.telnet, &cb_table, LIBTELNET_MODE_CLIENT);
-	libtelnet_init(&client.telnet, &cb_table, LIBTELNET_MODE_SERVER);
+	/* initialize telnet boxes */
+	libtelnet_init(&server.telnet, &cb_table, LIBTELNET_MODE_PROXY);
+	libtelnet_init(&client.telnet, &cb_table, LIBTELNET_MODE_PROXY);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));

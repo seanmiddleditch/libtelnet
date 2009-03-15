@@ -88,7 +88,8 @@ struct libtelnet_cb_t;
 /* libtelnet modes */
 enum libtelnet_mode_t {
 	LIBTELNET_MODE_SERVER = 0,
-	LIBTELNET_MODE_CLIENT
+	LIBTELNET_MODE_CLIENT,
+	LIBTELNET_MODE_PROXY
 };
 
 /* telnet states */
@@ -145,7 +146,8 @@ struct libtelnet_t {
 	struct libtelnet_cb_t *cb;
 #ifdef HAVE_ZLIB
 	/* zlib (mccp2) compression */
-	z_stream *zlib;
+	z_stream *z_deflate;
+	z_stream *z_inflate;
 #endif
 	/* sub-request buffer */
 	unsigned char *buffer;
