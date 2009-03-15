@@ -127,32 +127,12 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 	}
 }
 
-static void _data_cb(struct libtelnet_t *telnet, unsigned char *buffer,
-		unsigned int size, void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
-
-	printf("%s DATA: ", conn->name);
-	print_buffer(buffer, size);
-	printf("\e[0m\n");
-
-	libtelnet_send_data(&conn->remote->telnet, buffer, size,
-			conn->remote);
-}
-
-static void _send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
-		unsigned int size, void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
+static void _send(int sock, unsigned char *buffer, unsigned int size) {
 	int rs;
-
-	/* DONT SPAM
-	printf("%s SEND: ", conn->name);
-	print_buffer(buffer, size);
-	printf("\e[0m\n");
-	*/
 
 	/* send data */
 	while (size > 0) {
-		if ((rs = send(conn->sock, buffer, size, 0)) == -1) {
+		if ((rs = send(sock, buffer, size, 0)) == -1) {
 			fprintf(stderr, "send() failed: %s\n", strerror(errno));
 			exit(1);
 		} else if (rs == 0) {
@@ -166,55 +146,68 @@ static void _send_cb(struct libtelnet_t *telnet, unsigned char *buffer,
 	}
 }
 
-static void _command_cb(struct libtelnet_t *telnet, unsigned char cmd,
-		void *user_data) {
+static void _event_handler(struct libtelnet_t *telnet,
+		struct libtelnet_event_t *ev, void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
-	printf("%s IAC %s\e[0m\n", conn->name, get_cmd(cmd));
+	switch (ev->type) {
+	/* data received */
+	case LIBTELNET_EV_DATA:
+		printf("%s DATA: ", conn->name);
+		print_buffer(ev->buffer, ev->size);
+		printf("\e[0m\n");
 
-	libtelnet_send_command(&conn->remote->telnet, cmd, conn->remote);
-}
+		libtelnet_send_data(&conn->remote->telnet, ev->buffer, ev->size,
+				conn->remote);
+		break;
+	/* data must be sent */
+	case LIBTELNET_EV_SEND:
+		/* DONT SPAM
+		printf("%s SEND: ", conn->name);
+		print_buffer(ev->buffer, ev->size);
+		printf("\e[0m\n");
+		*/
 
-static void _negotiate_cb(struct libtelnet_t *telnet, unsigned char cmd,
-		unsigned char opt, void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
+		_send(conn->sock, ev->buffer, ev->size);
+		break;
+	/* IAC command */
+	case LIBTELNET_EV_IAC:
+		printf("%s IAC %s\e[0m\n", conn->name, get_cmd(ev->command));
 
-	printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(cmd),
-			(int)opt, get_opt(opt));
+		libtelnet_send_command(&conn->remote->telnet, ev->command,
+				conn->remote);
+		break;
+	/* negotiation */
+	case LIBTELNET_EV_NEGOTIATE:
+		printf("%s IAC %s %d (%s)\e[0m\n", conn->name, get_cmd(ev->command),
+				(int)ev->telopt, get_opt(ev->telopt));
 
-	libtelnet_send_negotiate(&conn->remote->telnet, cmd, opt,
-			conn->remote);
-}
+		libtelnet_send_negotiate(&conn->remote->telnet, ev->command,
+				ev->telopt, conn->remote);
+		break;
+	/* subnegotiation */
+	case LIBTELNET_EV_SUBNEGOTIATION:
+		printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
+				get_opt(ev->telopt));
+		if (ev->size > 0) {
+			printf(" [%u]: ", ev->size);
+			print_buffer(ev->buffer, ev->size);
+		}
+		printf("\e[0m\n");
 
-static void _subnegotiation_cb(struct libtelnet_t *telnet,
-		unsigned char type, unsigned char *buffer, unsigned int size,
-		void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
-
-	printf("%s SUB %d (%s)", conn->name, (int)type, get_opt(type));
-	if (size > 0) {
-		printf(" [%u]: ", size);
-		print_buffer(buffer, size);
+		libtelnet_send_subnegotiation(&conn->remote->telnet, ev->telopt,
+				ev->buffer, ev->size, conn->remote);
+		break;
+	/* compression notification */
+	case LIBTELNET_EV_COMPRESS:
+		printf("%s COMPRESSION %s\e[0m\n", conn->name,
+				ev->command ? "ON" : "OFF");
+		break;
+	/* error */
+	case LIBTELNET_EV_ERROR:
+		printf("%s ERROR: %.*s\e[0m\n", conn->name, ev->size, ev->buffer);
+		exit(1);
 	}
-	printf("\e[0m\n");
-
-	libtelnet_send_subnegotiation(&conn->remote->telnet, type, buffer, size,
-			conn->remote);
-}
-
-static void _compress_cb(struct libtelnet_t *telnet, char enabled,
-		void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
-
-	printf("%s COMPRESSION %s\e[0m\n", conn->name, enabled ? "ON" : "OFF");
-}
-
-static void _error_cb(struct libtelnet_t *telnet, enum libtelnet_error_t error,
-		const char *msg, void *user_data) {
-	struct conn_t *conn = (struct conn_t*)user_data;
-
-	printf("%s ERROR: %s\e[0m\n", conn->name, msg);
-	exit(1);
 }
 
 int main(int argc, char **argv) {
@@ -226,7 +219,6 @@ int main(int argc, char **argv) {
 	struct pollfd pfd[2];
 	struct conn_t server;
 	struct conn_t client;
-	struct libtelnet_cb_t cb_table;
 	struct addrinfo *ai;
 	struct addrinfo hints;
 
@@ -310,19 +302,9 @@ int main(int argc, char **argv) {
 	client.name = "\e[34mCLIENT";
 	client.remote = &server;
 
-	/* initialize libtelnet callback table */
-	memset(&cb_table, 0, sizeof(cb_table));
-	cb_table.data = _data_cb;
-	cb_table.send = _send_cb;
-	cb_table.command = _command_cb;
-	cb_table.negotiate = _negotiate_cb;
-	cb_table.subnegotiation = _subnegotiation_cb;
-	cb_table.compress = _compress_cb;
-	cb_table.error = _error_cb;
-
 	/* initialize telnet boxes */
-	libtelnet_init(&server.telnet, &cb_table, LIBTELNET_MODE_PROXY);
-	libtelnet_init(&client.telnet, &cb_table, LIBTELNET_MODE_PROXY);
+	libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY);
+	libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));

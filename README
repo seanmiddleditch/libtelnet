@@ -49,8 +49,8 @@ the basic initialization and deinitialization routines.  The second
 part is a single function for pushing received data into the
 libtelnet processor.  The third part is the libtelnet_send_*()
 functions, which generate TELNET commands and ensure data is properly
-formatted before sending over the wire.  The final part is the
-callback structure libtelnet_cb_t.
+formatted before sending over the wire.  The final part is the event
+handler interface.
 
 IIa. Initialization
 
@@ -60,21 +60,16 @@ IIa. Initialization
    its own libtelnet_t structure, which is passed to all libtelnet
    API calls.
 
- struct libtelnet_cb_t;
-   An instance of this structure must be initialized and have all
-   mandatory and desired optional callbacks set.  See section IId
-   for more information.
-
  void libtelnet_init(struct libtelnet_t *telnet,
-     struct libtelnet_cb_t *cb, enum libtelnet_mode_t mode);
+     libtelnet_event_handler_t handler, enum libtelnet_mode_t mode);
    The libtelnet_init() function is responsible for initializing
    the data in a libtelnet_t structure.  It must be called
    immediately after establishing a connection and before any other
    libtelnet API calls are made.
 
-   The cb parameter must be a pointer to a fully initialized
-   instance of libtelnet_cb_t.  A single instance of the structure
-   can be shared between any number of libtelnet_t instances.
+   The handler parameter must be a function matching the
+   libtelnet_event_handler_t definition.  More information about
+   events can be found in section IId.
 
    The mode parameter must be one of LIBTELNET_MODE_SERVER,
    LIBTELNET_MODE_CLIENT, or LIBTELNET_MODE_PROXY.  These slightly
@@ -95,15 +90,24 @@ IIb. Receiving Data
      unsigned char *buffer, unsigned int size, void *user_data);
    When your application receives data over the socket from the
    remote end, it must pass the received bytes into this function.
-   Callback functions will be invoked as the buffer is processed,
-   and the user_data parameter will be passed to each callback.
+
+   As the TELNET stream is parsed, events will be generated and
+   passed to the event handler given to libtelnet_init().  Of
+   particular interest for data receiving is the LIBTELNET_EV_DATA
+   event, which is triggered for any regular data such as user
+   input or server process output.
 
 IIc. Sending Data
 
- Note that all of the libtelnet_send_*() functions will invoke
- the send callback function attached to the libtelnet_t instance.
- The user_data parameter to each of these functions is passed
- through to the callback.
+ All of the libtelnet_send_*() functions will invoke the
+ LIBTELNET_EV_SEND event.  The user_data parameter to each of these
+ functions is passed through to the callback.
+
+ Note: it is very important that ALL data sent to the remote end of
+ the connection be passed through libtelnet.  All user input or
+ process output that you wish to send over the wire should be given
+ to libtelnet_send_data().  Do NOT send or buffer unprocessed output
+ data directly!
 
  void libtelnet_send_command(struct libtelnet_t *telnet,
      unsigned char cmd, void *user_data);
@@ -128,109 +132,164 @@ IIc. Sending Data
    Sends a TELNET sub-negotiation command.  The opt parameter
    is the sub-negotiation option.
 
-IId. Callbacks
+IId. Event Handling
 
- The libtelnet_cb_t structure containers a number of callback
- entry points.  Of these, only the send and data callbacks are
- absolutely required.  All others are optional.  The declarations
- below show the signature of the callback functions.
+ libtelnet relies on an event-handling mechanism for processing
+ the parsed TELNET protocol stream as well as for buffering and
+ sending output data.
 
- An example of initializing a libtelnet_cb_t structure:
+ When you initialize a libtelnet_t structure with libtelnet_init()
+ you had to pass in an event handler function.  This function must
+ meet the following prototype:
 
-  /* illustrative data callback */
-  void my_data_cb(libtelnet_t *telnet, unsigned char *buffer,
-      unsigned int size, void *user_data) {
-    /* print number of bytes received and then show the
-     * whole buffer */
-    printf("RECV(%d): %.*s\n", size, size, buffer);
+  void (libtelnet_t *telnet, libtelnet_event_t *event,
+      void *user_data); 
+
+ The libtelnet_event_t structure has the following definition:
+
+  struct libtelnet_event_t {
+    enum libtelnet_event_type_t type;
+    unsigned char command;
+    unsigned char telopt;
+    unsigned char *buffer;
+    unsigned int size;
+  };
+ 
+ The enumeration values of libtelnet_event_type_t are described in
+ detail below.  Whenever the the event handler is invoked, the
+ application must look at the event->type value and do any
+ necessary processing.
+
+ The only event that MUST be implemented is LIBTELNET_EV_SEND.
+ Most applications will also always want to implement the event
+ LIBTELNET_EV_DATA.
+
+ Here is an example event handler implementation which includes
+ handlers for several important events.
+
+  void my_event_handler(struct libtelnet_t *telnet,
+      libtelnet_event_t *ev, void *user_data) {
+    struct user_info *user = (struct user_info *)user_data;
+
+    switch (ev->type) {
+    case LIBTELNET_EV_DATA:
+      process_user_input(user, event->buffer, event->size);
+      break;
+    case LIBTELNET_EV_SEND:
+      write_to_descriptor(user, event->buffer, event->size);
+      break;
+    case LIBTELNET_EV_ERROR:
+      fatal_error("TELNET error: %s", event->buffer);
+      break;
+    }
   }
 
-  /* illustrative variable definitions */
-  libtelnet_t conn;
-  libtelnet_cb_t callbacks;
+ LIBTELNET_EV_DATA:
+   The DATA event is triggered whenever regular data (not part of
+   any special TELNET command) is received.  For a client, this
+   will be process output from the server.  For a server, this will
+   be input typed by the user.
 
-  /* clear all callbacks and set just the ones we want */
-  memset(&callbacks, 0, sizeof(callbacks));
-  callbacks->send = my_send_cb;
-  callbacks->data = my_data_cb;
+   The event->buffer value will contain the bytes received and the
+   event->size value will contain the number of bytes received.
+   Note that event->buffer is not NUL terminated!
 
-  /* initialize the connection with our callbacks */
-  libtelnet_init(&conn, &callbacks, LIBTELNET_MODE_SERVER);
+   NOTE: there is no guarantee that user input or server output
+   will be received in whole lines.  If you wish to process data
+   a line at a time, you are responsible for buffering the data and
+   checking for line terminators yourself!
+ 
+ LIBTELNET_EV_SEND:
+   This event is sent whenever libtelnet has generated data that
+   must be sent over the wire to the remove end.  Generally that
+   means calling send() or adding the data to your application's
+   output buffer.
 
- Remember that a single libtelnet_cb_t structure can be shared
- between any number of libtelnet_t instances.  There is no reason
- to make multiple copies of the data if all of your connections
- use the same callback functions.
+   The event->buffer value will contain the bytes to send and the
+   event->size value will contain the number of bytes to send.
+   Note that event->buffer is not NUL terminated, and may include
+   NUL characters in its data, so always use event->size!
 
- void libtelnet_cb_t->data(struct libtelnet_t *telnet,
-     unsigned char *buffer, unsigned int size, void *user_data);
-   Regular data has been received by the remote end.  For a server,
-   this would be input typed by the client; for a client, this is
-   process output generated by the server.
+   NOTE: Your SEND event handler must send or buffer the data in
+   its raw form as provided by libtelnet.  If you wish to perform
+   any kind of preprocessing on data you want to send to the other
+ 
+ LIBTELNET_EV_IAC:
+   The IAC event is triggered whenever a simple IAC command is
+   received, such as the IAC EOR (end of record, also called
+   go ahead or GA) command.
 
-   Note that data is not line-buffered by libtelnet.  A single
-   line of input may be broken into pieces and given to
-   consecutive calls to libtelnet_data_cb().  If you are doing
-   line-based processing of data, it is your responsibility to
-   buffer data and find the line breaks.
+   The command received is in the event->command value.
 
- void libtelnet_cb_t->send(struct libtelnet_t *telnet,
-     unsigned char *buffer, unsigned int size, void *user_data);
-   This is called whenever libtelnet has generated output to be
-   send to the remote end of the connection.  In most cases this
-   will be a simple wrapper arround your applications network
-   output buffering/transmission code.
+   The necessary processing depends on the specific commands; see
+   the TELNET RFC for more information.
+ 
+ LIBTELNET_EV_NEGOTIATE:
+   The NEGOTIATE event is sent when a TELNET neogitiation command
+   is received.
 
-   You can pass socket information through the user_data
-   parameter to libtelnet calls so that it is available in this
-   callback.
-
- void libtelnet_cb_t->command(struct libtelnet_t *telnet,
-     unsigned char cmd, void *user_data);
-   Called whenever a "simpler" TELNET command has arrived, such
-   as GO-AHEAD commands (255 249).  The necessary processing
-   depends on the specific commands; see the TELNET RFC for
-   more information.
-
- void libtelnet_cb_t->negotiate(struct libtelnet_t *telnet,
-     unsigned char cmd, unsigned char opt, void *user_data);
-   This function is called whenever a TELNET negotiation command
-   has been received.  The cmd parameter will be one of
-   LIBTELNET_WILL, LIBTELNET_WONT, LIBTELNET_DO, or LIBTELNET_DONT.
-   The opt parameter is the option being negotiated.
+   The event->command value will be one of LIBTELNET_WILL,
+   LIBTELNET_WONT, LIBTELNET_DO, or LIBTELNET_DONT.  The
+   event->telopt value will contain the option value being
+   negotiated.
 
    libtelnet does not currently manage negotiation for you.  For
    best practice in implementing TELNET negotiation, see:
 
     http://www.faqs.org/rfcs/rfc1143.html
 
- void libtelnet_cb_t->subnegotiation(struct libtelnet_t *telnet,
-     unsigned char opt, unsigned char *data, unsigned int size,
-     void *user_data);
-   Called whenever a TELNET sub-negotiation has been received.
+ LIBTELNET_EV_SUBNEGOTIATION:
+   Triggered whenever a TELNET sub-negotiation has been received.
    Sub-negotiations include the NAWS option for communicating
    terminal size to a server, the NEW-ENVIRON and TTYPE options
    for negotiating terminal features, and MUD-centric protocols
    such as ZMP, MSSP, and MCCP2.
 
-   The opt parameter is the option under sub-negotiation.  The
-   remaining data (if any) is passed in the buffer.
+   The event->telopt value is the option under sub-negotiation.
+   The remaining data (if any) is passed in event->buffer and
+   event->size.  Note that most subnegotiation commands can
+   include embedded NUL bytes in the subnegotiation data, and
+   the data event->buffer is not NUL terminated, so always use
+   the event->size value!
 
- void libtelnet_cb_t->compress(struct libtelnet_t *telnet,
-     char enabled, void *user_data);
-   The callback is invoked whenever the COMPRESS2 (MCCP2)
-   feature is enabled or disabled.  For servers, this is called
-   immediately after beginning compression after a client accepts
-   the COMPRESS2 option.  For clients, this is called immediately
-   after a compress stream begin or ends.
+   The meaning and necessary processing for subnegotiations are
+   defined in various TELNET RFCs and other informal
+   specifications.  A subnegotiation should never be sent unless
+   the specific option has been enabled through the use of the
+   telnet negotiation feature.
 
-   The enabled parameter is 1 if compression has begun and 0 if
-   compression has ended.
+ LIBTELNET_EV_COMPRESS
+   The COMPRESS event notifies the app that COMPRESS2/MCCP2
+   compression has begun or ended.  Only servers can send compressed
+   data, and hence only clients will receive compressed data.
 
-III. INTEGRATING LIBTELNET
+   The event->command value will be 1 if compression has started and
+   will be 0 if compression has ended.
+
+ LIBTELNET_EV_ERROR
+   This event is called whenever an error occurs while trying to
+   process the TELNET protocol.  This includes both invalid protocol
+   sequences (which are rare) and out of memory conditions.
+
+   With few exceptions, an error is non-recoverable, and the only
+   solid course of action is to close the connection.  This is
+   especially true for any errors involving the COMPRESS2 option.
+
+   The event->buffer value will contain a NUL terminated string
+   explaining the error, and the event->size value containers the
+   length of the string.
+
+   FIXME: we should pass the error code in one of the fields, and
+   better document which errors are definitely non-recoverable and
+   which are maybe-recoverable (mostly those are just IAC-in-SB
+   errors... every other error is related to MCCP2 and usually
+   results in being unable to further read the stream).
+
+III. INTEGRATING LIBTELNET WITH COMMON MUDS
 =====================================================================
 
-FIXME: fill in notes about implementing the libtelnet_*_cb functions
+FIXME: fill in some notes about how to splice in libtelnet with
+common Diku/Merc/Circle/etc. MUD codebases.
 
 IV. SAFETY AND CORRECTNESS CONSIDERATIONS
 =====================================================================
@@ -246,6 +305,21 @@ For these reasons, it is very important that applications making use
 of libtelnet always make use of the libtelnet_send_*() family of
 functions for all data being sent over the TELNET connection.
 
+In particular, if you are writing a client, all user input must be
+passed through to libtelnet_send_data().  This also includes any
+input generated automatically by scripts, triggers, or macros.
+
+For a server, any and all output -- including ANSI/VT100 escape
+codes, regular text, newlines, and so on -- must be passed through
+to libtelnet_send_data().
+
+Any TELNET commands that are to be sent must be given to one of the
+following: libtelnet_send_command, libtelnet_send_negotiate, or
+libtelnet_send_subnegotiation().
+
+If you are attempting to enable COMPRESS2/MCCP2, you must use the
+libtelnet_begin_compress2() function.
+
 V. MCCP2 COMPRESSION
 =====================================================================
 
@@ -254,6 +328,11 @@ all traffic sent from server to client.  For more information:
 
  http://www.mudbytes.net/index.php?a=articles&s=mccp
 
+In order for libtelnet to support MCCP2, zlib must be installed and
+enabled when compiling libtelnet.  Use -DHAVE_ZLIB to enable zlib
+when compiling libtelnet.c and pass -lz to the linker to link in the
+zlib shared library.
+
 libtelnet transparently supports MCCP2.  For a server to support
 MCCP2, the application must begin negotiation of the COMPRESS2
 option using libtelnet_send_negotiate(), for example:
@@ -261,18 +340,15 @@ option using libtelnet_send_negotiate(), for example:
  libtelnet_send_negotiate(&telnet, LIBTELNET_WILL,
      LIBTELNET_OPTION_COMPRESS2, user_data);
 
-libtelnet will automatically detect if the client responds favoribly
-and will begin compressing data.  For clients, no action must be
-taken, as libtelnet will automatically handle the requests.
+If a favorable DO COMPRESS2 is sent back from the client (processed
+in a LIBTELNET_EV_NEGOTIATE event, with event->command equal to
+LIBTELNET_DO and event->telopt equal to LIBTELNET_TELOPT_COMPRESS2),
+then the server application can begin compression at any time by
+calling libtelnet_begin_compress2().
 
-NOTE: libtelnet will still invoke the callback functions for
-negotiation and sub-negotiation commands relating to MCCP2.  Do not
-respond to these.
-
-In order for libtelnet to support MCCP2, zlib must be installed and
-enabled when compiling libtelnet.  Use -DHAVE_ZLIB to enable zlib
-when compiling libtelnet.c and pass -lz to the linker to link in the
-zlib shared library.
+If a connection is in PROXY mode and COMPRESS2 support is enabled
+then libtelnet will automatically detect the start of a COMPRESS2
+stream, in either the sending or receiving direction.
 
 VI. TELNET PROXY UTILITY
 =====================================================================

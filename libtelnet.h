@@ -113,37 +113,38 @@ enum libtelnet_error_t {
 	LIBTELNET_EUNKNOWN /* some crazy unexplainable unknown error */
 };
 
-/* libtelnet callback declarations */
-struct libtelnet_cb_t {
-	/* received (processed) data */
-	void (*data)(struct libtelnet_t *telnet, unsigned char *buffer,
-			unsigned int size, void *user_data);
-	/* processed data to buffer for sending */
-	void (*send)(struct libtelnet_t *telnet, unsigned char *buffer,
-			unsigned int size, void *user_data);
-	/* unknown command notification */
-	void (*command)(struct libtelnet_t *telnet, unsigned char cmd,
-			void *user_data);
-	/* negotiation notification */
-	void (*negotiate)(struct libtelnet_t *telnet, unsigned char cmd,
-			unsigned char opt, void *user_data);
-	/* unknown subnegotiation notification */
-	void (*subnegotiation)(struct libtelnet_t *telnet, unsigned char opt,
-			unsigned char *data, unsigned int size, void *user_data);
-	/* error handler */
-	void (*error)(struct libtelnet_t *telnet, enum libtelnet_error_t error,
-			const char *msg, void *user_data);
-
-	#ifdef HAVE_ZLIB
-	void (*compress)(struct libtelnet_t *telnet,
-			char enabled, void *user_data);
-	#endif
+/* event codes */
+enum libtelnet_event_type_t {
+	LIBTELNET_EV_DATA = 0,
+	LIBTELNET_EV_SEND,
+	LIBTELNET_EV_IAC,
+	LIBTELNET_EV_NEGOTIATE,
+	LIBTELNET_EV_SUBNEGOTIATION,
+	LIBTELNET_EV_COMPRESS,
+	LIBTELNET_EV_ERROR
 };
+
+/* event information */
+struct libtelnet_event_t {
+	/* type of event */ 
+	enum libtelnet_event_type_t type;
+	/* command info: only for IAC event */
+	unsigned char command;
+	/* telopt info: for NEGOTIATE and SUBNEGOTIATION events */
+	unsigned char telopt;
+	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
+	unsigned char *buffer;
+	unsigned int size;
+};
+
+/* event handler declaration */
+typedef void (*libtelnet_event_handler_t)(struct libtelnet_t *telnet,
+		struct libtelnet_event_t *event, void *user_data);
 
 /* state tracker */
 struct libtelnet_t {
-	/* callback table */
-	struct libtelnet_cb_t *cb;
+	/* event handler */
+	libtelnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
 	/* zlib (mccp2) compression */
 	z_stream *z_deflate;
@@ -163,7 +164,7 @@ struct libtelnet_t {
 
 /* initialize a telnet state tracker */
 extern void libtelnet_init(struct libtelnet_t *telnet,
-		struct libtelnet_cb_t *cb, enum libtelnet_mode_t mode);
+		libtelnet_event_handler_t eh, enum libtelnet_mode_t mode);
 
 /* free up any memory allocated by a state tracker */
 extern void libtelnet_free(struct libtelnet_t *telnet);
