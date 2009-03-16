@@ -132,19 +132,19 @@ static void _negotiate(struct libtelnet_t *telnet, unsigned char cmd,
 	int q;
 
 	/* in PROXY mode, just pass it thru and do nothing */
-	if (telnet->mode == LIBTELNET_MODE_PROXY) {
+	if (telnet->flags & LIBTELNET_FLAG_PROXY) {
 		switch (cmd) {
 		case LIBTELNET_WILL:
-			_event(telnet, LIBTELNET_EV_WILL, cmd, telopt, 0, 0);
+			_event(telnet, LIBTELNET_EV_WILL, 0, telopt, 0, 0);
 			break;
 		case LIBTELNET_WONT:
-			_event(telnet, LIBTELNET_EV_WONT, cmd, telopt, 0, 0);
+			_event(telnet, LIBTELNET_EV_WONT, 0, telopt, 0, 0);
 			break;
 		case LIBTELNET_DO:
-			_event(telnet, LIBTELNET_EV_DO, cmd, telopt, 0, 0);
+			_event(telnet, LIBTELNET_EV_DO, 0, telopt, 0, 0);
 			break;
 		case LIBTELNET_DONT:
-			_event(telnet, LIBTELNET_EV_DONT, cmd, telopt, 0, 0);
+			_event(telnet, LIBTELNET_EV_DONT, 0, telopt, 0, 0);
 			break;
 		}
 		return;
