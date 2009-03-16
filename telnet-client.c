@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <termios.h>
 #include <unistd.h>
 
 #ifdef HAVE_ZLIB
@@ -26,6 +27,13 @@
 #endif
 
 #include "libtelnet.h"
+
+static struct termios orig_tios;
+static int do_echo;
+
+static void _cleanup(void) {
+	tcsetattr(STDOUT_FILENO, TCSADRAIN, &orig_tios);
+}
 
 static void _send(int sock, unsigned char *buffer, unsigned int size) {
 	int rs;
@@ -61,10 +69,67 @@ static void _event_handler(struct libtelnet_t *telnet,
 		break;
 	/* accept any options we want */
 	case LIBTELNET_EV_NEGOTIATE:
-		/* enable COMPRESS2 */
-		if (ev->command == LIBTELNET_WILL &&
-				ev->telopt == LIBTELNET_TELOPT_COMPRESS2)
-			libtelnet_send_negotiate(telnet, LIBTELNET_DO, ev->telopt);
+		switch (ev->command) {
+		case LIBTELNET_WILL:
+			switch (ev->telopt) {
+			/* accept request to enable compression */
+			case LIBTELNET_TELOPT_COMPRESS2:
+				libtelnet_send_negotiate(telnet, LIBTELNET_DO, ev->telopt);
+				break;
+			/* server "promises" to echo, so turn off local echo */
+			case LIBTELNET_TELOPT_ECHO:
+				do_echo = 0;
+				libtelnet_send_negotiate(telnet, LIBTELNET_DO, ev->telopt);
+				break;
+			/* unknown -- reject */
+			default:
+				libtelnet_send_negotiate(telnet, LIBTELNET_DONT, ev->telopt);
+				break;
+			}
+			break;
+
+		case LIBTELNET_WONT:
+			switch (ev->telopt) {
+			/* server wants us to do echoing, by telling us it won't */
+			case LIBTELNET_TELOPT_ECHO:
+				do_echo = 1;
+				libtelnet_send_negotiate(telnet, LIBTELNET_DONT, ev->telopt);
+				break;
+			}
+			break;
+
+		case LIBTELNET_DO:
+			switch (ev->telopt) {
+			/* accept request to enable terminal-type requests */
+			case LIBTELNET_TELOPT_TTYPE:
+				libtelnet_send_negotiate(telnet, LIBTELNET_WILL, ev->telopt);
+				break;
+			/* unknown - reject */
+			default:
+				libtelnet_send_negotiate(telnet, LIBTELNET_WONT, ev->telopt);
+				break;
+			}
+			break;
+
+		case LIBTELNET_DONT:
+			/* ignore for now */
+			break;
+		}
+		break;
+	/* respond to particular subnegotiations */
+	case LIBTELNET_EV_SUBNEGOTIATION:
+		/* respond with our terminal type */
+		if (ev->telopt == LIBTELNET_TELOPT_TTYPE) {
+			/* NOTE: we just assume the server sent a legitimate
+			 * sub-negotiation, as there really isn't anything else
+			 * it's allowed to send
+			 */
+			char buffer[64];
+			buffer[0] = 0; /* IS code for RFC 1091 */
+			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
+			libtelnet_send_subnegotiation(telnet, LIBTELNET_TELOPT_TTYPE,
+					(unsigned char *)buffer, 1 + strlen(buffer + 1));
+		}
 		break;
 	/* error */
 	case LIBTELNET_EV_ERROR:
@@ -85,6 +150,7 @@ int main(int argc, char **argv) {
 	struct libtelnet_t telnet;
 	struct addrinfo *ai;
 	struct addrinfo hints;
+	struct termios tios;
 
 	/* check usage */
 	if (argc != 3) {
@@ -125,6 +191,18 @@ int main(int argc, char **argv) {
 	/* free address lookup info */
 	freeaddrinfo(ai);
 
+	/* get current terminal settings, set raw mode, make sure we
+	 * register atexit handler to restore terminal settings
+	 */
+	tcgetattr(STDOUT_FILENO, &orig_tios);
+	atexit(_cleanup);
+	tios = orig_tios;
+	cfmakeraw(&tios);
+	tcsetattr(STDOUT_FILENO, TCSADRAIN, &tios);
+
+	/* set input echoing on by default */
+	do_echo = 1;
+
 	/* initialize telnet box */
 	libtelnet_init(&telnet, _event_handler, LIBTELNET_MODE_CLIENT, &sock);
 
@@ -140,6 +218,11 @@ int main(int argc, char **argv) {
 		/* read from stdin */
 		if (pfd[0].revents & POLLIN) {
 			if ((rs = read(STDIN_FILENO, buffer, sizeof(buffer))) > 0) {
+				/* local echo */
+				if (do_echo)
+					write(STDOUT_FILENO, buffer, rs);
+
+				/* send over the wire */
 				libtelnet_send_data(&telnet, buffer, rs);
 			} else if (rs == 0) {
 				break;
