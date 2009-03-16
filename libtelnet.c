@@ -348,7 +348,7 @@ void libtelnet_push(libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size) {
 #ifdef HAVE_ZLIB
 	/* if we have an inflate (decompression) zlib stream, use it */
-	if (telnet->z != 0) {
+	if (telnet->z != 0 && !(telnet->flags & LIBTELNET_PFLAG_DEFLATE)) {
 		unsigned char inflate_buffer[4096];
 		int rs;
 
@@ -398,7 +398,7 @@ static void _send(libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size) {
 #ifdef HAVE_ZLIB
 	/* if we have a deflate (compression) zlib box, use it */
-	if (telnet->z != 0) {
+	if (telnet->z != 0 && telnet->flags & LIBTELNET_PFLAG_DEFLATE) {
 		unsigned char deflate_buffer[1024];
 		int rs;
 
