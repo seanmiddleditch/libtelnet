@@ -29,10 +29,32 @@
 #include "libtelnet.h"
 
 static struct termios orig_tios;
+static struct libtelnet_t telnet;
 static int do_echo;
 
 static void _cleanup(void) {
 	tcsetattr(STDOUT_FILENO, TCSADRAIN, &orig_tios);
+}
+
+static void _input(unsigned char *buffer, int size) {
+	static unsigned char crlf[] = { '\r', '\n' };
+	int i;
+
+	for (i = 0; i != size; ++i) {
+		/* if we got a CR or LF, replace with CRLF
+		 * NOTE that usually you'd get a CR in UNIX, but in raw
+		 * mode we get LF instead (not sure why)
+		 */
+		if (buffer[i] == '\r' || buffer[i] == '\n') {
+			if (do_echo)
+				write(STDOUT_FILENO, crlf, 2);
+			libtelnet_send_data(&telnet, crlf, 2);
+		} else {
+			if (do_echo)
+				write(STDOUT_FILENO, buffer + i, 1);
+			libtelnet_send_data(&telnet, buffer + i, 1);
+		}
+	}
 }
 
 static void _send(int sock, unsigned char *buffer, unsigned int size) {
@@ -147,7 +169,6 @@ int main(int argc, char **argv) {
 	int sock;
 	struct sockaddr_in addr;
 	struct pollfd pfd[2];
-	struct libtelnet_t telnet;
 	struct addrinfo *ai;
 	struct addrinfo hints;
 	struct termios tios;
@@ -218,12 +239,7 @@ int main(int argc, char **argv) {
 		/* read from stdin */
 		if (pfd[0].revents & POLLIN) {
 			if ((rs = read(STDIN_FILENO, buffer, sizeof(buffer))) > 0) {
-				/* local echo */
-				if (do_echo)
-					write(STDOUT_FILENO, buffer, rs);
-
-				/* send over the wire */
-				libtelnet_send_data(&telnet, buffer, rs);
+				_input(buffer, rs);
 			} else if (rs == 0) {
 				break;
 			} else {
