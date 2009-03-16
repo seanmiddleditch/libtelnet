@@ -84,6 +84,7 @@ static libtelnet_error_t _error(libtelnet_t *telnet, unsigned line,
 	return err;
 }
 
+#ifdef HAVE_ZLIB
 /* initialize the zlib box for a telnet box; if deflate is non-zero, it
  * initializes zlib for delating (compression), otherwise for inflating
  * (decompression).  returns LIBTELNET_EOK on success, something else on
@@ -124,6 +125,7 @@ libtelnet_error_t _init_zlib(libtelnet_t *telnet, int deflate, int err_fatal) {
 
 	return LIBTELNET_EOK;
 }
+#endif
 
 /* push bytes out, compressing them first if need be */
 static void _send(libtelnet_t *telnet, const unsigned char *buffer,
@@ -391,6 +393,7 @@ void libtelnet_free(libtelnet_t *telnet) {
 		telnet->buffer_pos = 0;
 	}
 
+#ifdef HAVE_ZLIB
 	/* free zlib box */
 	if (telnet->z != 0) {
 		if (telnet->flags & LIBTELNET_PFLAG_DEFLATE)
@@ -400,6 +403,7 @@ void libtelnet_free(libtelnet_t *telnet) {
 		free(telnet->z);
 		telnet->z = 0;
 	}
+#endif
 
 	/* free RFC1143 queue */
 	if (telnet->q) {
