@@ -48,8 +48,8 @@ static const unsigned int _buffer_sizes_count = sizeof(_buffer_sizes) /
 /* event dispatch helper; return value is value of the accept field of the
  * event struct after dispatch; used for the funky REQUEST event */
 static int _event(libtelnet_t *telnet, libtelnet_event_type_t type,
-		unsigned char command, unsigned char telopt, unsigned char *buffer,
-		unsigned int size) {
+		unsigned char command, unsigned char telopt,
+		const unsigned char *buffer, unsigned int size) {
 	libtelnet_event_t ev;
 	ev.buffer = buffer;
 	ev.size = size;
@@ -126,7 +126,7 @@ libtelnet_error_t _init_zlib(libtelnet_t *telnet, int deflate, int err_fatal) {
 }
 
 /* push bytes out, compressing them first if need be */
-static void _send(libtelnet_t *telnet, unsigned char *buffer,
+static void _send(libtelnet_t *telnet, const unsigned char *buffer,
 		unsigned int size) {
 #ifdef HAVE_ZLIB
 	/* if we have a deflate (compression) zlib box, use it */
@@ -135,7 +135,7 @@ static void _send(libtelnet_t *telnet, unsigned char *buffer,
 		int rs;
 
 		/* initialize z state */
-		telnet->z->next_in = buffer;
+		telnet->z->next_in = (unsigned char *)buffer;
 		telnet->z->avail_in = size;
 		telnet->z->next_out = deflate_buffer;
 		telnet->z->avail_out = sizeof(deflate_buffer);
@@ -450,7 +450,7 @@ static libtelnet_error_t _buffer_byte(libtelnet_t *telnet,
 	return LIBTELNET_EOK;
 }
 
-static void _process(libtelnet_t *telnet, unsigned char *buffer,
+static void _process(libtelnet_t *telnet, const unsigned char *buffer,
 		unsigned int size) {
 	unsigned char byte;
 	unsigned int i, start;
@@ -610,7 +610,7 @@ static void _process(libtelnet_t *telnet, unsigned char *buffer,
 }
 
 /* push a bytes into the state tracker */
-void libtelnet_push(libtelnet_t *telnet, unsigned char *buffer,
+void libtelnet_push(libtelnet_t *telnet, const unsigned char *buffer,
 		unsigned int size) {
 #ifdef HAVE_ZLIB
 	/* if we have an inflate (decompression) zlib stream, use it */
@@ -619,7 +619,7 @@ void libtelnet_push(libtelnet_t *telnet, unsigned char *buffer,
 		int rs;
 
 		/* initialize zlib state */
-		telnet->z->next_in = buffer;
+		telnet->z->next_in = (unsigned char *)buffer;
 		telnet->z->avail_in = size;
 		telnet->z->next_out = inflate_buffer;
 		telnet->z->avail_out = sizeof(inflate_buffer);
@@ -792,10 +792,10 @@ void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 }
 
 /* send non-command data (escapes IAC bytes) */
-void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
+void libtelnet_send_data(libtelnet_t *telnet, const unsigned char *buffer,
 		unsigned int size) {
-	static unsigned char CRLF[] = { '\r', '\n' };
-	static unsigned char CRNUL[] = { '\r', '\0' };
+	static const unsigned char CRLF[] = { '\r', '\n' };
+	static const unsigned char CRNUL[] = { '\r', '\0' };
 	unsigned int i, l;
 
 	for (l = i = 0; i != size; ++i) {
@@ -832,7 +832,7 @@ void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
 
 /* send sub-request */
 void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char telopt,
-		unsigned char *buffer, unsigned int size) {
+		const unsigned char *buffer, unsigned int size) {
 	libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt);
 	libtelnet_send_data(telnet, buffer, size);
 	libtelnet_send_command(telnet, LIBTELNET_SE);
@@ -855,7 +855,7 @@ void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char telopt,
 
 void libtelnet_begin_compress2(libtelnet_t *telnet) {
 #ifdef HAVE_ZLIB
-	unsigned char compress2[] = { LIBTELNET_IAC, LIBTELNET_SB,
+	static const unsigned char compress2[] = { LIBTELNET_IAC, LIBTELNET_SB,
 			LIBTELNET_TELOPT_COMPRESS2, LIBTELNET_IAC, LIBTELNET_SE };
 
 	/* attempt to create output stream first, bail if we can't */

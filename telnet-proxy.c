@@ -129,7 +129,7 @@ static const char *get_opt(unsigned char opt) {
 	}
 }
 
-static void print_buffer(unsigned char *buffer, unsigned int size) {
+static void print_buffer(const unsigned char *buffer, unsigned int size) {
 	unsigned int i;
 	for (i = 0; i != size; ++i) {
 		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
@@ -142,7 +142,7 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 	}
 }
 
-static void _send(int sock, unsigned char *buffer, unsigned int size) {
+static void _send(int sock, const unsigned char *buffer, unsigned int size) {
 	int rs;
 
 	/* send data */

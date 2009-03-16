@@ -57,7 +57,7 @@ static void _input(unsigned char *buffer, int size) {
 	}
 }
 
-static void _send(int sock, unsigned char *buffer, unsigned int size) {
+static void _send(int sock, const unsigned char *buffer, unsigned int size) {
 	int rs;
 
 	/* send data */

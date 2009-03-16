@@ -95,7 +95,7 @@ IIa. Initialization
 IIb. Receiving Data
 
  void libtelnet_push(libtelnet_t *telnet,
-     unsigned char *buffer, unsigned int size, void *user_data);
+     const unsigned char *buffer, unsigned int size, void *user_data);
    When your application receives data over the socket from the
    remote end, it must pass the received bytes into this function.
 
@@ -132,13 +132,14 @@ IIc. Sending Data
    LIBTELNET_DONT.  The opt parameter is the option to
    negotiate.
 
- void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
-     unsigned int size);
+ void libtelnet_send_data(libtelnet_t *telnet,
+     const unsigned char *buffer, unsigned int size);
    Sends raw data, which would be either the process output from
    a server or the user input from a client.
 
  void libtelnet_send_subnegotiation(libtelnet_t *telnet,
-     unsigned char telopt, unsigned char *buffer, unsigned int size);
+     unsigned char telopt, const unsigned char *buffer,
+     unsigned int size);
    Sends a TELNET sub-negotiation command.  The telopt parameter
    is the sub-negotiation option.
 
@@ -172,7 +173,7 @@ IId. Event Handling
  pointer passed to libtelnet_init().
 
   struct libtelnet_event_t {
-    unsigned char *buffer;
+    const unsigned char *buffer;
     unsigned int size;
     libtelnet_event_type_t type;
     unsigned char command;
