@@ -200,7 +200,14 @@ extern void libtelnet_push(libtelnet_t *telnet, unsigned char *buffer,
 /* send an iac command */
 extern void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd);
 
-/* send negotiation */
+/* send an iac command with a telopt */
+extern void libtelnet_send_telopt(libtelnet_t *telnet, unsigned char cmd,
+		unsigned char telopt);
+
+/* send negotiation, with RFC1143 checking.
+ * will not actually send unless necessary, but will update internal
+ * negotiation queue.
+ */
 extern void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 		unsigned char opt);
 
@@ -208,9 +215,15 @@ extern void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 extern void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
 		unsigned int size);
 
-/* send sub-request */
+/* send sub-request, equivalent to:
+ *   libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt)
+ *   libtelnet_send_data(telnet, buffer, size);
+ *   libtelnet_send_command(telnet, LIBTELNET_SE);
+ * manually generating sequence may be easier for complex subnegotiations
+ * thare are most easily implemented with a series of send_data calls.
+ */
 extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
-		unsigned char opt, unsigned char *buffer, unsigned int size);
+		unsigned char telopt, unsigned char *buffer, unsigned int size);
 
 /* begin sending compressed data (server only) */
 extern void libtelnet_begin_compress2(libtelnet_t *telnet);

@@ -110,6 +110,11 @@ IIc. Sending Data
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
+ void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd,
+     unsigned char telopt);
+   Sends a TELNET command with an option code following.  This is
+   only useful for the WILL, WONT, DO, DONT, and SB commands.
+
  void libtelnet_send_negotiate(libtelnet_t *telnet,
      unsigned char cmd, unsigned char opt);
    Sends a TELNET negotiation command.  The cmd parameter must be
@@ -123,9 +128,22 @@ IIc. Sending Data
    a server or the user input from a client.
 
  void libtelnet_send_subnegotiation(libtelnet_t *telnet,
-     unsigned char opt, unsigned char *buffer, unsigned int size);
-   Sends a TELNET sub-negotiation command.  The opt parameter
+     unsigned char telopt, unsigned char *buffer, unsigned int size);
+   Sends a TELNET sub-negotiation command.  The telopt parameter
    is the sub-negotiation option.
+
+   Note that the above function is just a shorthand for:
+    libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt);
+    libtelnet_send_data(telnet, buffer, size);
+    libtelnet_send_command(telnet, LIBTELNET_SE);
+
+   For some subnegotiations that involve a lot of complex formatted
+   data to be sent, it may be easier to manually send the SB telopt
+   header and SE footer around mulitple calls to send_data.
+
+   NOTE: libtelnet_send_subrequest() does have special behavior in
+   PROXY mode, as in that mode this function will automatically
+   detect the COMPRESS2 marker and enable zlib compression.
 
 IId. Event Handling
 

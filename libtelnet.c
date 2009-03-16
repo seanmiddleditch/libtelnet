@@ -206,13 +206,6 @@ void _set_rfc1143(libtelnet_t *telnet, libtelnet_rfc1143_t q) {
 	telnet->q[telnet->q_size++] = q;
 }
 
-/* send a negotiation without going through the RFC1143 checks */
-static void _send_negotiate(libtelnet_t *telnet, unsigned char cmd,
-		unsigned char opt) {
-	unsigned char bytes[3] = { LIBTELNET_IAC, cmd, opt };
-	_send(telnet, bytes, 3);
-}
-
 /* negotiation handling magic for RFC1143 */
 static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
@@ -249,9 +242,9 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 			if (_event(telnet, LIBTELNET_EV_WILL, cmd, telopt, 0, 0) == 1) {
 				q.him = RFC1143_YES;
 				_set_rfc1143(telnet, q);
-				_send_negotiate(telnet, LIBTELNET_DO, telopt);
+				libtelnet_send_telopt(telnet, LIBTELNET_DO, telopt);
 			} else
-				_send_negotiate(telnet, LIBTELNET_DONT, telopt);
+				libtelnet_send_telopt(telnet, LIBTELNET_DONT, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -274,7 +267,7 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTYES_OP:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			_send_negotiate(telnet, LIBTELNET_DONT, telopt);
+			libtelnet_send_telopt(telnet, LIBTELNET_DONT, telopt);
 			break;
 		}
 		break;
@@ -287,7 +280,7 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.him = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			_send_negotiate(telnet, LIBTELNET_DONT, telopt);
+			libtelnet_send_telopt(telnet, LIBTELNET_DONT, telopt);
 			_event(telnet, LIBTELNET_EV_WONT, 0, telopt,
 					0, 0);
 			break;
@@ -318,9 +311,9 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 			if (_event(telnet, LIBTELNET_EV_DO, cmd, telopt, 0, 0) == 1) {
 				q.us = RFC1143_YES;
 				_set_rfc1143(telnet, q);
-				_send_negotiate(telnet, LIBTELNET_WILL, telopt);
+				libtelnet_send_telopt(telnet, LIBTELNET_WILL, telopt);
 			} else
-				_send_negotiate(telnet, LIBTELNET_WONT, telopt);
+				libtelnet_send_telopt(telnet, LIBTELNET_WONT, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -343,7 +336,7 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTYES_OP:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			_send_negotiate(telnet, LIBTELNET_WONT, telopt);
+			libtelnet_send_telopt(telnet, LIBTELNET_WONT, telopt);
 			break;
 		}
 		break;
@@ -356,7 +349,7 @@ static void _negotiate(libtelnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.us = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			_send_negotiate(telnet, LIBTELNET_WONT, telopt);
+			libtelnet_send_telopt(telnet, LIBTELNET_WONT, telopt);
 			_event(telnet, LIBTELNET_EV_DONT, 0, telopt, 0, 0);
 			break;
 		case RFC1143_WANTNO:
@@ -673,6 +666,13 @@ void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd) {
 	_send(telnet, bytes, 2);
 }
 
+/* send an iac command with telopt */
+void libtelnet_send_telopt(libtelnet_t *telnet, unsigned char cmd,
+		unsigned char telopt) {
+	unsigned char bytes[3] = { LIBTELNET_IAC, cmd, telopt };
+	_send(telnet, bytes, 3);
+}
+
 /* send negotiation */
 void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
@@ -814,10 +814,9 @@ void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
 }
 
 /* send sub-request */
-void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char opt,
+void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char telopt,
 		unsigned char *buffer, unsigned int size) {
-	libtelnet_send_command(telnet, LIBTELNET_SB);
-	libtelnet_send_data(telnet, &opt, 1);
+	libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt);
 	libtelnet_send_data(telnet, buffer, size);
 	libtelnet_send_command(telnet, LIBTELNET_SE);
 
@@ -826,8 +825,7 @@ void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char opt,
 	 * make sure all further data is compressed if not already.
 	 */
 	if (telnet->flags & LIBTELNET_FLAG_PROXY &&
-			telnet->z == 0 &&
-			opt == LIBTELNET_TELOPT_COMPRESS2) {
+			telopt == LIBTELNET_TELOPT_COMPRESS2) {
 
 		if (_init_zlib(telnet, 1, 1) != LIBTELNET_EOK)
 			return;
@@ -852,5 +850,8 @@ void libtelnet_begin_compress2(libtelnet_t *telnet) {
 	 * the compress marker itself being compressed.
 	 */
 	_event(telnet, LIBTELNET_EV_SEND, 0, 0, compress2, sizeof(compress2));
+
+	/* notify app that compression was successfully enabled */
+	_event(telnet, LIBTELNET_EV_COMPRESS, 1, 0, 0, 0);
 #endif /* HAVE_ZLIB */
 }
