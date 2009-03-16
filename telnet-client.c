@@ -29,7 +29,7 @@
 #include "libtelnet.h"
 
 static struct termios orig_tios;
-static struct libtelnet_t telnet;
+static libtelnet_t telnet;
 static int do_echo;
 
 static void _cleanup(void) {
@@ -76,8 +76,8 @@ static void _send(int sock, unsigned char *buffer, unsigned int size) {
 	}
 }
 
-static void _event_handler(struct libtelnet_t *telnet,
-		struct libtelnet_event_t *ev, void *user_data) {
+static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
+		void *user_data) {
 	int sock = *(int*)user_data;
 
 	switch (ev->type) {
