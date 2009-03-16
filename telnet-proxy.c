@@ -191,12 +191,31 @@ static void _event_handler(struct libtelnet_t *telnet,
 
 		libtelnet_send_command(&conn->remote->telnet, ev->command);
 		break;
-	/* negotiation */
-	case LIBTELNET_EV_NEGOTIATE:
-		printf("%s IAC %s %d (%s)" COLOR_NORMAL "\n", conn->name,
-				get_cmd(ev->command), (int)ev->telopt, get_opt(ev->telopt));
-
-		libtelnet_send_negotiate(&conn->remote->telnet, ev->command,
+	/* negotiation, WILL */
+	case LIBTELNET_EV_WILL:
+		printf("%s IAC WILL %d (%s)" COLOR_NORMAL "\n", conn->name,
+				(int)ev->telopt, get_opt(ev->telopt));
+		libtelnet_send_negotiate(&conn->remote->telnet, LIBTELNET_WILL,
+				ev->telopt);
+		break;
+	/* negotiation, WONT */
+	case LIBTELNET_EV_WONT:
+		printf("%s IAC WONT %d (%s)" COLOR_NORMAL "\n", conn->name,
+				(int)ev->telopt, get_opt(ev->telopt));
+		libtelnet_send_negotiate(&conn->remote->telnet, LIBTELNET_WONT,
+				ev->telopt);
+		break;
+	/* negotiation, DO */
+	case LIBTELNET_EV_DO:
+		printf("%s IAC DO %d (%s)" COLOR_NORMAL "\n", conn->name,
+				(int)ev->telopt, get_opt(ev->telopt));
+		libtelnet_send_negotiate(&conn->remote->telnet, LIBTELNET_DO,
+				ev->telopt);
+		break;
+	case LIBTELNET_EV_DONT:
+		printf("%s IAC DONT %d (%s)" COLOR_NORMAL "\n", conn->name,
+				(int)ev->telopt, get_opt(ev->telopt));
+		libtelnet_send_negotiate(&conn->remote->telnet, LIBTELNET_DONT,
 				ev->telopt);
 		break;
 	/* subnegotiation */

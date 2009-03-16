@@ -226,19 +226,75 @@ IId. Event Handling
    The necessary processing depends on the specific commands; see
    the TELNET RFC for more information.
  
- LIBTELNET_EV_NEGOTIATE:
-   The NEGOTIATE event is sent when a TELNET neogitiation command
-   is received.
+ LIBTELNET_EV_WILL:
+ LIBTELNET_EV_DO:
+   The WILL and DO events are sent when a TELNET negotiation
+   command of the same name is received.
 
-   The event->command value will be one of LIBTELNET_WILL,
-   LIBTELNET_WONT, LIBTELNET_DO, or LIBTELNET_DONT.  The
-   event->telopt value will contain the option value being
-   negotiated.
+   WILL events are sent by the remote end when they wish to be
+   allowed to turn an option on on their end, or in confirmation
+   after you have sent a DO command to them.
 
-   libtelnet does not currently manage negotiation for you.  For
-   best practice in implementing TELNET negotiation, see:
+   DO events are sent by the remote end when they wish for you
+   to turn on an option on your end, or in confirmation after you
+   have sent a WILL command to them.
+
+   In either case, the TELNET option under negotiation will be in
+   event->telopt field.
+
+   If you support the option and wish for it to be enabled you
+   must set the event->accept field to 1, unless this event is
+   a confirmation for a previous WILL/DO command you sent to the
+   remote end.  If you do not set event->field to 1 then
+   libtelnet will send a rejection command back to the other end.
+
+   libtelnet manages some of the pecularities of negotiation for
+   you.  For information on libtelnet's negotiation method, see:
 
     http://www.faqs.org/rfcs/rfc1143.html
+
+   Examples:
+
+    You want remote end to use TTYPE, so you send DO TTYPE.
+    Remote accepts and sends WILL TTYPE.
+
+    Remote end wants you to use SGA, so they send DO_SGA.
+    You do not support SGA and set event->accept = 0.
+
+    Remote end wants to use ZMP, so they send WILL ZMP.
+    You support ZMP, so you set event->accept = 1 and enable
+    local ZMP support.
+
+    You want to use MCCP2, so you send WILL COMPRESS2.
+    Remote end accepts and sends DO COMPRESS2.
+
+   Note that in PROXY mode libtelnet will do no processing of its
+   own for you.
+
+ LIBTELNET_EV_WONT:
+ LIBTELNET_EV_DONT:
+   The WONT and DONT events are sent when the remote end of the
+   connection wishes to disable an option, when they are
+   refusing to a support an option that you have asked for, or
+   in confirmation of an option you have asked to be disabled.
+
+   Most commonly WONT and DONT events are sent as rejections of
+   features you requested by sending DO or WILL events.  Receiving
+   these events means the TELNET option is not or will not be
+   supported by the remote end, so give up.
+
+   Sometimes WONT or DONT will be sent for TELNET options that are
+   already enabled, but the remote end wishes to stop using.  You
+   cannot decline.  These events are demands that must be complied
+   with.  libtelnet will always send the appropriate response back
+   without consulting your application.  These events are sent to
+   allow your application to disable its own use of the features.
+
+   In either case, the TELNET option under negotiation will be in
+   event->telopt field.
+
+   Note that in PROXY mode libtelnet will do no processing of its
+   own for you.
 
  LIBTELNET_EV_SUBNEGOTIATION:
    Triggered whenever a TELNET sub-negotiation has been received.
@@ -347,11 +403,9 @@ option using libtelnet_send_negotiate(), for example:
  libtelnet_send_negotiate(&telnet, LIBTELNET_WILL,
      LIBTELNET_OPTION_COMPRESS2, user_data);
 
-If a favorable DO COMPRESS2 is sent back from the client (processed
-in a LIBTELNET_EV_NEGOTIATE event, with event->command equal to
-LIBTELNET_DO and event->telopt equal to LIBTELNET_TELOPT_COMPRESS2),
-then the server application can begin compression at any time by
-calling libtelnet_begin_compress2().
+If a favorable DO COMPRESS2 is sent back from the client then the
+server application can begin compression at any time by calling
+libtelnet_begin_compress2().
 
 If a connection is in PROXY mode and COMPRESS2 support is enabled
 then libtelnet will automatically detect the start of a COMPRESS2

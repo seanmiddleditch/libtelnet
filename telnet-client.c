@@ -89,54 +89,31 @@ static void _event_handler(struct libtelnet_t *telnet,
 	case LIBTELNET_EV_SEND:
 		_send(sock, ev->buffer, ev->size);
 		break;
-	/* accept any options we want */
-	case LIBTELNET_EV_NEGOTIATE:
-		switch (ev->command) {
-		case LIBTELNET_WILL:
-			switch (ev->telopt) {
-			/* accept request to enable compression */
-			case LIBTELNET_TELOPT_COMPRESS2:
-				libtelnet_send_negotiate(telnet, LIBTELNET_DO, ev->telopt);
-				break;
-			/* server "promises" to echo, so turn off local echo */
-			case LIBTELNET_TELOPT_ECHO:
-				do_echo = 0;
-				libtelnet_send_negotiate(telnet, LIBTELNET_DO, ev->telopt);
-				break;
-			/* unknown -- reject */
-			default:
-				libtelnet_send_negotiate(telnet, LIBTELNET_DONT, ev->telopt);
-				break;
-			}
-			break;
+	/* request to enable remote feature (or receipt) */
+	case LIBTELNET_EV_WILL:
+		/* we accept COMPRESS2 (MCCP) */
+		if (ev->telopt == LIBTELNET_TELOPT_COMPRESS2)
+			ev->accept = 1;
 
-		case LIBTELNET_WONT:
-			switch (ev->telopt) {
-			/* server wants us to do echoing, by telling us it won't */
-			case LIBTELNET_TELOPT_ECHO:
-				do_echo = 1;
-				libtelnet_send_negotiate(telnet, LIBTELNET_DONT, ev->telopt);
-				break;
-			}
-			break;
-
-		case LIBTELNET_DO:
-			switch (ev->telopt) {
-			/* accept request to enable terminal-type requests */
-			case LIBTELNET_TELOPT_TTYPE:
-				libtelnet_send_negotiate(telnet, LIBTELNET_WILL, ev->telopt);
-				break;
-			/* unknown - reject */
-			default:
-				libtelnet_send_negotiate(telnet, LIBTELNET_WONT, ev->telopt);
-				break;
-			}
-			break;
-
-		case LIBTELNET_DONT:
-			/* ignore for now */
-			break;
+		/* we'll agree to turn off our echo if server wants us to stop */
+		else if (ev->telopt == LIBTELNET_TELOPT_ECHO) {
+			do_echo = 0;
+			ev->accept = 1;
 		}
+		break;
+	/* notification of disabling remote feature (or receipt) */
+	case LIBTELNET_EV_WONT:
+		if (ev->telopt == LIBTELNET_TELOPT_ECHO)
+			do_echo = 1;
+		break;
+	/* request to enable local feature (or receipt) */
+	case LIBTELNET_EV_DO:
+		/* we support the TTYPE option */
+		if (ev->telopt == LIBTELNET_TELOPT_TTYPE)
+			ev->accept = 1;
+		break;
+	/* demand to disable local feature (or receipt) */
+	case LIBTELNET_EV_DONT:
 		break;
 	/* respond to particular subnegotiations */
 	case LIBTELNET_EV_SUBNEGOTIATION:

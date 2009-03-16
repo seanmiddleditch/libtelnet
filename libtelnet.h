@@ -120,7 +120,10 @@ enum libtelnet_event_type_t {
 	LIBTELNET_EV_DATA = 0,
 	LIBTELNET_EV_SEND,
 	LIBTELNET_EV_IAC,
-	LIBTELNET_EV_NEGOTIATE,
+	LIBTELNET_EV_WILL,
+	LIBTELNET_EV_WONT,
+	LIBTELNET_EV_DO,
+	LIBTELNET_EV_DONT,
 	LIBTELNET_EV_SUBNEGOTIATION,
 	LIBTELNET_EV_COMPRESS,
 	LIBTELNET_EV_WARNING,
@@ -129,15 +132,23 @@ enum libtelnet_event_type_t {
 
 /* event information */
 struct libtelnet_event_t {
-	/* type of event */ 
-	enum libtelnet_event_type_t type;
-	/* command info: only for IAC event */
-	unsigned char command;
-	/* telopt info: for NEGOTIATE and SUBNEGOTIATION events */
-	unsigned char telopt;
 	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
 	unsigned char *buffer;
 	unsigned int size;
+	/* type of event */ 
+	enum libtelnet_event_type_t type;
+	/* IAC command */
+	unsigned char command;
+	/* telopt info: for negotiation events SUBNEGOTIATION */
+	unsigned char telopt;
+	/* accept status: for WILL and DO events */
+	unsigned char accept;
+};
+
+/* option negotiation state (RFC 1143) */
+struct libtelnet_rfc1143_t {
+	unsigned char telopt;
+	char us:4, him:4;
 };
 
 /* event handler declaration */
@@ -155,18 +166,22 @@ struct libtelnet_t {
 	z_stream *z_deflate;
 	z_stream *z_inflate;
 #endif
+	/* RFC1143 option negotiation states */
+	struct libtelnet_rfc1143_t *q;
 	/* sub-request buffer */
 	unsigned char *buffer;
 	/* current size of the buffer */
-	unsigned int size;
-	/* length of data in the buffer */
-	unsigned int length;
+	unsigned int buffer_size;
+	/* current buffer write position (also length of buffer data) */
+	unsigned int buffer_pos;
 	/* current state */
 	enum libtelnet_state_t state;
 	/* processing mode */
 	enum libtelnet_mode_t mode;
 	/* current subnegotiation telopt */
 	unsigned char sb_telopt;
+	/* length of RFC1143 queue */
+	unsigned char q_size;
 };
 
 /* initialize a telnet state tracker */
@@ -199,5 +214,13 @@ extern void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
 
 /* begin sending compressed data (server only) */
 extern void libtelnet_begin_compress2(struct libtelnet_t *telnet);
+
+/* return the status of a specific TELNET option on our end (US) */
+extern int libtelnet_get_telopt_local(struct libtelnet_t *telnet,
+		unsigned char telopt);
+
+/* return the status of a specific TELNET option on remote end (HIM) */
+extern int libtelnet_get_telopt_remote(struct libtelnet_t *telnet,
+		unsigned char telopt);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
