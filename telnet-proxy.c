@@ -44,7 +44,7 @@
 struct conn_t {
 	const char *name;
 	int sock;
-	struct libtelnet_t telnet;
+	libtelnet_t telnet;
 	struct conn_t *remote;
 };
 
@@ -161,8 +161,8 @@ static void _send(int sock, unsigned char *buffer, unsigned int size) {
 	}
 }
 
-static void _event_handler(struct libtelnet_t *telnet,
-		struct libtelnet_event_t *ev, void *user_data) {
+static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
+		void *user_data) {
 	struct conn_t *conn = (struct conn_t*)user_data;
 
 	switch (ev->type) {
@@ -355,9 +355,9 @@ int main(int argc, char **argv) {
 		client.remote = &server;
 
 		/* initialize telnet boxes */
-		libtelnet_init(&server.telnet, _event_handler, LIBTELNET_MODE_PROXY,
+		libtelnet_init(&server.telnet, _event_handler, LIBTELNET_FLAG_PROXY,
 				&server);
-		libtelnet_init(&client.telnet, _event_handler, LIBTELNET_MODE_PROXY,
+		libtelnet_init(&client.telnet, _event_handler, LIBTELNET_FLAG_PROXY,
 				&client);
 
 		/* initialize poll descriptors */

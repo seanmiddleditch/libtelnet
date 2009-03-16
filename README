@@ -57,9 +57,8 @@ IIa. Initialization
    its own libtelnet_t structure, which is passed to all libtelnet
    API calls.
 
- void libtelnet_init(struct libtelnet_t *telnet,
-     libtelnet_event_handler_t handler, enum libtelnet_mode_t mode,
-     void *user_data);
+ void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t handler,
+     unsigned char flags, void *user_data);
    The libtelnet_init() function is responsible for initializing
    the data in a libtelnet_t structure.  It must be called
    immediately after establishing a connection and before any other
@@ -74,22 +73,19 @@ IIa. Initialization
    information about the connection, including a socket descriptor
    for implementing LIBTELNET_EV_SEND event handling.
 
-   The mode parameter must be one of LIBTELNET_MODE_SERVER,
-   LIBTELNET_MODE_CLIENT, or LIBTELNET_MODE_PROXY.  These slightly
-   alter the behavior of libtelnet in certain instances.  If you are
-   implementing a TELNET server, use the SERVER mode.  If you are
-   implementing a client, use the CLIENT mode.  The PROXY mode
-   enables special behavior for telnet-proxy (or similar
-   applications).
+   The flags parameter can be any of the following flag constants
+   bit-or'd together, or 0 to leave all options disabled.
+
+    LIBTELNET_FLAG_PROXY   - operate in proxy mode
  
- boid libtelnet_free(struct libtelnet_t *telnet);
+ boid libtelnet_free(libtelnet_t *telnet);
    Releases any internal memory allocated by libtelnet.  This must
    be called whenever a connection is closed, or you will incur
    memory leaks.
 
 IIb. Receiving Data
 
- void libtelnet_push(struct libtelnet_t *telnet,
+ void libtelnet_push(libtelnet_t *telnet,
      unsigned char *buffer, unsigned int size, void *user_data);
    When your application receives data over the socket from the
    remote end, it must pass the received bytes into this function.
@@ -111,24 +107,23 @@ IIc. Sending Data
  to libtelnet_send_data().  Do NOT send or buffer unprocessed output
  data directly!
 
- void libtelnet_send_command(struct libtelnet_t *telnet,
-     unsigned char cmd);
+ void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd);
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
- void libtelnet_send_negotiate(struct libtelnet_t *telnet,
+ void libtelnet_send_negotiate(libtelnet_t *telnet,
      unsigned char cmd, unsigned char opt);
    Sends a TELNET negotiation command.  The cmd parameter must be
    one of LIBTELNET_WILL, LIBTELNET_DONT, LIBTELNET_DO, or
    LIBTELNET_DONT.  The opt parameter is the option to
    negotiate.
 
- void libtelnet_send_data(struct libtelnet_t *telnet,
-     unsigned char *buffer, unsigned int size);
+ void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
+     unsigned int size);
    Sends raw data, which would be either the process output from
    a server or the user input from a client.
 
- void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
+ void libtelnet_send_subnegotiation(libtelnet_t *telnet,
      unsigned char opt, unsigned char *buffer, unsigned int size);
    Sends a TELNET sub-negotiation command.  The opt parameter
    is the sub-negotiation option.
@@ -150,11 +145,12 @@ IId. Event Handling
  pointer passed to libtelnet_init().
 
   struct libtelnet_event_t {
-    enum libtelnet_event_type_t type;
-    unsigned char command;
-    unsigned char telopt;
     unsigned char *buffer;
     unsigned int size;
+    libtelnet_event_type_t type;
+    unsigned char command;
+    unsigned char telopt;
+    unsigned char accept;
   };
  
  The enumeration values of libtelnet_event_type_t are described in
@@ -169,8 +165,8 @@ IId. Event Handling
  Here is an example event handler implementation which includes
  handlers for several important events.
 
-  void my_event_handler(struct libtelnet_t *telnet,
-      libtelnet_event_t *ev, void *user_data) {
+  void my_event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
+      void *user_data) {
     struct user_info *user = (struct user_info *)user_data;
 
     switch (ev->type) {

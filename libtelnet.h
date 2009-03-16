@@ -13,8 +13,12 @@
 #define LIBTELNET_INCLUDE 1
 
 /* forward declarations */
-struct libtelnet_t;
-struct libtelnet_cb_t;
+typedef struct libtelnet_t libtelnet_t;
+typedef struct libtelnet_event_t libtelnet_event_t;
+typedef enum libtelnet_mode_t libtelnet_mode_t;
+typedef enum libtelnet_state_t libtelnet_state_t;
+typedef enum libtelnet_error_t libtelnet_error_t;
+typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 
 /* telnet special values */
 #define LIBTELNET_IAC 255
@@ -85,12 +89,10 @@ struct libtelnet_cb_t;
 #define LIBTELNET_TELOPT_ZMP 93
 #define LIBTELNET_TELOPT_EXOPL 255
 
-/* libtelnet modes */
-enum libtelnet_mode_t {
-	LIBTELNET_MODE_SERVER = 0,
-	LIBTELNET_MODE_CLIENT,
-	LIBTELNET_MODE_PROXY
-};
+/* libtelnet feature flags */
+#define LIBTELNET_FLAG_PROXY (1<<0)
+
+#define LIBTELNET_PFLAG_DEFLATE (1<<7)
 
 /* telnet states */
 enum libtelnet_state_t {
@@ -152,8 +154,8 @@ struct libtelnet_rfc1143_t {
 };
 
 /* event handler declaration */
-typedef void (*libtelnet_event_handler_t)(struct libtelnet_t *telnet,
-		struct libtelnet_event_t *event, void *user_data);
+typedef void (*libtelnet_event_handler_t)(libtelnet_t *telnet,
+		libtelnet_event_t *event, void *user_data);
 
 /* state tracker */
 struct libtelnet_t {
@@ -163,8 +165,7 @@ struct libtelnet_t {
 	libtelnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
 	/* zlib (mccp2) compression */
-	z_stream *z_deflate;
-	z_stream *z_inflate;
+	z_stream *z;
 #endif
 	/* RFC1143 option negotiation states */
 	struct libtelnet_rfc1143_t *q;
@@ -176,8 +177,8 @@ struct libtelnet_t {
 	unsigned int buffer_pos;
 	/* current state */
 	enum libtelnet_state_t state;
-	/* processing mode */
-	enum libtelnet_mode_t mode;
+	/* option flags */
+	unsigned char flags;
 	/* current subnegotiation telopt */
 	unsigned char sb_telopt;
 	/* length of RFC1143 queue */
@@ -185,35 +186,33 @@ struct libtelnet_t {
 };
 
 /* initialize a telnet state tracker */
-extern void libtelnet_init(struct libtelnet_t *telnet,
-		libtelnet_event_handler_t eh, enum libtelnet_mode_t mode,
-		void *user_data);
+extern void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t eh,
+		unsigned char flags, void *user_data);
 
 /* free up any memory allocated by a state tracker */
-extern void libtelnet_free(struct libtelnet_t *telnet);
+extern void libtelnet_free(libtelnet_t *telnet);
 
 /* push a byte buffer into the state tracker */
-extern void libtelnet_push(struct libtelnet_t *telnet,
-		unsigned char *buffer, unsigned int size);
+extern void libtelnet_push(libtelnet_t *telnet, unsigned char *buffer,
+		unsigned int size);
 
 /* send an iac command */
-extern void libtelnet_send_command(struct libtelnet_t *telnet,
-		unsigned char cmd);
+extern void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd);
 
 /* send negotiation */
-extern void libtelnet_send_negotiate(struct libtelnet_t *telnet,
-		unsigned char cmd, unsigned char opt);
+extern void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
+		unsigned char opt);
 
 /* send non-command data (escapes IAC bytes) */
-extern void libtelnet_send_data(struct libtelnet_t *telnet,
-		unsigned char *buffer, unsigned int size);
+extern void libtelnet_send_data(libtelnet_t *telnet, unsigned char *buffer,
+		unsigned int size);
 
 /* send sub-request */
-extern void libtelnet_send_subnegotiation(struct libtelnet_t *telnet,
+extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
 		unsigned char opt, unsigned char *buffer, unsigned int size);
 
 /* begin sending compressed data (server only) */
-extern void libtelnet_begin_compress2(struct libtelnet_t *telnet);
+extern void libtelnet_begin_compress2(libtelnet_t *telnet);
 
 /* return the status of a specific TELNET option on our end (US) */
 extern int libtelnet_get_telopt_local(struct libtelnet_t *telnet,
