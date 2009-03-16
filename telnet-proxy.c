@@ -135,7 +135,7 @@ static void print_buffer(unsigned char *buffer, unsigned int size) {
 		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
 			printf("%c", (char)buffer[i]);
 		else if (buffer[i] == '\n')
-			printf("<" COLOR_BOLD "[1m0x%02X" COLOR_UNBOLD ">\n",
+			printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">\n",
 					(int)buffer[i]);
 		else
 			printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">", (int)buffer[i]);
