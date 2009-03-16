@@ -92,6 +92,8 @@ typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 /* libtelnet feature flags */
 #define LIBTELNET_FLAG_PROXY (1<<0)
 
+#define LIBTELNET_PFLAG_DEFLATE (1<<7)
+
 /* telnet states */
 enum libtelnet_state_t {
 	LIBTELNET_STATE_DATA = 0,
@@ -152,8 +154,7 @@ struct libtelnet_t {
 	libtelnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
 	/* zlib (mccp2) compression */
-	z_stream *z_deflate;
-	z_stream *z_inflate;
+	z_stream *z;
 #endif
 	/* sub-request buffer */
 	unsigned char *buffer;
