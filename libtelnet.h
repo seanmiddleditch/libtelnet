@@ -16,10 +16,6 @@
 typedef struct libtelnet_t libtelnet_t;
 typedef struct libtelnet_event_t libtelnet_event_t;
 typedef struct libtelnet_rfc1143_t libtelnet_rfc1143_t;
-typedef enum libtelnet_mode_t libtelnet_mode_t;
-typedef enum libtelnet_state_t libtelnet_state_t;
-typedef enum libtelnet_error_t libtelnet_error_t;
-typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 
 /* telnet special values */
 #define LIBTELNET_IAC 255
@@ -107,6 +103,7 @@ enum libtelnet_state_t {
 	LIBTELNET_STATE_SB_DATA,
 	LIBTELNET_STATE_SB_DATA_IAC
 };
+typedef enum libtelnet_state_t libtelnet_state_t;
 
 /* error codes */
 enum libtelnet_error_t {
@@ -117,6 +114,7 @@ enum libtelnet_error_t {
 	LIBTELNET_EPROTOCOL, /* invalid sequence of special bytes */
 	LIBTELNET_ECOMPRESS /* error handling compressed streams */
 };
+typedef enum libtelnet_error_t libtelnet_error_t;
 
 /* event codes */
 enum libtelnet_event_type_t {
@@ -132,6 +130,7 @@ enum libtelnet_event_type_t {
 	LIBTELNET_EV_WARNING,
 	LIBTELNET_EV_ERROR
 };
+typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 
 /* event information */
 struct libtelnet_event_t {
