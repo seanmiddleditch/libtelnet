@@ -855,3 +855,20 @@ void libtelnet_begin_compress2(libtelnet_t *telnet) {
 	_event(telnet, LIBTELNET_EV_COMPRESS, 1, 0, 0, 0);
 #endif /* HAVE_ZLIB */
 }
+
+/* send formatted data through libtelnet_send_data */
+int libtelnet_send_printf(libtelnet_t *telnet, const char *fmt, ...) {
+	char buffer[4096];
+	va_list va;
+	int rs;
+
+	/* format */
+	va_start(va, fmt);
+	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
+	va_end(va);
+
+	/* send */
+	libtelnet_send_data(telnet, (unsigned char *)buffer, rs);
+
+	return rs;
+}

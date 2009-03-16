@@ -228,4 +228,13 @@ extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
 /* begin sending compressed data (server only) */
 extern void libtelnet_begin_compress2(libtelnet_t *telnet);
 
+/* send formatted data (through libtelnet_send_data) */
+#ifdef __GNUC__
+# define LIBTELNET_GNU_PRINTF(f,a) __attribute__((printf(f, a)))
+#else
+# define LIBTELNET_GNU_PRINTF(f,a)
+#endif
+
+extern int libtelnet_send_printf(libtelnet_t *telnet, const char *fmt, ...);
+
 #endif /* !defined(LIBTELNET_INCLUDE) */
