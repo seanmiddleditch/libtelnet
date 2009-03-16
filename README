@@ -18,7 +18,6 @@ code under copyright law.
 
 *** TODO ***
 
- - RFC 1143 option negotiation algorithm
  - automatic MCCP2 handling (controllable by host app)
  ? ZMP parsing
  ? MSSP parsing
