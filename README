@@ -105,8 +105,8 @@ IIc. Sending Data
  Note: it is very important that ALL data sent to the remote end of
  the connection be passed through libtelnet.  All user input or
  process output that you wish to send over the wire should be given
- to libtelnet_send_data().  Do NOT send or buffer unprocessed output
- data directly!
+ to one of the following functions.  Do NOT send or buffer
+ unprocessed output data directly!
 
  void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd);
    Sends a single "simple" TELNET command, such as the GO-AHEAD
@@ -144,9 +144,31 @@ IIc. Sending Data
    data to be sent, it may be easier to manually send the SB telopt
    header and SE footer around mulitple calls to send_data.
 
-   NOTE: libtelnet_send_subrequest() does have special behavior in
-   PROXY mode, as in that mode this function will automatically
+   NOTE: libtelnet_send_subnegotiation() does have special behavior
+   in PROXY mode, as in that mode this function will automatically
    detect the COMPRESS2 marker and enable zlib compression.
+
+ int libtelnet_printf(libtelnet_t *telnet, const char *fmt, ...);
+  This functions very similarly to fprintf, except that output
+  is sent through libtelnet for processing.  This is equivalent
+  to using snprintf() to format data into a buffer and then
+  sending the buffer to libtelnet_send_data().  The return code
+  is the length of the formatted text.
+
+  NOTE: due to an internal implementation detail, the maximum
+  lenth of the formatted text is 4096 characters.
+ 
+ int libtelnet_printf2(libtelnet_T *telnet, const char *fmt, ...);
+  Identical to libtelnet_print(), except that this variant will
+  also translate C newlines (\n) into a CRLF and translates
+  carriage returns (\r) into CRNUL, as required by TELNET.
+
+  NOTE: this function should only be used for regular data such
+  as user input (in client applications) or process output (in 
+  server applications).  If you are formatting data that is part
+  of a subnegotiation, you should always use libtelnet_printf()
+  instead, as you will rarely want newline translation inside of
+  subnegotiations.
 
 IId. Event Handling
 
