@@ -235,6 +235,9 @@ extern void libtelnet_begin_compress2(libtelnet_t *telnet);
 # define LIBTELNET_GNU_PRINTF(f,a)
 #endif
 
-extern int libtelnet_send_printf(libtelnet_t *telnet, const char *fmt, ...);
+extern int libtelnet_printf(libtelnet_t *telnet, const char *fmt, ...);
+
+/* send formatted data with \r and \n translated */
+extern int libtelnet_printf2(libtelnet_t *telnet, const char *fmt, ...);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
