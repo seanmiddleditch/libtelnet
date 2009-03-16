@@ -148,8 +148,12 @@ static void _send(int sock, unsigned char *buffer, unsigned int size) {
 	/* send data */
 	while (size > 0) {
 		if ((rs = send(sock, buffer, size, 0)) == -1) {
-			fprintf(stderr, "send() failed: %s\n", strerror(errno));
-			exit(1);
+			if (errno != EINTR && errno != ECONNRESET) {
+				fprintf(stderr, "send() failed: %s\n", strerror(errno));
+				exit(1);
+			} else {
+				return;
+			}
 		} else if (rs == 0) {
 			fprintf(stderr, "send() unexpectedly returned 0\n");
 			exit(1);
