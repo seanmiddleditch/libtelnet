@@ -288,14 +288,10 @@ static void _process(libtelnet_t *telnet, unsigned char *buffer,
 						telnet->sb_telopt, telnet->buffer, telnet->length);
 
 #ifdef HAVE_ZLIB
-				/* if we are a client or a proxy and just received the
-				 * COMPRESS2 begin marker, setup our zlib box and start
-				 * handling the compressed stream if it's not already.
+				/* received COMPRESS2 begin marker, setup our zlib box and
+				 * start handling the compressed stream if it's not already.
 				 */
-				if (telnet->sb_telopt == LIBTELNET_TELOPT_COMPRESS2 &&
-						telnet->z == 0 &&
-						telnet->flags & LIBTELNET_FLAG_PROXY) {
-
+				if (telnet->sb_telopt == LIBTELNET_TELOPT_COMPRESS2) {
 					if (_init_zlib(telnet, 0, 1) != LIBTELNET_EOK)
 						break;
 
