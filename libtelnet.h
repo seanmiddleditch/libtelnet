@@ -89,12 +89,8 @@ typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 #define LIBTELNET_TELOPT_ZMP 93
 #define LIBTELNET_TELOPT_EXOPL 255
 
-/* libtelnet modes */
-enum libtelnet_mode_t {
-	LIBTELNET_MODE_SERVER = 0,
-	LIBTELNET_MODE_CLIENT,
-	LIBTELNET_MODE_PROXY
-};
+/* libtelnet feature flags */
+#define LIBTELNET_FLAG_PROXY (1<<0)
 
 /* telnet states */
 enum libtelnet_state_t {
@@ -167,15 +163,15 @@ struct libtelnet_t {
 	unsigned int length;
 	/* current state */
 	enum libtelnet_state_t state;
-	/* processing mode */
-	enum libtelnet_mode_t mode;
+	/* option flags */
+	unsigned char flags;
 	/* current subnegotiation telopt */
 	unsigned char sb_telopt;
 };
 
 /* initialize a telnet state tracker */
 extern void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t eh,
-		libtelnet_mode_t mode, void *user_data);
+		unsigned char flags, void *user_data);
 
 /* free up any memory allocated by a state tracker */
 extern void libtelnet_free(libtelnet_t *telnet);

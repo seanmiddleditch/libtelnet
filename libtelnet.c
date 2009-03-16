@@ -103,11 +103,11 @@ z_stream *_init_zlib(libtelnet_t *telnet, int deflate, int err_fatal) {
 
 /* initialize a telnet state tracker */
 void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t eh,
-		libtelnet_mode_t mode, void *user_data) {
+		unsigned char flags, void *user_data) {
 	memset(telnet, 0, sizeof(libtelnet_t));
 	telnet->ud = user_data;
 	telnet->eh = eh;
-	telnet->mode = mode;
+	telnet->flags = flags;
 }
 
 /* free up any memory allocated by a state tracker */
@@ -288,8 +288,7 @@ static void _process(libtelnet_t *telnet, unsigned char *buffer,
 				 */
 				if (telnet->sb_telopt == LIBTELNET_TELOPT_COMPRESS2 &&
 						telnet->z_inflate == 0 &&
-						(telnet->mode == LIBTELNET_MODE_CLIENT ||
-						 telnet->mode == LIBTELNET_MODE_PROXY)) {
+						telnet->flags & LIBTELNET_FLAG_PROXY) {
 
 					if ((telnet->z_inflate = _init_zlib(telnet, 0, 1)) == 0)
 						break;
@@ -476,7 +475,7 @@ void libtelnet_send_subnegotiation(libtelnet_t *telnet, unsigned char opt,
 	/* if we're a proxy and we just sent the COMPRESS2 marker, we must
 	 * make sure all further data is compressed if not already.
 	 */
-	if (telnet->mode == LIBTELNET_MODE_PROXY &&
+	if (telnet->flags & LIBTELNET_FLAG_PROXY &&
 			telnet->z_deflate == 0 &&
 			opt == LIBTELNET_TELOPT_COMPRESS2) {
 
@@ -497,13 +496,6 @@ void libtelnet_begin_compress2(libtelnet_t *telnet) {
 	if (telnet->z_deflate != 0) {
 		_error(telnet, __LINE__, __func__, LIBTELNET_EBADVAL, 0,
 				"compression already enabled");
-		return;
-	}
-	
-	/* only supported by servers */
-	if (telnet->mode != LIBTELNET_MODE_SERVER) {
-		_error(telnet, __LINE__, __func__, LIBTELNET_EBADVAL, 0,
-				"only supported in SERVER mode");
 		return;
 	}
 

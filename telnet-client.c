@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
 	do_echo = 1;
 
 	/* initialize telnet box */
-	libtelnet_init(&telnet, _event_handler, LIBTELNET_MODE_CLIENT, &sock);
+	libtelnet_init(&telnet, _event_handler, 0, &sock);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));

@@ -58,7 +58,7 @@ IIa. Initialization
    API calls.
 
  void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t handler,
-     libtelnet_mode_t mode, void *user_data);
+     unsigned char flags, void *user_data);
    The libtelnet_init() function is responsible for initializing
    the data in a libtelnet_t structure.  It must be called
    immediately after establishing a connection and before any other
@@ -73,13 +73,10 @@ IIa. Initialization
    information about the connection, including a socket descriptor
    for implementing LIBTELNET_EV_SEND event handling.
 
-   The mode parameter must be one of LIBTELNET_MODE_SERVER,
-   LIBTELNET_MODE_CLIENT, or LIBTELNET_MODE_PROXY.  These slightly
-   alter the behavior of libtelnet in certain instances.  If you are
-   implementing a TELNET server, use the SERVER mode.  If you are
-   implementing a client, use the CLIENT mode.  The PROXY mode
-   enables special behavior for telnet-proxy (or similar
-   applications).
+   The flags parameter can be any of the following flag constants
+   bit-or'd together, or 0 to leave all options disabled.
+
+    LIBTELNET_FLAG_PROXY   - operate in proxy mode
  
  boid libtelnet_free(libtelnet_t *telnet);
    Releases any internal memory allocated by libtelnet.  This must
