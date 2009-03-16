@@ -417,7 +417,7 @@ void libtelnet_free(libtelnet_t *telnet) {
 static libtelnet_error_t _buffer_byte(libtelnet_t *telnet,
 		unsigned char byte) {
 	unsigned char *new_buffer;
-	int i;
+	unsigned int i;
 
 	/* check if we're out of room */
 	if (telnet->buffer_pos == telnet->buffer_size) {
