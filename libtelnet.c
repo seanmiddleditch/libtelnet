@@ -63,7 +63,7 @@ static void _error(struct libtelnet_t *telnet, unsigned line, const char* func,
 	va_end(va);
 
 	_event(telnet, fatal ? LIBTELNET_EV_ERROR : LIBTELNET_EV_WARNING, err,
-			0, 0, 0);
+			0, (unsigned char *)buffer, strlen(buffer));
 }
 
 /* initialize the zlib box for a telnet box; if deflate is non-zero, it
@@ -292,8 +292,7 @@ static void _process(struct libtelnet_t *telnet, unsigned char *buffer,
 						(telnet->mode == LIBTELNET_MODE_CLIENT ||
 						 telnet->mode == LIBTELNET_MODE_PROXY)) {
 
-					if ((telnet->z_inflate = _init_zlib(telnet, 0, 1))
-							== 0)
+					if ((telnet->z_inflate = _init_zlib(telnet, 0, 1)) == 0)
 						break;
 
 					/* notify app that compression was enabled */
