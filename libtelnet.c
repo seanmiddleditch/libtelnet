@@ -847,13 +847,6 @@ void libtelnet_begin_compress2(libtelnet_t *telnet) {
 	unsigned char compress2[] = { LIBTELNET_IAC, LIBTELNET_SB,
 			LIBTELNET_TELOPT_COMPRESS2, LIBTELNET_IAC, LIBTELNET_SE };
 
-	/* don't do this if we've already got a compression stream */
-	if (telnet->z != 0) {
-		_error(telnet, __LINE__, __func__, LIBTELNET_EBADVAL, 0,
-				"compression already enabled");
-		return;
-	}
-
 	/* attempt to create output stream first, bail if we can't */
 	if (_init_zlib(telnet, 1, 0) != LIBTELNET_EOK)
 		return;
