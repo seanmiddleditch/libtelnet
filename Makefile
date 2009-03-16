@@ -1,10 +1,32 @@
 CFLAGS = -Wall -g -O0 -DHAVE_ZLIB -DENABLE_COLOR
-LFLAGS = -lz
+LFLAGS = -L. -ltelnet -lz
 
 all: telnet-proxy telnet-client
 
-telnet-proxy: telnet-proxy.c libtelnet.c libtelnet.h Makefile
-	$(CC) -o telnet-proxy $(CFLAGS) telnet-proxy.c libtelnet.c $(LFLAGS)
+%.o: %.c libtelnet.h
+	$(CC) -o $@ -c $(CFLAGS) $<
 
-telnet-client: telnet-client.c libtelnet.c libtelnet.h Makefile
-	$(CC) -o telnet-client $(CFLAGS) telnet-client.c libtelnet.c $(LFLAGS)
+libtelnet.a: libtelnet.o libtelnet.h
+	$(AR) rcs $@ $< 
+
+telnet-proxy: telnet-proxy.o libtelnet.a Makefile
+	$(CC) -o $@ $< $(LFLAGS)
+
+telnet-client: telnet-client.o libtelnet.a Makefile
+	$(CC) -o $@ $(CFLAGS) $< $(LFLAGS)
+
+clean:
+	rm -f libtelnet.a libtelnet.o telnet-proxy telnet-proxy.o \
+		telnet-client telnet-client.o
+
+dist:
+	rm -fr libtelnet-dist
+	rm -f libtelnet-dist.tar.gz
+	mkdir libtelnet-dist
+	cp Makefile README libtelnet.h libtelnet.c telnet-proxy.c \
+		telnet-client.c libtelnet-dist
+	tar -cf libtelnet-dist.tar libtelnet-dist
+	gzip libtelnet-dist.tar
+	rm -fr libtelnet-dist
+
+.PHONY: all clean dist

@@ -1,2 +1,5 @@
+*.o
+*.a
+libtelnet-dist.tar.gz
 telnet-proxy
 telnet-client
