@@ -92,7 +92,6 @@ typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 
 /* libtelnet feature flags */
 #define LIBTELNET_FLAG_PROXY (1<<0)
-#define LIBTELNET_FLAG_AUTO_CRLF (1<<1)
 
 #define LIBTELNET_PFLAG_DEFLATE (1<<7)
 

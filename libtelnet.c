@@ -794,8 +794,6 @@ void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 /* send non-command data (escapes IAC bytes) */
 void libtelnet_send_data(libtelnet_t *telnet, const unsigned char *buffer,
 		unsigned int size) {
-	static const unsigned char CRLF[] = { '\r', '\n' };
-	static const unsigned char CRNUL[] = { '\r', '\0' };
 	unsigned int i, l;
 
 	for (l = i = 0; i != size; ++i) {
@@ -808,20 +806,6 @@ void libtelnet_send_data(libtelnet_t *telnet, const unsigned char *buffer,
 
 			/* send escape */
 			libtelnet_send_command(telnet, LIBTELNET_IAC);
-
-		/* automatic translation of \n -> CRLF and \r -> CRNUL */
-		} else if (telnet->flags & LIBTELNET_FLAG_AUTO_CRLF &&
-				(buffer[i] == '\r' || buffer[i] == '\n')) {
-			/* dump prior text if any */
-			if (i != l)
-				_send(telnet, buffer + l, i - l);
-			l = i + 1;
-
-			/* translate */
-			if (buffer[i] == '\r')
-				_send(telnet, CRNUL, 2);
-			else
-				_send(telnet, CRLF, 2);
 		}
 	}
 

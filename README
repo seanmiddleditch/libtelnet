@@ -78,14 +78,6 @@ IIa. Initialization
     LIBTELNET_FLAG_PROXY
       Operate in proxy mode.  This disables the RFC1143 support and
       enables automatic detection of COMPRESS2 streams.
-
-    LIBTELNET_FLAG_AUTO_CRLF
-      Automatically translate C newlines (\n) into the TELNET
-      newline marker, CRLF (\r\n).  This also translates the C
-      carriage return (\r) into the TELNET-correct CRNUL (\r\0).
-
-      Note that this only affects data that is sent.  Received
-      data is untranslated, even with this flag set.
  
  boid libtelnet_free(libtelnet_t *telnet);
    Releases any internal memory allocated by libtelnet.  This must
