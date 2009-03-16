@@ -15,6 +15,7 @@
 /* forward declarations */
 typedef struct libtelnet_t libtelnet_t;
 typedef struct libtelnet_event_t libtelnet_event_t;
+typedef struct libtelnet_rfc1143_t libtelnet_rfc1143_t;
 typedef enum libtelnet_mode_t libtelnet_mode_t;
 typedef enum libtelnet_state_t libtelnet_state_t;
 typedef enum libtelnet_error_t libtelnet_error_t;
@@ -213,13 +214,5 @@ extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
 
 /* begin sending compressed data (server only) */
 extern void libtelnet_begin_compress2(libtelnet_t *telnet);
-
-/* return the status of a specific TELNET option on our end (US) */
-extern int libtelnet_get_telopt_local(struct libtelnet_t *telnet,
-		unsigned char telopt);
-
-/* return the status of a specific TELNET option on remote end (HIM) */
-extern int libtelnet_get_telopt_remote(struct libtelnet_t *telnet,
-		unsigned char telopt);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */

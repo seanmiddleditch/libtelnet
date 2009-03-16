@@ -29,14 +29,14 @@ I. INTRODUCTION
 =====================================================================
 
 libtelnet provides safe and correct handling of the core TELNET
-protocol.  It does not include any "smarts," and all use of the
-protocol (such as deciding which options to support, enabling
-and disabling options, or processing subrequests) must be implemented
-by the application author.
+protocol.  In addition to the base TELNET protocol, libtelnet also
+implements the Q method of TELNET option negotiation.  libtelnet
+can be used for writing servers, clients, or proxies.
 
 For more information on the TELNET protocol, see:
 
  http://www.faqs.org/rfcs/rfc854.html
+ http://www.faqs.org/rfcs/rfc1143.html
 
 II. LIBTELNET API
 =====================================================================
