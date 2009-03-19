@@ -22,6 +22,13 @@
 
 #include "libtelnet.h"
 
+/* inlinable functions */
+#if __GNUC__ || __STDC_VERSION__ >= 199901L
+# define INLINE inline
+#else
+# define INLINE
+#endif
+
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
 	unsigned char telopt;
@@ -53,7 +60,7 @@ static const size_t _buffer_sizes_count = sizeof(_buffer_sizes) /
 
 /* event dispatch helper; return value is value of the accept field of the
  * event struct after dispatch; used for the funky REQUEST event */
-static int _event(telnet_t *telnet, telnet_event_type_t type,
+static INLINE int _event(telnet_t *telnet, telnet_event_type_t type,
 		unsigned char command, unsigned char telopt,
 		const char *buffer, size_t size) {
 	telnet_event_t ev;
@@ -175,7 +182,8 @@ static void _send(telnet_t *telnet, const char *buffer,
 }
 
 /* retrieve RFC1143 option state */
-telnet_rfc1143_t _get_rfc1143(telnet_t *telnet, unsigned char telopt) {
+static INLINE telnet_rfc1143_t _get_rfc1143(telnet_t *telnet,
+		unsigned char telopt) {
 	const telnet_rfc1143_t empty = { telopt, 0, 0};
 	int i;
 
@@ -189,7 +197,7 @@ telnet_rfc1143_t _get_rfc1143(telnet_t *telnet, unsigned char telopt) {
 }
 
 /* save RFC1143 option state */
-void _set_rfc1143(telnet_t *telnet, telnet_rfc1143_t q) {
+static INLINE void _set_rfc1143(telnet_t *telnet, telnet_rfc1143_t q) {
 	telnet_rfc1143_t *qtmp;
 	int i;
 
@@ -215,7 +223,7 @@ void _set_rfc1143(telnet_t *telnet, telnet_rfc1143_t q) {
 }
 
 /* send negotiation bytes */
-static void _send_negotiate(telnet_t *telnet, unsigned char cmd,
+static INLINE void _send_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
 	char bytes[3] = { TELNET_IAC, cmd, telopt };
 	_send(telnet, bytes, 3);
