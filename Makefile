@@ -20,7 +20,7 @@ telnet-chatd: telnet-chatd.o libtelnet.a Makefile
 
 clean:
 	rm -f libtelnet.a libtelnet.o telnet-proxy telnet-proxy.o \
-		telnet-client telnet-client.o telnet-chatd telnet-chatd.c
+		telnet-client telnet-client.o telnet-chatd telnet-chatd.o
 
 dist:
 	rm -fr libtelnet-dist
