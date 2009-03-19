@@ -829,7 +829,14 @@ void telnet_send_data(telnet_t *telnet, const char *buffer,
 		_send(telnet, buffer + l, i - l);
 }
 
-/* send sub-request */
+/* send subnegotiation header */
+void telnet_begin_subnegotiation(telnet_t *telnet, unsigned char telopt) {
+	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
+	_send(telnet, sb, 3);
+}
+
+
+/* send complete subnegotiation */
 void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size) {
 	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };

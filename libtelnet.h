@@ -209,7 +209,7 @@ extern void telnet_begin_subnegotiation(telnet_t *telnet,
 
 /* send IAC SE */
 #define telnet_finish_subnegotiation(telnet) \
-		telnet_command((telnet), TELNET_SE)
+		telnet_send_command((telnet), TELNET_SE)
 
 /* shortcut for sending a complete subnegotiation buffer.
  * equivalent to:
