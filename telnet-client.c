@@ -29,7 +29,7 @@
 #include "libtelnet.h"
 
 static struct termios orig_tios;
-static libtelnet_t telnet;
+static telnet_t telnet;
 static int do_echo;
 
 static void _cleanup(void) {
@@ -48,11 +48,11 @@ static void _input(char *buffer, int size) {
 		if (buffer[i] == '\r' || buffer[i] == '\n') {
 			if (do_echo)
 				write(STDOUT_FILENO, crlf, 2);
-			libtelnet_send_data(&telnet, crlf, 2);
+			telnet_send_data(&telnet, crlf, 2);
 		} else {
 			if (do_echo)
 				write(STDOUT_FILENO, buffer + i, 1);
-			libtelnet_send_data(&telnet, buffer + i, 1);
+			telnet_send_data(&telnet, buffer + i, 1);
 		}
 	}
 }
@@ -76,49 +76,49 @@ static void _send(int sock, const char *buffer, size_t size) {
 	}
 }
 
-static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
+static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		void *user_data) {
 	int sock = *(int*)user_data;
 
 	switch (ev->type) {
 	/* data received */
-	case LIBTELNET_EV_DATA:
+	case TELNET_EV_DATA:
 		write(STDOUT_FILENO, ev->buffer, ev->size);
 		break;
 	/* data must be sent */
-	case LIBTELNET_EV_SEND:
+	case TELNET_EV_SEND:
 		_send(sock, ev->buffer, ev->size);
 		break;
 	/* request to enable remote feature (or receipt) */
-	case LIBTELNET_EV_WILL:
+	case TELNET_EV_WILL:
 		/* we accept COMPRESS2 (MCCP) */
-		if (ev->telopt == LIBTELNET_TELOPT_COMPRESS2)
+		if (ev->telopt == TELNET_TELOPT_COMPRESS2)
 			ev->accept = 1;
 
 		/* we'll agree to turn off our echo if server wants us to stop */
-		else if (ev->telopt == LIBTELNET_TELOPT_ECHO) {
+		else if (ev->telopt == TELNET_TELOPT_ECHO) {
 			do_echo = 0;
 			ev->accept = 1;
 		}
 		break;
 	/* notification of disabling remote feature (or receipt) */
-	case LIBTELNET_EV_WONT:
-		if (ev->telopt == LIBTELNET_TELOPT_ECHO)
+	case TELNET_EV_WONT:
+		if (ev->telopt == TELNET_TELOPT_ECHO)
 			do_echo = 1;
 		break;
 	/* request to enable local feature (or receipt) */
-	case LIBTELNET_EV_DO:
+	case TELNET_EV_DO:
 		/* we support the TTYPE option */
-		if (ev->telopt == LIBTELNET_TELOPT_TTYPE)
+		if (ev->telopt == TELNET_TELOPT_TTYPE)
 			ev->accept = 1;
 		break;
 	/* demand to disable local feature (or receipt) */
-	case LIBTELNET_EV_DONT:
+	case TELNET_EV_DONT:
 		break;
 	/* respond to particular subnegotiations */
-	case LIBTELNET_EV_SUBNEGOTIATION:
+	case TELNET_EV_SUBNEGOTIATION:
 		/* respond with our terminal type */
-		if (ev->telopt == LIBTELNET_TELOPT_TTYPE) {
+		if (ev->telopt == TELNET_TELOPT_TTYPE) {
 			/* NOTE: we just assume the server sent a legitimate
 			 * sub-negotiation, as there really isn't anything else
 			 * it's allowed to send
@@ -126,12 +126,12 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 			char buffer[64];
 			buffer[0] = 0; /* IS code for RFC 1091 */
 			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
-			libtelnet_send_subnegotiation(telnet, LIBTELNET_TELOPT_TTYPE,
+			telnet_send_subnegotiation(telnet, TELNET_TELOPT_TTYPE,
 					(char *)buffer, 1 + strlen(buffer + 1));
 		}
 		break;
 	/* error */
-	case LIBTELNET_EV_ERROR:
+	case TELNET_EV_ERROR:
 		fprintf(stderr, "ERROR: %s\n", ev->buffer);
 		exit(1);
 	default:
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 	do_echo = 1;
 
 	/* initialize telnet box */
-	libtelnet_init(&telnet, _event_handler, 0, &sock);
+	telnet_init(&telnet, _event_handler, 0, &sock);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 		/* read from client */
 		if (pfd[1].revents & POLLIN) {
 			if ((rs = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
-				libtelnet_push(&telnet, buffer, rs);
+				telnet_push(&telnet, buffer, rs);
 			} else if (rs == 0) {
 				break;
 			} else {
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* clean up */
-	libtelnet_free(&telnet);
+	telnet_free(&telnet);
 	close(sock);
 
 	return 0;

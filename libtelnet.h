@@ -13,132 +13,132 @@
 #define LIBTELNET_INCLUDE 1
 
 /* forward declarations */
-typedef struct libtelnet_t libtelnet_t;
-typedef struct libtelnet_event_t libtelnet_event_t;
-typedef struct libtelnet_rfc1143_t libtelnet_rfc1143_t;
+typedef struct telnet_t telnet_t;
+typedef struct telnet_event_t telnet_event_t;
+typedef struct telnet_rfc1143_t telnet_rfc1143_t;
 
 /* telnet special values */
-#define LIBTELNET_IAC 255
-#define LIBTELNET_DONT 254
-#define LIBTELNET_DO 253
-#define LIBTELNET_WONT 252
-#define LIBTELNET_WILL 251
-#define LIBTELNET_SB 250
-#define LIBTELNET_SB 250
-#define LIBTELNET_GA 249
-#define LIBTELNET_EL 248
-#define LIBTELNET_EC 247
-#define LIBTELNET_AYT 246
-#define LIBTELNET_AO 245
-#define LIBTELNET_IP 244
-#define LIBTELNET_BREAK 243
-#define LIBTELNET_DM 242
-#define LIBTELNET_NOP 241
-#define LIBTELNET_SE 240
-#define LIBTELNET_EOR 239
-#define LIBTELNET_ABORT 238
-#define LIBTELNET_SUSP 237
-#define LIBTELNET_EOF 236
+#define TELNET_IAC 255
+#define TELNET_DONT 254
+#define TELNET_DO 253
+#define TELNET_WONT 252
+#define TELNET_WILL 251
+#define TELNET_SB 250
+#define TELNET_SB 250
+#define TELNET_GA 249
+#define TELNET_EL 248
+#define TELNET_EC 247
+#define TELNET_AYT 246
+#define TELNET_AO 245
+#define TELNET_IP 244
+#define TELNET_BREAK 243
+#define TELNET_DM 242
+#define TELNET_NOP 241
+#define TELNET_SE 240
+#define TELNET_EOR 239
+#define TELNET_ABORT 238
+#define TELNET_SUSP 237
+#define TELNET_EOF 236
 
 /* telnet options */
-#define LIBTELNET_TELOPT_BINARY 0
-#define LIBTELNET_TELOPT_ECHO 1
-#define LIBTELNET_TELOPT_RCP 2
-#define LIBTELNET_TELOPT_SGA 3
-#define LIBTELNET_TELOPT_NAMS 4
-#define LIBTELNET_TELOPT_STATUS 5
-#define LIBTELNET_TELOPT_TM 6
-#define LIBTELNET_TELOPT_RCTE 7
-#define LIBTELNET_TELOPT_NAOL 8
-#define LIBTELNET_TELOPT_NAOP 9
-#define LIBTELNET_TELOPT_NAOCRD 10
-#define LIBTELNET_TELOPT_NAOHTS 11
-#define LIBTELNET_TELOPT_NAOHTD 12
-#define LIBTELNET_TELOPT_NAOFFD 13
-#define LIBTELNET_TELOPT_NAOVTS 14
-#define LIBTELNET_TELOPT_NAOVTD 15
-#define LIBTELNET_TELOPT_NAOLFD 16
-#define LIBTELNET_TELOPT_XASCII 17
-#define LIBTELNET_TELOPT_LOGOUT 18
-#define LIBTELNET_TELOPT_BM 19
-#define LIBTELNET_TELOPT_DET 20
-#define LIBTELNET_TELOPT_SUPDUP 21
-#define LIBTELNET_TELOPT_SUPDUPOUTPUT 22
-#define LIBTELNET_TELOPT_SNDLOC 23
-#define LIBTELNET_TELOPT_TTYPE 24
-#define LIBTELNET_TELOPT_EOR 25
-#define LIBTELNET_TELOPT_TUID 26
-#define LIBTELNET_TELOPT_OUTMRK 27
-#define LIBTELNET_TELOPT_TTYLOC 28
-#define LIBTELNET_TELOPT_3270REGIME 29
-#define LIBTELNET_TELOPT_X3PAD 30
-#define LIBTELNET_TELOPT_NAWS 31
-#define LIBTELNET_TELOPT_TSPEED 32
-#define LIBTELNET_TELOPT_LFLOW 33
-#define LIBTELNET_TELOPT_LINEMODE 34
-#define LIBTELNET_TELOPT_XDISPLOC 35
-#define LIBTELNET_TELOPT_ENVIRON 36
-#define LIBTELNET_TELOPT_AUTHENTICATION 37
-#define LIBTELNET_TELOPT_ENCRYPT 38
-#define LIBTELNET_TELOPT_NEW_ENVIRON 39
-#define LIBTELNET_TELOPT_COMPRESS 85
-#define LIBTELNET_TELOPT_COMPRESS2 86
-#define LIBTELNET_TELOPT_ZMP 93
-#define LIBTELNET_TELOPT_EXOPL 255
+#define TELNET_TELOPT_BINARY 0
+#define TELNET_TELOPT_ECHO 1
+#define TELNET_TELOPT_RCP 2
+#define TELNET_TELOPT_SGA 3
+#define TELNET_TELOPT_NAMS 4
+#define TELNET_TELOPT_STATUS 5
+#define TELNET_TELOPT_TM 6
+#define TELNET_TELOPT_RCTE 7
+#define TELNET_TELOPT_NAOL 8
+#define TELNET_TELOPT_NAOP 9
+#define TELNET_TELOPT_NAOCRD 10
+#define TELNET_TELOPT_NAOHTS 11
+#define TELNET_TELOPT_NAOHTD 12
+#define TELNET_TELOPT_NAOFFD 13
+#define TELNET_TELOPT_NAOVTS 14
+#define TELNET_TELOPT_NAOVTD 15
+#define TELNET_TELOPT_NAOLFD 16
+#define TELNET_TELOPT_XASCII 17
+#define TELNET_TELOPT_LOGOUT 18
+#define TELNET_TELOPT_BM 19
+#define TELNET_TELOPT_DET 20
+#define TELNET_TELOPT_SUPDUP 21
+#define TELNET_TELOPT_SUPDUPOUTPUT 22
+#define TELNET_TELOPT_SNDLOC 23
+#define TELNET_TELOPT_TTYPE 24
+#define TELNET_TELOPT_EOR 25
+#define TELNET_TELOPT_TUID 26
+#define TELNET_TELOPT_OUTMRK 27
+#define TELNET_TELOPT_TTYLOC 28
+#define TELNET_TELOPT_3270REGIME 29
+#define TELNET_TELOPT_X3PAD 30
+#define TELNET_TELOPT_NAWS 31
+#define TELNET_TELOPT_TSPEED 32
+#define TELNET_TELOPT_LFLOW 33
+#define TELNET_TELOPT_LINEMODE 34
+#define TELNET_TELOPT_XDISPLOC 35
+#define TELNET_TELOPT_ENVIRON 36
+#define TELNET_TELOPT_AUTHENTICATION 37
+#define TELNET_TELOPT_ENCRYPT 38
+#define TELNET_TELOPT_NEW_ENVIRON 39
+#define TELNET_TELOPT_COMPRESS 85
+#define TELNET_TELOPT_COMPRESS2 86
+#define TELNET_TELOPT_ZMP 93
+#define TELNET_TELOPT_EXOPL 255
 
 /* libtelnet feature flags */
-#define LIBTELNET_FLAG_PROXY (1<<0)
+#define TELNET_FLAG_PROXY (1<<0)
 
-#define LIBTELNET_PFLAG_DEFLATE (1<<7)
+#define TELNET_PFLAG_DEFLATE (1<<7)
 
 /* telnet states */
-enum libtelnet_state_t {
-	LIBTELNET_STATE_DATA = 0,
-	LIBTELNET_STATE_IAC,
-	LIBTELNET_STATE_DO,
-	LIBTELNET_STATE_DONT,
-	LIBTELNET_STATE_WILL,
-	LIBTELNET_STATE_WONT,
-	LIBTELNET_STATE_SB,
-	LIBTELNET_STATE_SB_DATA,
-	LIBTELNET_STATE_SB_DATA_IAC
+enum telnet_state_t {
+	TELNET_STATE_DATA = 0,
+	TELNET_STATE_IAC,
+	TELNET_STATE_DO,
+	TELNET_STATE_DONT,
+	TELNET_STATE_WILL,
+	TELNET_STATE_WONT,
+	TELNET_STATE_SB,
+	TELNET_STATE_SB_DATA,
+	TELNET_STATE_SB_DATA_IAC
 };
-typedef enum libtelnet_state_t libtelnet_state_t;
+typedef enum telnet_state_t telnet_state_t;
 
 /* error codes */
-enum libtelnet_error_t {
-	LIBTELNET_EOK = 0,
-	LIBTELNET_EBADVAL, /* invalid parameter, or API misuse */
-	LIBTELNET_ENOMEM, /* memory allocation failure */
-	LIBTELNET_EOVERFLOW, /* data exceeds buffer size */
-	LIBTELNET_EPROTOCOL, /* invalid sequence of special bytes */
-	LIBTELNET_ECOMPRESS /* error handling compressed streams */
+enum telnet_error_t {
+	TELNET_EOK = 0,
+	TELNET_EBADVAL, /* invalid parameter, or API misuse */
+	TELNET_ENOMEM, /* memory allocation failure */
+	TELNET_EOVERFLOW, /* data exceeds buffer size */
+	TELNET_EPROTOCOL, /* invalid sequence of special bytes */
+	TELNET_ECOMPRESS /* error handling compressed streams */
 };
-typedef enum libtelnet_error_t libtelnet_error_t;
+typedef enum telnet_error_t telnet_error_t;
 
 /* event codes */
-enum libtelnet_event_type_t {
-	LIBTELNET_EV_DATA = 0,
-	LIBTELNET_EV_SEND,
-	LIBTELNET_EV_IAC,
-	LIBTELNET_EV_WILL,
-	LIBTELNET_EV_WONT,
-	LIBTELNET_EV_DO,
-	LIBTELNET_EV_DONT,
-	LIBTELNET_EV_SUBNEGOTIATION,
-	LIBTELNET_EV_COMPRESS,
-	LIBTELNET_EV_WARNING,
-	LIBTELNET_EV_ERROR
+enum telnet_event_type_t {
+	TELNET_EV_DATA = 0,
+	TELNET_EV_SEND,
+	TELNET_EV_IAC,
+	TELNET_EV_WILL,
+	TELNET_EV_WONT,
+	TELNET_EV_DO,
+	TELNET_EV_DONT,
+	TELNET_EV_SUBNEGOTIATION,
+	TELNET_EV_COMPRESS,
+	TELNET_EV_WARNING,
+	TELNET_EV_ERROR
 };
-typedef enum libtelnet_event_type_t libtelnet_event_type_t;
+typedef enum telnet_event_type_t telnet_event_type_t;
 
 /* event information */
-struct libtelnet_event_t {
+struct telnet_event_t {
 	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
 	const char *buffer;
 	size_t size;
 	/* type of event */ 
-	enum libtelnet_event_type_t type;
+	enum telnet_event_type_t type;
 	/* IAC command */
 	unsigned char command;
 	/* telopt info: for negotiation events SUBNEGOTIATION */
@@ -148,27 +148,27 @@ struct libtelnet_event_t {
 };
 
 /* option negotiation state (RFC 1143) */
-struct libtelnet_rfc1143_t {
+struct telnet_rfc1143_t {
 	unsigned char telopt;
 	char us:4, him:4;
 };
 
 /* event handler declaration */
-typedef void (*libtelnet_event_handler_t)(libtelnet_t *telnet,
-		libtelnet_event_t *event, void *user_data);
+typedef void (*telnet_event_handler_t)(telnet_t *telnet,
+		telnet_event_t *event, void *user_data);
 
 /* state tracker */
-struct libtelnet_t {
+struct telnet_t {
 	/* user data */
 	void *ud;
 	/* event handler */
-	libtelnet_event_handler_t eh;
+	telnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
 	/* zlib (mccp2) compression */
 	z_stream *z;
 #endif
 	/* RFC1143 option negotiation states */
-	struct libtelnet_rfc1143_t *q;
+	struct telnet_rfc1143_t *q;
 	/* sub-request buffer */
 	char *buffer;
 	/* current size of the buffer */
@@ -176,7 +176,7 @@ struct libtelnet_t {
 	/* current buffer write position (also length of buffer data) */
 	size_t buffer_pos;
 	/* current state */
-	enum libtelnet_state_t state;
+	enum telnet_state_t state;
 	/* option flags */
 	unsigned char flags;
 	/* current subnegotiation telopt */
@@ -186,57 +186,58 @@ struct libtelnet_t {
 };
 
 /* initialize a telnet state tracker */
-extern void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t eh,
+extern void telnet_init(telnet_t *telnet, telnet_event_handler_t eh,
 		unsigned char flags, void *user_data);
 
 /* free up any memory allocated by a state tracker */
-extern void libtelnet_free(libtelnet_t *telnet);
+extern void telnet_free(telnet_t *telnet);
 
 /* push a byte buffer into the state tracker */
-extern void libtelnet_push(libtelnet_t *telnet, const char *buffer,
+extern void telnet_push(telnet_t *telnet, const char *buffer,
 		size_t size);
 
 /* send an iac command */
-extern void libtelnet_send_command(libtelnet_t *telnet, unsigned char cmd);
+extern void telnet_send_command(telnet_t *telnet, unsigned char cmd);
 
 /* send an iac command with a telopt */
-extern void libtelnet_send_telopt(libtelnet_t *telnet, unsigned char cmd,
+extern void telnet_send_telopt(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt);
 
 /* send negotiation, with RFC1143 checking.
  * will not actually send unless necessary, but will update internal
  * negotiation queue.
  */
-extern void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
+extern void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char opt);
 
 /* send non-command data (escapes IAC bytes) */
-extern void libtelnet_send_data(libtelnet_t *telnet,
+extern void telnet_send_data(telnet_t *telnet,
 		const char *buffer, size_t size);
 
 /* send sub-request, equivalent to:
- *   libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt)
- *   libtelnet_send_data(telnet, buffer, size);
- *   libtelnet_send_command(telnet, LIBTELNET_SE);
+ *   telnet_send_telopt(telnet, TELNET_SB, telopt)
+ *   telnet_send_data(telnet, buffer, size);
+ *   telnet_send_command(telnet, TELNET_SE);
  * manually generating sequence may be easier for complex subnegotiations
  * thare are most easily implemented with a series of send_data calls.
  */
-extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
+extern void telnet_send_subnegotiation(telnet_t *telnet,
 		unsigned char telopt, const char *buffer, size_t size);
 
 /* begin sending compressed data (server only) */
-extern void libtelnet_begin_compress2(libtelnet_t *telnet);
+extern void telnet_begin_compress2(telnet_t *telnet);
 
-/* send formatted data (through libtelnet_send_data) */
+/* printf type checking feature in GCC and some other compilers */
 #ifdef __GNUC__
-# define LIBTELNET_GNU_PRINTF(f,a) __attribute__((printf(f, a)))
+# define TELNET_GNU_PRINTF(f,a) __attribute__((printf(f, a)))
 #else
-# define LIBTELNET_GNU_PRINTF(f,a)
+# define TELNET_GNU_PRINTF(f,a)
 #endif
 
-extern int libtelnet_printf(libtelnet_t *telnet, const char *fmt, ...);
+/* send formatted data with \r and \n translated, and IAC escaped */
+extern int telnet_printf(telnet_t *telnet, const char *fmt, ...);
 
-/* send formatted data with \r and \n translated */
-extern int libtelnet_printf2(libtelnet_t *telnet, const char *fmt, ...);
+/* send formatted data with just IAC escaped */
+extern int telnet_printf2(telnet_t *telnet, const char *fmt, ...);
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
