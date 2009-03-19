@@ -168,6 +168,11 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	case TELNET_EV_SEND:
 		_send(user->sock, ev->buffer, ev->size);
 		break;
+	/* enable compress2 if accepted by client */
+	case TELNET_EV_DO:
+		if (ev->telopt == TELNET_TELOPT_COMPRESS2)
+			telnet_begin_compress2(telnet);
+		break;
 	/* error */
 	case TELNET_EV_ERROR:
 		close(user->sock);
@@ -287,6 +292,8 @@ int main(int argc, char **argv) {
 			/* init, welcome */
 			users[i].sock = rs;
 			telnet_init(&users[i].telnet, _event_handler, 0, &users[i]);
+			telnet_send_negotiate(&users[i].telnet, TELNET_WILL,
+					TELNET_TELOPT_COMPRESS2);
 			telnet_printf(&users[i].telnet, "Enter name: ");
 		}
 
