@@ -36,8 +36,8 @@ static void _cleanup(void) {
 	tcsetattr(STDOUT_FILENO, TCSADRAIN, &orig_tios);
 }
 
-static void _input(unsigned char *buffer, int size) {
-	static unsigned char crlf[] = { '\r', '\n' };
+static void _input(char *buffer, int size) {
+	static char crlf[] = { '\r', '\n' };
 	int i;
 
 	for (i = 0; i != size; ++i) {
@@ -57,7 +57,7 @@ static void _input(unsigned char *buffer, int size) {
 	}
 }
 
-static void _send(int sock, const unsigned char *buffer, unsigned int size) {
+static void _send(int sock, const char *buffer, unsigned int size) {
 	int rs;
 
 	/* send data */
@@ -127,7 +127,7 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 			buffer[0] = 0; /* IS code for RFC 1091 */
 			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
 			libtelnet_send_subnegotiation(telnet, LIBTELNET_TELOPT_TTYPE,
-					(unsigned char *)buffer, 1 + strlen(buffer + 1));
+					(char *)buffer, 1 + strlen(buffer + 1));
 		}
 		break;
 	/* error */
@@ -141,7 +141,7 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 }
 
 int main(int argc, char **argv) {
-	unsigned char buffer[512];
+	char buffer[512];
 	int rs;
 	int sock;
 	struct sockaddr_in addr;

@@ -135,7 +135,7 @@ typedef enum libtelnet_event_type_t libtelnet_event_type_t;
 /* event information */
 struct libtelnet_event_t {
 	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
-	const unsigned char *buffer;
+	const char *buffer;
 	unsigned int size;
 	/* type of event */ 
 	enum libtelnet_event_type_t type;
@@ -170,7 +170,7 @@ struct libtelnet_t {
 	/* RFC1143 option negotiation states */
 	struct libtelnet_rfc1143_t *q;
 	/* sub-request buffer */
-	unsigned char *buffer;
+	char *buffer;
 	/* current size of the buffer */
 	unsigned int buffer_size;
 	/* current buffer write position (also length of buffer data) */
@@ -193,7 +193,7 @@ extern void libtelnet_init(libtelnet_t *telnet, libtelnet_event_handler_t eh,
 extern void libtelnet_free(libtelnet_t *telnet);
 
 /* push a byte buffer into the state tracker */
-extern void libtelnet_push(libtelnet_t *telnet, const unsigned char *buffer,
+extern void libtelnet_push(libtelnet_t *telnet, const char *buffer,
 		unsigned int size);
 
 /* send an iac command */
@@ -212,7 +212,7 @@ extern void libtelnet_send_negotiate(libtelnet_t *telnet, unsigned char cmd,
 
 /* send non-command data (escapes IAC bytes) */
 extern void libtelnet_send_data(libtelnet_t *telnet,
-		const unsigned char *buffer, unsigned int size);
+		const char *buffer, unsigned int size);
 
 /* send sub-request, equivalent to:
  *   libtelnet_send_telopt(telnet, LIBTELNET_SB, telopt)
@@ -222,7 +222,7 @@ extern void libtelnet_send_data(libtelnet_t *telnet,
  * thare are most easily implemented with a series of send_data calls.
  */
 extern void libtelnet_send_subnegotiation(libtelnet_t *telnet,
-		unsigned char telopt, const unsigned char *buffer, unsigned int size);
+		unsigned char telopt, const char *buffer, unsigned int size);
 
 /* begin sending compressed data (server only) */
 extern void libtelnet_begin_compress2(libtelnet_t *telnet);
