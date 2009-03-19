@@ -170,7 +170,7 @@ static void _send(telnet_t *telnet, const char *buffer,
 
 /* retrieve RFC1143 option state */
 telnet_rfc1143_t _get_rfc1143(telnet_t *telnet, unsigned char telopt) {
-	static const telnet_rfc1143_t empty = { 0, 0, 0};
+	const telnet_rfc1143_t empty = { telopt, 0, 0};
 	int i;
 
 	/* search for entry */
