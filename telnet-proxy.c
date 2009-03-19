@@ -379,9 +379,11 @@ int main(int argc, char **argv) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
 					break;
 				} else {
-					fprintf(stderr, "recv(server) failed: %s\n",
-							strerror(errno));
-					exit(1);
+					if (errno != EINTR && errno != ECONNRESET) {
+						fprintf(stderr, "recv(server) failed: %s\n",
+								strerror(errno));
+						exit(1);
+					}
 				}
 			}
 
@@ -393,9 +395,11 @@ int main(int argc, char **argv) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
 					break;
 				} else {
-					fprintf(stderr, "recv(client) failed: %s\n",
-							strerror(errno));
-					exit(1);
+					if (errno != EINTR && errno != ECONNRESET) {
+						fprintf(stderr, "recv(server) failed: %s\n",
+								strerror(errno));
+						exit(1);
+					}
 				}
 			}
 		}
