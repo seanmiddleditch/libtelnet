@@ -261,8 +261,6 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 			} else
 				_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
-		case RFC1143_YES:
-			break;
 		case RFC1143_WANTNO:
 			q.him = RFC1143_NO;
 			_set_rfc1143(telnet, q);
@@ -294,8 +292,6 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 	/* request to disable option on remote end, confirm DONT, reject DO */
 	case TELNET_WONT:
 		switch (q.him) {
-		case RFC1143_NO:
-			break;
 		case RFC1143_YES:
 			q.him = RFC1143_NO;
 			_set_rfc1143(telnet, q);
@@ -331,8 +327,6 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 			} else
 				_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
-		case RFC1143_YES:
-			break;
 		case RFC1143_WANTNO:
 			q.us = RFC1143_NO;
 			_set_rfc1143(telnet, q);
@@ -364,8 +358,6 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 	/* request to disable option on local end, confirm WONT, reject WILL */
 	case TELNET_DONT:
 		switch (q.us) {
-		case RFC1143_NO:
-			break;
 		case RFC1143_YES:
 			q.us = RFC1143_NO;
 			_set_rfc1143(telnet, q);
@@ -712,15 +704,9 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_WILL, telopt);
 			break;
-		case RFC1143_YES:
-			break;
 		case RFC1143_WANTNO:
 			q.us = RFC1143_WANTNO_OP;
 			_set_rfc1143(telnet, q);
-			break;
-		case RFC1143_WANTYES:
-			break;
-		case RFC1143_WANTNO_OP:
 			break;
 		case RFC1143_WANTYES_OP:
 			q.us = RFC1143_WANTYES;
@@ -732,14 +718,10 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 	/* force turn-off of locally enabled option */
 	case TELNET_WONT:
 		switch (q.us) {
-		case RFC1143_NO:
-			break;
 		case RFC1143_YES:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_WONT, telopt);
-			break;
-		case RFC1143_WANTNO:
 			break;
 		case RFC1143_WANTYES:
 			q.us = RFC1143_WANTYES_OP;
@@ -748,8 +730,6 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTNO_OP:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			break;
-		case RFC1143_WANTYES_OP:
 			break;
 		}
 		break;
@@ -762,15 +742,9 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_DO, telopt);
 			break;
-		case RFC1143_YES:
-			break;
 		case RFC1143_WANTNO:
 			q.him = RFC1143_WANTNO_OP;
 			_set_rfc1143(telnet, q);
-			break;
-		case RFC1143_WANTYES:
-			break;
-		case RFC1143_WANTNO_OP:
 			break;
 		case RFC1143_WANTYES_OP:
 			q.him = RFC1143_WANTYES;
@@ -782,14 +756,10 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 	/* demand remote end disable an option */
 	case TELNET_DONT:
 		switch (q.him) {
-		case RFC1143_NO:
-			break;
 		case RFC1143_YES:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
-			break;
-		case RFC1143_WANTNO:
 			break;
 		case RFC1143_WANTYES:
 			q.him = RFC1143_WANTYES_OP;
@@ -798,8 +768,6 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTNO_OP:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			break;
-		case RFC1143_WANTYES_OP:
 			break;
 		}
 		break;
