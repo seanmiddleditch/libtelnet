@@ -198,7 +198,7 @@ void _set_rfc1143(telnet_t *telnet, telnet_rfc1143_t q) {
 	/* we're going to need to track state for it, so grow the queue
 	 * and put the telopt into it; bail on allocation error
 	 */
-	if ((qtmp = (telnet_rfc1143_t *)malloc(sizeof(
+	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q, sizeof(
 			telnet_rfc1143_t) * (telnet->q_size + 1))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 				"malloc() failed: %s", strerror(errno));
