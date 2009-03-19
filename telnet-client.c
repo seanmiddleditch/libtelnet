@@ -57,7 +57,7 @@ static void _input(char *buffer, int size) {
 	}
 }
 
-static void _send(int sock, const char *buffer, unsigned int size) {
+static void _send(int sock, const char *buffer, size_t size) {
 	int rs;
 
 	/* send data */
@@ -132,7 +132,7 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 		break;
 	/* error */
 	case LIBTELNET_EV_ERROR:
-		fprintf(stderr, "ERROR: %.*s\n", ev->size, ev->buffer);
+		fprintf(stderr, "ERROR: %s\n", ev->buffer);
 		exit(1);
 	default:
 		/* ignore */

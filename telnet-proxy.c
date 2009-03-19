@@ -129,8 +129,8 @@ static const char *get_opt(unsigned char opt) {
 	}
 }
 
-static void print_buffer(const char *buffer, unsigned int size) {
-	unsigned int i;
+static void print_buffer(const char *buffer, size_t size) {
+	size_t i;
 	for (i = 0; i != size; ++i) {
 		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
 			printf("%c", (char)buffer[i]);
@@ -142,7 +142,7 @@ static void print_buffer(const char *buffer, unsigned int size) {
 	}
 }
 
-static void _send(int sock, const char *buffer, unsigned int size) {
+static void _send(int sock, const char *buffer, size_t size) {
 	int rs;
 
 	/* send data */
@@ -227,7 +227,7 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 		printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
 				get_opt(ev->telopt));
 		if (ev->size > 0) {
-			printf(" [%u]: ", ev->size);
+			printf(" [%zi]: ", ev->size);
 			print_buffer(ev->buffer, ev->size);
 		}
 		printf(COLOR_NORMAL "\n");
@@ -242,13 +242,11 @@ static void _event_handler(libtelnet_t *telnet, libtelnet_event_t *ev,
 		break;
 	/* warning */
 	case LIBTELNET_EV_WARNING:
-		printf("%s WARNING: %.*s" COLOR_NORMAL "\n", conn->name, ev->size,
-				ev->buffer);
+		printf("%s WARNING: %s" COLOR_NORMAL "\n", conn->name, ev->buffer);
 		break;
 	/* error */
 	case LIBTELNET_EV_ERROR:
-		printf("%s ERROR: %.*s" COLOR_NORMAL "\n", conn->name, ev->size,
-				ev->buffer);
+		printf("%s ERROR: %s" COLOR_NORMAL "\n", conn->name, ev->buffer);
 		exit(1);
 	}
 }
