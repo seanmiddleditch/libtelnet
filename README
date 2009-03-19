@@ -112,11 +112,6 @@ IIc. Sending Data
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
- void telnet_send_telopt(telnet_t *telnet, unsigned char cmd,
-     unsigned char telopt);
-   Sends a TELNET command with an option code following.  This is
-   only useful for the WILL, WONT, DO, DONT, and SB commands.
-
  void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
      unsigned char opt);
    Sends a TELNET negotiation command.  The cmd parameter must be one
@@ -135,20 +130,38 @@ IIc. Sending Data
 
    For sending regular text is may be more convenient to use
    telnet_printf().
+ 
+ void telnet_begin_subnegotiation(telnet_t *telnet, unsigned char
+     telopt);
+   Sends the header for a TELNET sub-negotiation command for the
+   specified option.  All send data following this command will be
+   part of the sub-negotiation data until a call is made to
+   telnet_finish_subnegotiation().
+
+   You should not use telnet_printf() for sending subnegotiation
+   data as it will perform newline translations that usually do not
+   need to be done for subnegotiation data, and may cause problems.
+
+ void telnet_finish_subnegotiation(telnet_t *telnet);
+   Sends the end marker for a TELNET sub-negotiation command.  This
+   must be called after (and only after) a call has been made to
+   telnet_begin_subnegotiation() and any negotiation data has been
+   sent.
 
  void telnet_send_subnegotiation(telnet_t *telnet,
      unsigned char telopt, const char *buffer, unsigned int size);
    Sends a TELNET sub-negotiation command.  The telopt parameter is
    the sub-negotiation option.
 
-   Note that the above function is just a shorthand for:
-    telnet_send_telopt(telnet, TELNET_SB, telopt);
+   Note that this function is just a shorthand for:
+    telnet_begin_subnegotiation(telnet, telopt);
     telnet_send_data(telnet, buffer, size);
-    telnet_send_command(telnet, TELNET_SE);
+    telnet_end_subnegotiation(telnet);
 
    For some subnegotiations that involve a lot of complex formatted
-   data to be sent, it may be easier to manually send the SB telopt
-   header and SE footer around mulitple calls to send_data.
+   data to be sent, it may be easier to make calls to both
+   telnet_begin_negotiation() and telnet_end_subnegotiation() and
+   using telnet_send_data() or telnet_printf2() to format the data.
 
    NOTE: telnet_send_subnegotiation() does have special behavior in
    PROXY mode, as in that mode this function will automatically

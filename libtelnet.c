@@ -22,6 +22,12 @@
 
 #include "libtelnet.h"
 
+/* RFC1143 option negotiation state */
+typedef struct telnet_rfc1143_t {
+	unsigned char telopt;
+	char us:4, him:4;
+} telnet_rfc1143_t;
+
 /* RFC1143 state names */
 #define RFC1143_NO 0x00
 #define RFC1143_YES 0x01
@@ -208,6 +214,13 @@ void _set_rfc1143(telnet_t *telnet, telnet_rfc1143_t q) {
 	telnet->q[telnet->q_size++] = q;
 }
 
+/* send negotiation bytes */
+static void _send_negotiate(telnet_t *telnet, unsigned char cmd,
+		unsigned char telopt) {
+	char bytes[3] = { TELNET_IAC, cmd, telopt };
+	_send(telnet, bytes, 3);
+}
+
 /* negotiation handling magic for RFC1143 */
 static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
@@ -244,9 +257,9 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 			if (_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0) == 1) {
 				q.him = RFC1143_YES;
 				_set_rfc1143(telnet, q);
-				telnet_send_telopt(telnet, TELNET_DO, telopt);
+				_send_negotiate(telnet, TELNET_DO, telopt);
 			} else
-				telnet_send_telopt(telnet, TELNET_DONT, telopt);
+				_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -272,7 +285,7 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTYES_OP:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_DONT, telopt);
+			_send_negotiate(telnet, TELNET_DONT, telopt);
 			_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0);
 			break;
 		}
@@ -286,7 +299,7 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.him = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_DONT, telopt);
+			_send_negotiate(telnet, TELNET_DONT, telopt);
 			_event(telnet, TELNET_EV_WONT, 0, telopt, 0, 0);
 			break;
 		case RFC1143_WANTNO:
@@ -314,9 +327,9 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 			if (_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0) == 1) {
 				q.us = RFC1143_YES;
 				_set_rfc1143(telnet, q);
-				telnet_send_telopt(telnet, TELNET_WILL, telopt);
+				_send_negotiate(telnet, TELNET_WILL, telopt);
 			} else
-				telnet_send_telopt(telnet, TELNET_WONT, telopt);
+				_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -342,7 +355,7 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTYES_OP:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_WONT, telopt);
+			_send_negotiate(telnet, TELNET_WONT, telopt);
 			_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0);
 			break;
 		}
@@ -356,7 +369,7 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.us = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_WONT, telopt);
+			_send_negotiate(telnet, TELNET_WONT, telopt);
 			_event(telnet, TELNET_EV_DONT, 0, telopt, 0, 0);
 			break;
 		case RFC1143_WANTNO:
@@ -675,13 +688,6 @@ void telnet_send_command(telnet_t *telnet, unsigned char cmd) {
 	_send(telnet, bytes, 2);
 }
 
-/* send an iac command with telopt */
-void telnet_send_telopt(telnet_t *telnet, unsigned char cmd,
-		unsigned char telopt) {
-	char bytes[3] = { TELNET_IAC, cmd, telopt };
-	_send(telnet, bytes, 3);
-}
-
 /* send negotiation */
 void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
@@ -704,7 +710,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_NO:
 			q.us = RFC1143_WANTYES;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_WILL, telopt);
+			_send_negotiate(telnet, TELNET_WILL, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -731,7 +737,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_WONT, telopt);
+			_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
 		case RFC1143_WANTNO:
 			break;
@@ -754,7 +760,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_NO:
 			q.him = RFC1143_WANTYES;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_DO, telopt);
+			_send_negotiate(telnet, TELNET_DO, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -781,7 +787,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			telnet_send_telopt(telnet, TELNET_DONT, telopt);
+			_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
 		case RFC1143_WANTNO:
 			break;
@@ -826,9 +832,12 @@ void telnet_send_data(telnet_t *telnet, const char *buffer,
 /* send sub-request */
 void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size) {
-	telnet_send_telopt(telnet, TELNET_SB, telopt);
+	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
+	static const char se[2] = { TELNET_IAC, TELNET_SE };
+
+	_send(telnet, sb, 3);
 	telnet_send_data(telnet, buffer, size);
-	telnet_send_command(telnet, TELNET_SE);
+	_send(telnet, se, 2);
 
 #ifdef HAVE_ZLIB
 	/* if we're a proxy and we just sent the COMPRESS2 marker, we must

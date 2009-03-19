@@ -15,7 +15,6 @@
 /* forward declarations */
 typedef struct telnet_t telnet_t;
 typedef struct telnet_event_t telnet_event_t;
-typedef struct telnet_rfc1143_t telnet_rfc1143_t;
 
 /* telnet special values */
 #define TELNET_IAC 255
@@ -147,12 +146,6 @@ struct telnet_event_t {
 	unsigned char accept;
 };
 
-/* option negotiation state (RFC 1143) */
-struct telnet_rfc1143_t {
-	unsigned char telopt;
-	char us:4, him:4;
-};
-
 /* event handler declaration */
 typedef void (*telnet_event_handler_t)(telnet_t *telnet,
 		telnet_event_t *event, void *user_data);
@@ -199,10 +192,6 @@ extern void telnet_push(telnet_t *telnet, const char *buffer,
 /* send an iac command */
 extern void telnet_send_command(telnet_t *telnet, unsigned char cmd);
 
-/* send an iac command with a telopt */
-extern void telnet_send_telopt(telnet_t *telnet, unsigned char cmd,
-		unsigned char telopt);
-
 /* send negotiation, with RFC1143 checking.
  * will not actually send unless necessary, but will update internal
  * negotiation queue.
@@ -214,15 +203,22 @@ extern void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 extern void telnet_send_data(telnet_t *telnet,
 		const char *buffer, size_t size);
 
-/* send sub-request, equivalent to:
- *   telnet_send_telopt(telnet, TELNET_SB, telopt)
+/* send IAC SB followed by the telopt code */
+extern void telnet_begin_subnegotiation(telnet_t *telnet,
+		unsigned char telopt);
+
+/* send IAC SE */
+#define telnet_finish_subnegotiation(telnet) \
+		telnet_command((telnet), TELNET_SE)
+
+/* shortcut for sending a complete subnegotiation buffer.
+ * equivalent to:
+ *   telnet_begin_subnegotiation(telnet, telopt);
  *   telnet_send_data(telnet, buffer, size);
- *   telnet_send_command(telnet, TELNET_SE);
- * manually generating sequence may be easier for complex subnegotiations
- * thare are most easily implemented with a series of send_data calls.
+ *   telnet_finish_subnegotiation(telnet);
  */
-extern void telnet_send_subnegotiation(telnet_t *telnet,
-		unsigned char telopt, const char *buffer, size_t size);
+extern void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
+		const char *buffer, size_t size);
 
 /* begin sending compressed data (server only) */
 extern void telnet_begin_compress2(telnet_t *telnet);
