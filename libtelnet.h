@@ -224,7 +224,7 @@ extern void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
 extern void telnet_begin_compress2(telnet_t *telnet);
 
 /* printf type checking feature in GCC and some other compilers */
-#ifdef __GNUC__
+#if __GNUC__
 # define TELNET_GNU_PRINTF(f,a) __attribute__((printf(f, a)))
 #else
 # define TELNET_GNU_PRINTF(f,a)
