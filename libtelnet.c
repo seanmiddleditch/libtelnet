@@ -699,7 +699,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_NO:
 			q.us = RFC1143_WANTYES;
 			_set_rfc1143(telnet, q);
-			_negotiate(telnet, TELNET_WILL, telopt);
+			telnet_send_telopt(telnet, TELNET_WILL, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -726,7 +726,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			_negotiate(telnet, TELNET_WONT, telopt);
+			telnet_send_telopt(telnet, TELNET_WONT, telopt);
 			break;
 		case RFC1143_WANTNO:
 			break;
@@ -749,7 +749,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_NO:
 			q.him = RFC1143_WANTYES;
 			_set_rfc1143(telnet, q);
-			_negotiate(telnet, TELNET_DO, telopt);
+			telnet_send_telopt(telnet, TELNET_DO, telopt);
 			break;
 		case RFC1143_YES:
 			break;
@@ -776,7 +776,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_YES:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
-			_negotiate(telnet, TELNET_DONT, telopt);
+			telnet_send_telopt(telnet, TELNET_DONT, telopt);
 			break;
 		case RFC1143_WANTNO:
 			break;
