@@ -240,6 +240,9 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,
 				ev->command ? "ON" : "OFF");
 		break;
+	/* ZMP command (ignored in PROXY mode) */
+	case TELNET_EV_ZMP:
+		break;
 	/* warning */
 	case TELNET_EV_WARNING:
 		printf("%s WARNING: %s" COLOR_NORMAL "\n", conn->name, ev->buffer);

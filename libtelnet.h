@@ -128,6 +128,7 @@ enum telnet_event_type_t {
 	TELNET_EV_DONT,
 	TELNET_EV_SUBNEGOTIATION,
 	TELNET_EV_COMPRESS,
+	TELNET_EV_ZMP,
 	TELNET_EV_WARNING,
 	TELNET_EV_ERROR
 };
@@ -135,6 +136,9 @@ typedef enum telnet_event_type_t telnet_event_type_t;
 
 /* event information */
 struct telnet_event_t {
+	/* ZMP argument list */
+	const char **argv;
+	size_t argc;
 	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
 	const char *buffer;
 	size_t size;
