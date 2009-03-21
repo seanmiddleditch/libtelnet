@@ -232,23 +232,22 @@ static INLINE void _send_negotiate(telnet_t *telnet, unsigned char cmd,
 }
 
 /* negotiation handling magic for RFC1143 */
-static void _negotiate(telnet_t *telnet, unsigned char cmd,
-		unsigned char telopt) {
+static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	telnet_rfc1143_t q;
 
 	/* in PROXY mode, just pass it thru and do nothing */
 	if (telnet->flags & TELNET_FLAG_PROXY) {
-		switch (cmd) {
-		case TELNET_WILL:
+		switch ((int)telnet->state) {
+		case TELNET_STATE_WILL:
 			_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0);
 			break;
-		case TELNET_WONT:
+		case TELNET_STATE_WONT:
 			_event(telnet, TELNET_EV_WONT, 0, telopt, 0, 0);
 			break;
-		case TELNET_DO:
+		case TELNET_STATE_DO:
 			_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0);
 			break;
-		case TELNET_DONT:
+		case TELNET_STATE_DONT:
 			_event(telnet, TELNET_EV_DONT, 0, telopt, 0, 0);
 			break;
 		}
@@ -259,12 +258,12 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 	q = _get_rfc1143(telnet, telopt);
 
 	/* start processing... */
-	switch (cmd) {
+	switch ((int)telnet->state) {
 	/* request to enable option on remote end or confirm DO */
-	case TELNET_WILL:
+	case TELNET_STATE_WILL:
 		switch (q.him) {
 		case RFC1143_NO:
-			if (_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0) == 1) {
+			if (_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0) == 1) {
 				q.him = RFC1143_YES;
 				_set_rfc1143(telnet, q);
 				_send_negotiate(telnet, TELNET_DO, telopt);
@@ -274,33 +273,33 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTNO:
 			q.him = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_WONT, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_WONT, 0, telopt, 0, 0);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"DONT answered by WILL");
 			break;
 		case RFC1143_WANTNO_OP:
 			q.him = RFC1143_YES;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"DONT answered by WILL");
 			break;
 		case RFC1143_WANTYES:
 			q.him = RFC1143_YES;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0);
 			break;
 		case RFC1143_WANTYES_OP:
 			q.him = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
-			_event(telnet, TELNET_EV_WILL, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0);
 			break;
 		}
 		break;
 
 	/* request to disable option on remote end, confirm DONT, reject DO */
-	case TELNET_WONT:
+	case TELNET_STATE_WONT:
 		switch (q.him) {
 		case RFC1143_YES:
 			q.him = RFC1143_NO;
@@ -327,10 +326,10 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		break;
 
 	/* request to enable option on local end or confirm WILL */
-	case TELNET_DO:
+	case TELNET_STATE_DO:
 		switch (q.us) {
 		case RFC1143_NO:
-			if (_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0) == 1) {
+			if (_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0) == 1) {
 				q.us = RFC1143_YES;
 				_set_rfc1143(telnet, q);
 				_send_negotiate(telnet, TELNET_WILL, telopt);
@@ -340,33 +339,33 @@ static void _negotiate(telnet_t *telnet, unsigned char cmd,
 		case RFC1143_WANTNO:
 			q.us = RFC1143_NO;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_DONT, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_DONT, 0, telopt, 0, 0);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"WONT answered by DO");
 			break;
 		case RFC1143_WANTNO_OP:
 			q.us = RFC1143_YES;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"WONT answered by DO");
 			break;
 		case RFC1143_WANTYES:
 			q.us = RFC1143_YES;
 			_set_rfc1143(telnet, q);
-			_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0);
 			break;
 		case RFC1143_WANTYES_OP:
 			q.us = RFC1143_WANTNO;
 			_set_rfc1143(telnet, q);
 			_send_negotiate(telnet, TELNET_WONT, telopt);
-			_event(telnet, TELNET_EV_DO, cmd, telopt, 0, 0);
+			_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0);
 			break;
 		}
 		break;
 
 	/* request to disable option on local end, confirm WONT, reject WILL */
-	case TELNET_DONT:
+	case TELNET_STATE_DONT:
 		switch (q.us) {
 		case RFC1143_YES:
 			q.us = RFC1143_NO;
@@ -528,22 +527,10 @@ static void _process(telnet_t *telnet, const char *buffer,
 
 		/* negotiation commands */
 		case TELNET_STATE_WILL:
-			_negotiate(telnet, TELNET_WILL, byte);
-			start = i + 1;
-			telnet->state = TELNET_STATE_DATA;
-			break;
 		case TELNET_STATE_WONT:
-			_negotiate(telnet, TELNET_WONT, byte);
-			start = i + 1;
-			telnet->state = TELNET_STATE_DATA;
-			break;
 		case TELNET_STATE_DO:
-			_negotiate(telnet, TELNET_DO, byte);
-			start = i + 1;
-			telnet->state = TELNET_STATE_DATA;
-			break;
 		case TELNET_STATE_DONT:
-			_negotiate(telnet, TELNET_DONT, byte);
+			_negotiate(telnet, byte);
 			start = i + 1;
 			telnet->state = TELNET_STATE_DATA;
 			break;
