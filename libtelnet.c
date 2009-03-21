@@ -54,9 +54,8 @@ static const size_t _buffer_sizes[] = {
 static const size_t _buffer_sizes_count = sizeof(_buffer_sizes) /
 		sizeof(_buffer_sizes[0]);
 
-/* event dispatch helper; return value is value of the accept field of the
- * event struct after dispatch; used for the funky REQUEST event */
-static INLINE int _event(telnet_t *telnet, telnet_event_type_t type,
+/* event dispatch helper */
+static INLINE void _event(telnet_t *telnet, telnet_event_type_t type,
 		unsigned char command, unsigned char telopt,
 		const char *buffer, size_t size) {
 	telnet_event_t ev;
@@ -65,11 +64,8 @@ static INLINE int _event(telnet_t *telnet, telnet_event_type_t type,
 	ev.type = type;
 	ev.command = command;
 	ev.telopt = telopt;
-	ev.accept = 0;
 
 	telnet->eh(telnet, &ev, telnet->ud);
-
-	return ev.accept;
 }
 
 /* error generation function */
@@ -179,6 +175,27 @@ static void _send(telnet_t *telnet, const char *buffer,
 		_event(telnet, TELNET_EV_SEND, 0, 0, buffer, size);
 }
 
+/* check if we support a particular telopt; if us is non-zero, we
+ * check if we (local) supports it, otherwise we check if he (remote)
+ * supports it.  return non-zero if supported, zero if not supported.
+ */
+static INLINE int _check_telopt(telnet_t *telnet, unsigned char telopt,
+		int us) {
+	int i;
+
+	/* if we have no telopts table, we obviously don't support it */
+	if (telnet->telopts == 0)
+		return 0;
+
+	/* loop unti found or end marker (us and him both 0) */
+	for (i = 0; telnet->telopts[i].telopt != -1; ++i)
+		if (telnet->telopts[i].telopt == telopt)
+			return us ? telnet->telopts[i].us : telnet->telopts[i].him;
+
+	/* not found, so not supported */
+	return 0;
+}
+
 /* retrieve RFC1143 option state */
 static INLINE telnet_rfc1143_t _get_rfc1143(telnet_t *telnet,
 		unsigned char telopt) {
@@ -264,9 +281,10 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	case TELNET_STATE_WILL:
 		switch (q.him) {
 		case Q_NO:
-			if (_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0) == 1) {
+			if (_check_telopt(telnet, telopt, 0)) {
 				_set_rfc1143(telnet, telopt, q.us, Q_YES);
 				_send_negotiate(telnet, TELNET_DO, telopt);
+				_event(telnet, TELNET_EV_WILL, 0, telopt, 0, 0);
 			} else
 				_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
@@ -321,9 +339,10 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	case TELNET_STATE_DO:
 		switch (q.us) {
 		case Q_NO:
-			if (_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0) == 1) {
+			if (_check_telopt(telnet, telopt, 1)) {
 				_set_rfc1143(telnet, telopt, Q_YES, q.him);
 				_send_negotiate(telnet, TELNET_WILL, telopt);
+				_event(telnet, TELNET_EV_DO, 0, telopt, 0, 0);
 			} else
 				_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
@@ -377,10 +396,11 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 }
 
 /* initialize a telnet state tracker */
-void telnet_init(telnet_t *telnet, telnet_event_handler_t eh,
-		unsigned char flags, void *user_data) {
+void telnet_init(telnet_t *telnet, const telnet_telopt_t *telopts,
+		telnet_event_handler_t eh, unsigned char flags, void *user_data) {
 	memset(telnet, 0, sizeof(telnet_t));
 	telnet->ud = user_data;
+	telnet->telopts = telopts;
 	telnet->eh = eh;
 	telnet->flags = flags;
 }
@@ -775,7 +795,7 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 }
 
 /* send subnegotiation header */
-void telnet_begin_subnegotiation(telnet_t *telnet, unsigned char telopt) {
+void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
 	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
 	_send(telnet, sb, 3);
 }

@@ -357,9 +357,9 @@ int main(int argc, char **argv) {
 		client.remote = &server;
 
 		/* initialize telnet boxes */
-		telnet_init(&server.telnet, _event_handler, TELNET_FLAG_PROXY,
+		telnet_init(&server.telnet, 0, _event_handler, TELNET_FLAG_PROXY,
 				&server);
-		telnet_init(&client.telnet, _event_handler, TELNET_FLAG_PROXY,
+		telnet_init(&client.telnet, 0, _event_handler, TELNET_FLAG_PROXY,
 				&client);
 
 		/* initialize poll descriptors */

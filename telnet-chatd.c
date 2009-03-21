@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
 
 			/* init, welcome */
 			users[i].sock = rs;
-			telnet_init(&users[i].telnet, _event_handler, 0, &users[i]);
+			telnet_init(&users[i].telnet, 0, _event_handler, 0, &users[i]);
 			telnet_negotiate(&users[i].telnet, TELNET_WILL,
 					TELNET_TELOPT_COMPRESS2);
 			telnet_printf(&users[i].telnet, "Enter name: ");

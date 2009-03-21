@@ -32,6 +32,13 @@ static struct termios orig_tios;
 static telnet_t telnet;
 static int do_echo;
 
+static const telnet_telopt_t telopts[] = {
+	{ TELNET_TELOPT_ECHO, 0, 1 },
+ 	{ TELNET_TELOPT_COMPRESS2, 0, 1 },
+	{ TELNET_TELOPT_TTYPE, 1, 0 },
+	{ -1, 0, 0 }
+};
+
 static void _cleanup(void) {
 	tcsetattr(STDOUT_FILENO, TCSADRAIN, &orig_tios);
 }
@@ -91,15 +98,9 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* request to enable remote feature (or receipt) */
 	case TELNET_EV_WILL:
-		/* we accept COMPRESS2 (MCCP) */
-		if (ev->telopt == TELNET_TELOPT_COMPRESS2)
-			ev->accept = 1;
-
 		/* we'll agree to turn off our echo if server wants us to stop */
-		else if (ev->telopt == TELNET_TELOPT_ECHO) {
+		if (ev->telopt == TELNET_TELOPT_ECHO)
 			do_echo = 0;
-			ev->accept = 1;
-		}
 		break;
 	/* notification of disabling remote feature (or receipt) */
 	case TELNET_EV_WONT:
@@ -108,9 +109,6 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* request to enable local feature (or receipt) */
 	case TELNET_EV_DO:
-		/* we support the TTYPE option */
-		if (ev->telopt == TELNET_TELOPT_TTYPE)
-			ev->accept = 1;
 		break;
 	/* demand to disable local feature (or receipt) */
 	case TELNET_EV_DONT:
@@ -202,7 +200,7 @@ int main(int argc, char **argv) {
 	do_echo = 1;
 
 	/* initialize telnet box */
-	telnet_init(&telnet, _event_handler, 0, &sock);
+	telnet_init(&telnet, telopts, _event_handler, 0, &sock);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
