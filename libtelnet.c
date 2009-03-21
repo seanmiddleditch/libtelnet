@@ -641,25 +641,23 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 						"unexpected byte after IAC inside SB: %d",
 						byte);
 
-				/* process what we've got */
-				_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
-						telnet->buffer, telnet->buffer_pos, 0, 0);
+				/* ready for next bytes */
+				start = i + 1;
 
 				/* process subnegotiation; see comment in
 				 * TELNET_STATE_SB_DATA_IAC about invoking telnet_recv()
 				 */
 				if (_subnegotiate(telnet) != 0) {
-					telnet_recv(telnet, &buffer[i + 1], size - i - 1);
+					telnet_recv(telnet, &buffer[start], size - start);
 					return;
+				} else {
+					/* recursive call to get the current input byte processed
+					 * as a regular IAC command.  we could use a goto, but
+					 * that would be gross.
+					 */
+					telnet->state = TELNET_STATE_IAC;
+					_process(telnet, (char *)&byte, 1);
 				}
-
-				/* recursive call to get the current input byte processed
-				 * as a regular IAC command.  we could use a goto, but
-				 * that would be gross.
-				 */
-				telnet->state = TELNET_STATE_IAC;
-				start = i + 1;
-				_process(telnet, (char *)&byte, 1);
 				break;
 			}
 			break;
