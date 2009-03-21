@@ -80,10 +80,12 @@ typedef struct telnet_event_t telnet_event_t;
 #define TELNET_TELOPT_AUTHENTICATION 37
 #define TELNET_TELOPT_ENCRYPT 38
 #define TELNET_TELOPT_NEW_ENVIRON 39
-#define TELNET_TELOPT_COMPRESS 85
+#define TELNET_TELOPT_MSSP 70
 #define TELNET_TELOPT_COMPRESS2 86
 #define TELNET_TELOPT_ZMP 93
 #define TELNET_TELOPT_EXOPL 255
+
+#define TELNET_TELOPT_MCCP2 86
 
 /* libtelnet feature flags */
 #define TELNET_FLAG_PROXY (1<<0)
