@@ -775,7 +775,7 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 }
 
 /* send subnegotiation header */
-void telnet_begin_subnegotiation(telnet_t *telnet, unsigned char telopt) {
+void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
 	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
 	_send(telnet, sb, 3);
 }
