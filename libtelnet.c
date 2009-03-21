@@ -472,8 +472,7 @@ static telnet_error_t _buffer_byte(telnet_t *telnet,
 	return TELNET_EOK;
 }
 
-static void _process(telnet_t *telnet, const char *buffer,
-		size_t size) {
+static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 	unsigned char byte;
 	size_t i, start;
 	for (i = start = 0; i != size; ++i) {
@@ -601,13 +600,24 @@ static void _process(telnet_t *telnet, const char *buffer,
 					telnet->state = TELNET_STATE_SB_DATA;
 				}
 				break;
-			/* something else -- protocol error */
+			/* something else -- protocol error.  attempt to process
+			 * content in subnegotiation buffer, then evaluate the
+			 * given command as an IAC code.
+			 */
 			default:
 				_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 						"unexpected byte after IAC inside SB: %d",
 						byte);
-				start = i + 1;
-				telnet->state = TELNET_STATE_DATA;
+
+				/* process what we've got */
+				_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+						telnet->buffer, telnet->buffer_pos);
+
+				/* recursive call to get the current input byte processed
+				 * as a regular IAC command
+				 */
+				telnet->state = TELNET_STATE_IAC;
+				_process(telnet, (char *)&byte, 1);
 				break;
 			}
 			break;
