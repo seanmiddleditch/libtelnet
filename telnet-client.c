@@ -48,11 +48,11 @@ static void _input(char *buffer, int size) {
 		if (buffer[i] == '\r' || buffer[i] == '\n') {
 			if (do_echo)
 				write(STDOUT_FILENO, crlf, 2);
-			telnet_send_data(&telnet, crlf, 2);
+			telnet_send(&telnet, crlf, 2);
 		} else {
 			if (do_echo)
 				write(STDOUT_FILENO, buffer + i, 1);
-			telnet_send_data(&telnet, buffer + i, 1);
+			telnet_send(&telnet, buffer + i, 1);
 		}
 	}
 }
@@ -126,8 +126,8 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 			char buffer[64];
 			buffer[0] = 0; /* IS code for RFC 1091 */
 			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
-			telnet_send_subnegotiation(telnet, TELNET_TELOPT_TTYPE,
-					(char *)buffer, 1 + strlen(buffer + 1));
+			telnet_subnegotiation(telnet, TELNET_TELOPT_TTYPE, buffer,
+					1 + strlen(buffer + 1));
 		}
 		break;
 	/* error */
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 		/* read from client */
 		if (pfd[1].revents & POLLIN) {
 			if ((rs = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
-				telnet_push(&telnet, buffer, rs);
+				telnet_recv(&telnet, buffer, rs);
 			} else if (rs == 0) {
 				break;
 			} else {

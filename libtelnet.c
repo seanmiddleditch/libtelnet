@@ -591,12 +591,12 @@ static void _process(telnet_t *telnet, const char *buffer,
 					_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0);
 
 					/* any remaining bytes in the buffer are compressed.
-					 * we have to re-invoke telnet_push to get those
+					 * we have to re-invoke telnet_recv to get those
 					 * bytes inflated and abort trying to process the
 					 * remaining compressed bytes in the current _process
 					 * buffer argument
 					 */
-					telnet_push(telnet, &buffer[start], size - start);
+					telnet_recv(telnet, &buffer[start], size - start);
 					return;
 				}
 #endif /* HAVE_ZLIB */
@@ -632,7 +632,7 @@ static void _process(telnet_t *telnet, const char *buffer,
 }
 
 /* push a bytes into the state tracker */
-void telnet_push(telnet_t *telnet, const char *buffer,
+void telnet_recv(telnet_t *telnet, const char *buffer,
 		size_t size) {
 #ifdef HAVE_ZLIB
 	/* if we have an inflate (decompression) zlib stream, use it */
@@ -683,13 +683,13 @@ void telnet_push(telnet_t *telnet, const char *buffer,
 }
 
 /* send an iac command */
-void telnet_send_command(telnet_t *telnet, unsigned char cmd) {
+void telnet_iac(telnet_t *telnet, unsigned char cmd) {
 	char bytes[2] = { TELNET_IAC, cmd };
 	_send(telnet, bytes, 2);
 }
 
 /* send negotiation */
-void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
+void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
 	telnet_rfc1143_t q;
 
@@ -783,7 +783,7 @@ void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
 }
 
 /* send non-command data (escapes IAC bytes) */
-void telnet_send_data(telnet_t *telnet, const char *buffer,
+void telnet_send(telnet_t *telnet, const char *buffer,
 		size_t size) {
 	size_t i, l;
 
@@ -796,7 +796,7 @@ void telnet_send_data(telnet_t *telnet, const char *buffer,
 			l = i + 1;
 
 			/* send escape */
-			telnet_send_command(telnet, TELNET_IAC);
+			telnet_iac(telnet, TELNET_IAC);
 		}
 	}
 
@@ -813,13 +813,13 @@ void telnet_begin_subnegotiation(telnet_t *telnet, unsigned char telopt) {
 
 
 /* send complete subnegotiation */
-void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
+void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size) {
 	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
 	static const char se[2] = { TELNET_IAC, TELNET_SE };
 
 	_send(telnet, sb, 3);
-	telnet_send_data(telnet, buffer, size);
+	telnet_send(telnet, buffer, size);
 	_send(telnet, se, 2);
 
 #ifdef HAVE_ZLIB
@@ -883,7 +883,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 
 			/* IAC -> IAC IAC */
 			if (buffer[i] == TELNET_IAC)
-				telnet_send_command(telnet, TELNET_IAC);
+				telnet_iac(telnet, TELNET_IAC);
 			/* automatic translation of \r -> CRNUL */
 			else if (buffer[i] == '\r')
 				_send(telnet, CRNUL, 2);
@@ -912,7 +912,7 @@ int telnet_printf2(telnet_t *telnet, const char *fmt, ...) {
 	va_end(va);
 
 	/* send */
-	telnet_send_data(telnet, (char *)buffer, rs);
+	telnet_send(telnet, (char *)buffer, rs);
 
 	return rs;
 }

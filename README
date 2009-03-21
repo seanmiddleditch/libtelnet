@@ -18,11 +18,14 @@ code under copyright law.
 
 *** TODO ***
 
- - automatic MCCP2 handling (controllable by host app)
+ - the negotiate callback behavior needs to be redone so that the
+   app immediately confirms; right now if you set ev->accept=1 when
+   receiving a request to enable you can't immediately start sending
+   ubnegotiations because the confirmation hasn't been sent yet.  :/
  ? ZMP parsing
  ? MSSP parsing
+ ? TTYPE parsing
  ? ENVIRON/NEW-ENVIRON parsing
- ? telnet-status testing tool
 
 I. INTRODUCTION
 =====================================================================
@@ -43,7 +46,7 @@ II. LIBTELNET API
 The libtelnet API contains several distinct parts.  The first part is
 the basic initialization and deinitialization routines.  The second
 part is a single function for pushing received data into the telnet
-processor.  The third part is the telnet_send_*() functions, which
+processor.  The third part is the libtelnet output functions, which
 generate TELNET commands and ensure data is properly formatted before
 sending over the wire.  The final part is the event handler
 interface.
@@ -86,7 +89,7 @@ IIa. Initialization
 
 IIb. Receiving Data
 
- void telnet_push(telnet_t *telnet,
+ void telnet_recv(telnet_t *telnet,
      const char *buffer, unsigned int size, void *user_data);
    When your application receives data over the socket from the
    remote end, it must pass the received bytes into this function.
@@ -99,8 +102,7 @@ IIb. Receiving Data
 
 IIc. Sending Data
 
- All of the telnet_send_*() functions will invoke the TELNET_EV_SEND
- event.
+ All of the output functions will invoke the TELNET_EV_SEND event.
 
  Note: it is very important that ALL data sent to the remote end of
  the connection be passed through libtelnet.  All user input or
@@ -108,11 +110,11 @@ IIc. Sending Data
  to one of the following functions.  Do NOT send or buffer
  unprocessed output data directly!
 
- void telnet_send_command(telnet_t *telnet, unsigned char cmd);
+ void telnet_iac(telnet_t *telnet, unsigned char cmd);
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
- void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
+ void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
      unsigned char opt);
    Sends a TELNET negotiation command.  The cmd parameter must be one
    of TELNET_WILL, TELNET_DONT, TELNET_DO, or TELNET_DONT.  The opt
@@ -123,8 +125,7 @@ IIc. Sending Data
    invocations, such as asking for WILL NAWS when NAWS is already on
    or is currently awaiting response from the remote end.
 
- void telnet_send_data(telnet_t *telnet, const char *buffer,
-     unsigned int size);
+ void telnet_send(telnet_t *telnet, const char *buffer, size_t size);
    Sends raw data, which would be either the process output from a
    server or the user input from a client.
 
@@ -148,22 +149,22 @@ IIc. Sending Data
    telnet_begin_subnegotiation() and any negotiation data has been
    sent.
 
- void telnet_send_subnegotiation(telnet_t *telnet,
-     unsigned char telopt, const char *buffer, unsigned int size);
+ void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
+     const char *buffer, unsigned int size);
    Sends a TELNET sub-negotiation command.  The telopt parameter is
    the sub-negotiation option.
 
    Note that this function is just a shorthand for:
-    telnet_begin_subnegotiation(telnet, telopt);
-    telnet_send_data(telnet, buffer, size);
-    telnet_end_subnegotiation(telnet);
+    telnet_begin_sb(telnet, telopt);
+    telnet_send(telnet, buffer, size);
+    telnet_end_sb(telnet);
 
    For some subnegotiations that involve a lot of complex formatted
    data to be sent, it may be easier to make calls to both
-   telnet_begin_negotiation() and telnet_end_subnegotiation() and
-   using telnet_send_data() or telnet_printf2() to format the data.
+   telnet_begin_sb() and telnet_finish_sb() and using telnet_send()
+   or telnet_printf2() to format the data.  
 
-   NOTE: telnet_send_subnegotiation() does have special behavior in
+   NOTE: telnet_subnegotiation() does have special behavior in
    PROXY mode, as in that mode this function will automatically
    detect the COMPRESS2 marker and enable zlib compression.
 
@@ -414,20 +415,19 @@ the TELNET protocol, not least of which is the need to escape any
 byte value 0xFF with a special TELNET command.
 
 For these reasons, it is very important that applications making use
-of libtelnet always make use of the telnet_send_*() family of
-functions for all data being sent over the TELNET connection.
+of libtelnet always make use of the libtelnet output functions for
+all data being sent over the TELNET connection.
 
 In particular, if you are writing a client, all user input must be
-passed through to telnet_send_data().  This also includes any input
+passed through to telnet_send().  This also includes any input
 generated automatically by scripts, triggers, or macros.
 
 For a server, any and all output -- including ANSI/VT100 escape
 codes, regular text, newlines, and so on -- must be passed through to
-telnet_send_data().
+telnet_send().
 
 Any TELNET commands that are to be sent must be given to one of the
-following: telnet_send_command, telnet_send_negotiate, or
-telnet_send_subnegotiation().
+following: telnet_iac, telnet_negotiate, or telnet_subnegotiation().
 
 If you are attempting to enable COMPRESS2/MCCP2, you must use the
 telnet_begin_compress2() function.
@@ -447,9 +447,9 @@ zlib shared library.
 
 libtelnet transparently supports MCCP2.  For a server to support
 MCCP2, the application must begin negotiation of the COMPRESS2 option
-using telnet_send_negotiate(), for example:
+using telnet_negotiate(), for example:
 
- telnet_send_negotiate(&telnet, TELNET_WILL,
+ telnet_negotiate(&telnet, TELNET_WILL,
      TELNET_OPTION_COMPRESS2, user_data);
 
 If a favorable DO COMPRESS2 is sent back from the client then the

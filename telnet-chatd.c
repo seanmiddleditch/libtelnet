@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 			/* init, welcome */
 			users[i].sock = rs;
 			telnet_init(&users[i].telnet, _event_handler, 0, &users[i]);
-			telnet_send_negotiate(&users[i].telnet, TELNET_WILL,
+			telnet_negotiate(&users[i].telnet, TELNET_WILL,
 					TELNET_TELOPT_COMPRESS2);
 			telnet_printf(&users[i].telnet, "Enter name: ");
 		}
@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 
 			if (pfd[i].revents & POLLIN) {
 				if ((rs = recv(users[i].sock, buffer, sizeof(buffer), 0)) > 0) {
-					telnet_push(&users[i].telnet, buffer, rs);
+					telnet_recv(&users[i].telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("Connection closed.\n");
 					close(users[i].sock);

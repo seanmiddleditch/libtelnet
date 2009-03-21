@@ -176,7 +176,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		print_buffer(ev->buffer, ev->size);
 		printf(COLOR_NORMAL "\n");
 
-		telnet_send_data(&conn->remote->telnet, ev->buffer, ev->size);
+		telnet_send(&conn->remote->telnet, ev->buffer, ev->size);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
@@ -193,33 +193,33 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		printf("%s IAC %s" COLOR_NORMAL "\n", conn->name,
 				get_cmd(ev->command));
 
-		telnet_send_command(&conn->remote->telnet, ev->command);
+		telnet_iac(&conn->remote->telnet, ev->command);
 		break;
 	/* negotiation, WILL */
 	case TELNET_EV_WILL:
 		printf("%s IAC WILL %d (%s)" COLOR_NORMAL "\n", conn->name,
 				(int)ev->telopt, get_opt(ev->telopt));
-		telnet_send_negotiate(&conn->remote->telnet, TELNET_WILL,
+		telnet_negotiate(&conn->remote->telnet, TELNET_WILL,
 				ev->telopt);
 		break;
 	/* negotiation, WONT */
 	case TELNET_EV_WONT:
 		printf("%s IAC WONT %d (%s)" COLOR_NORMAL "\n", conn->name,
 				(int)ev->telopt, get_opt(ev->telopt));
-		telnet_send_negotiate(&conn->remote->telnet, TELNET_WONT,
+		telnet_negotiate(&conn->remote->telnet, TELNET_WONT,
 				ev->telopt);
 		break;
 	/* negotiation, DO */
 	case TELNET_EV_DO:
 		printf("%s IAC DO %d (%s)" COLOR_NORMAL "\n", conn->name,
 				(int)ev->telopt, get_opt(ev->telopt));
-		telnet_send_negotiate(&conn->remote->telnet, TELNET_DO,
+		telnet_negotiate(&conn->remote->telnet, TELNET_DO,
 				ev->telopt);
 		break;
 	case TELNET_EV_DONT:
 		printf("%s IAC DONT %d (%s)" COLOR_NORMAL "\n", conn->name,
 				(int)ev->telopt, get_opt(ev->telopt));
-		telnet_send_negotiate(&conn->remote->telnet, TELNET_DONT,
+		telnet_negotiate(&conn->remote->telnet, TELNET_DONT,
 				ev->telopt);
 		break;
 	/* subnegotiation */
@@ -232,7 +232,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		}
 		printf(COLOR_NORMAL "\n");
 
-		telnet_send_subnegotiation(&conn->remote->telnet, ev->telopt,
+		telnet_subnegotiation(&conn->remote->telnet, ev->telopt,
 				ev->buffer, ev->size);
 		break;
 	/* compression notification */
@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 			/* read from server */
 			if (pfd[0].revents & POLLIN) {
 				if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
-					telnet_push(&server.telnet, buffer, rs);
+					telnet_recv(&server.telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", server.name);
 					break;
@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
 			/* read from client */
 			if (pfd[1].revents & POLLIN) {
 				if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
-					telnet_push(&client.telnet, buffer, rs);
+					telnet_recv(&client.telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("%s DISCONNECTED" COLOR_NORMAL "\n", client.name);
 					break;

@@ -186,38 +186,37 @@ extern void telnet_init(telnet_t *telnet, telnet_event_handler_t eh,
 extern void telnet_free(telnet_t *telnet);
 
 /* push a byte buffer into the state tracker */
-extern void telnet_push(telnet_t *telnet, const char *buffer,
+extern void telnet_recv(telnet_t *telnet, const char *buffer,
 		size_t size);
 
 /* send an iac command */
-extern void telnet_send_command(telnet_t *telnet, unsigned char cmd);
+extern void telnet_iac(telnet_t *telnet, unsigned char cmd);
 
 /* send negotiation, with RFC1143 checking.
  * will not actually send unless necessary, but will update internal
  * negotiation queue.
  */
-extern void telnet_send_negotiate(telnet_t *telnet, unsigned char cmd,
+extern void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char opt);
 
 /* send non-command data (escapes IAC bytes) */
-extern void telnet_send_data(telnet_t *telnet,
+extern void telnet_send(telnet_t *telnet,
 		const char *buffer, size_t size);
 
 /* send IAC SB followed by the telopt code */
-extern void telnet_begin_subnegotiation(telnet_t *telnet,
+extern void telnet_begin_sb(telnet_t *telnet,
 		unsigned char telopt);
 
 /* send IAC SE */
-#define telnet_finish_subnegotiation(telnet) \
-		telnet_send_command((telnet), TELNET_SE)
+#define telnet_finish_sb(telnet) telnet_iac((telnet), TELNET_SE)
 
 /* shortcut for sending a complete subnegotiation buffer.
  * equivalent to:
- *   telnet_begin_subnegotiation(telnet, telopt);
- *   telnet_send_data(telnet, buffer, size);
- *   telnet_finish_subnegotiation(telnet);
+ *   telnet_begin_sb(telnet, telopt);
+ *   telnet_send(telnet, buffer, size);
+ *   telnet_finish_sb(telnet);
  */
-extern void telnet_send_subnegotiation(telnet_t *telnet, unsigned char telopt,
+extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size);
 
 /* begin sending compressed data (server only) */
