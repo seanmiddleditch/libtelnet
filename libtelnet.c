@@ -605,6 +605,10 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 			switch (byte) {
 			/* end subnegotiation */
 			case TELNET_SE:
+				/* return to default state */
+				start = i + 1;
+				telnet->state = TELNET_STATE_DATA;
+
 				/* process subnegotiation */
 				if (_subnegotiate(telnet) != 0) {
 					/* any remaining bytes in the buffer are compressed.
@@ -613,13 +617,9 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 					 * remaining compressed bytes in the current _process
 					 * buffer argument
 					 */
-					telnet_recv(telnet, &buffer[i + 1], size - start);
+					telnet_recv(telnet, &buffer[start], size - start);
 					return;
 				}
-
-				/* return to default state */
-				start = i + 1;
-				telnet->state = TELNET_STATE_DATA;
 				break;
 			/* escaped IAC byte */
 			case TELNET_IAC:
@@ -649,7 +649,7 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 				 * TELNET_STATE_SB_DATA_IAC about invoking telnet_recv()
 				 */
 				if (_subnegotiate(telnet) != 0) {
-					telnet_recv(telnet, &buffer[i + 1], size - start);
+					telnet_recv(telnet, &buffer[i + 1], size - i - 1);
 					return;
 				}
 
@@ -658,6 +658,7 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 				 * that would be gross.
 				 */
 				telnet->state = TELNET_STATE_IAC;
+				start = i + 1;
 				_process(telnet, (char *)&byte, 1);
 				break;
 			}
