@@ -86,13 +86,15 @@ static telnet_error_t _error(telnet_t *telnet, unsigned line,
 	/* format error intro */
 	snprintf(buffer, sizeof(buffer), "%s:%u in %s: ", __FILE__, line, func);
 
+	/* format informational text */
 	va_start(va, fmt);
 	vsnprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer),
 			fmt, va);
 	va_end(va);
 
+	/* send error event to the user */
 	_event(telnet, fatal ? TELNET_EV_ERROR : TELNET_EV_WARNING, err,
-			0, (char *)buffer, strlen(buffer));
+			0, buffer, strlen(buffer));
 	
 	return err;
 }
@@ -454,8 +456,7 @@ static telnet_error_t _buffer_byte(telnet_t *telnet,
 		}
 
 		/* (re)allocate buffer */
-		new_buffer = (char *)realloc(telnet->buffer,
-				_buffer_sizes[i + 1]);
+		new_buffer = (char *)realloc(telnet->buffer, _buffer_sizes[i + 1]);
 		if (new_buffer == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"realloc() failed");
@@ -878,7 +879,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 				buffer[i] == '\n') {
 			/* dump prior portion of text */
 			if (i != l)
-				_send(telnet, (char *)buffer + l, i - l);
+				_send(telnet, buffer + l, i - l);
 			l = i + 1;
 
 			/* IAC -> IAC IAC */
@@ -895,7 +896,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 
 	/* send whatever portion of buffer is left */
 	if (i != l)
-		_send(telnet, (char *)buffer + l, i - l);
+		_send(telnet, buffer + l, i - l);
 
 	return rs;
 }
@@ -912,7 +913,7 @@ int telnet_printf2(telnet_t *telnet, const char *fmt, ...) {
 	va_end(va);
 
 	/* send */
-	telnet_send(telnet, (char *)buffer, rs);
+	telnet_send(telnet, buffer, rs);
 
 	return rs;
 }
