@@ -412,7 +412,7 @@ static int _subnegotiate(telnet_t *telnet) {
 			return 0;
 
 		/* count arguments */
-		while (c != telnet->buffer + telnet->buffer_pos + 1) {
+		while (c != telnet->buffer + telnet->buffer_pos) {
 			++argc;
 			c += strlen(c) + 1;
 		}
@@ -641,8 +641,9 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 						"unexpected byte after IAC inside SB: %d",
 						byte);
 
-				/* ready for next bytes */
+				/* enter IAC state */
 				start = i + 1;
+				telnet->state = TELNET_STATE_IAC;
 
 				/* process subnegotiation; see comment in
 				 * TELNET_STATE_SB_DATA_IAC about invoking telnet_recv()
@@ -655,7 +656,6 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 					 * as a regular IAC command.  we could use a goto, but
 					 * that would be gross.
 					 */
-					telnet->state = TELNET_STATE_IAC;
 					_process(telnet, (char *)&byte, 1);
 				}
 				break;
