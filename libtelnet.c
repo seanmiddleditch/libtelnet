@@ -527,16 +527,6 @@ static void _process(telnet_t *telnet, const char *buffer,
 			break;
 
 		/* negotiation commands */
-		case TELNET_STATE_DO:
-			_negotiate(telnet, TELNET_DO, byte);
-			start = i + 1;
-			telnet->state = TELNET_STATE_DATA;
-			break;
-		case TELNET_STATE_DONT:
-			_negotiate(telnet, TELNET_DONT, byte);
-			start = i + 1;
-			telnet->state = TELNET_STATE_DATA;
-			break;
 		case TELNET_STATE_WILL:
 			_negotiate(telnet, TELNET_WILL, byte);
 			start = i + 1;
@@ -544,6 +534,16 @@ static void _process(telnet_t *telnet, const char *buffer,
 			break;
 		case TELNET_STATE_WONT:
 			_negotiate(telnet, TELNET_WONT, byte);
+			start = i + 1;
+			telnet->state = TELNET_STATE_DATA;
+			break;
+		case TELNET_STATE_DO:
+			_negotiate(telnet, TELNET_DO, byte);
+			start = i + 1;
+			telnet->state = TELNET_STATE_DATA;
+			break;
+		case TELNET_STATE_DONT:
+			_negotiate(telnet, TELNET_DONT, byte);
 			start = i + 1;
 			telnet->state = TELNET_STATE_DATA;
 			break;
