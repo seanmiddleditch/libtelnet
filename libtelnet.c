@@ -969,3 +969,36 @@ int telnet_printf2(telnet_t *telnet, const char *fmt, ...) {
 
 	return rs;
 }
+
+/* send ZMP data */
+void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv) {
+	size_t i;
+
+	/* ZMP header */
+	telnet_begin_sb(telnet, TELNET_TELOPT_ZMP);
+
+	/* send out each argument, including trailing NUL byte */
+	for (i = 0; i != argc; ++i)
+		telnet_send(telnet, argv[i], strlen(argv[i] + 1));
+
+	/* ZMP footer */
+	telnet_finish_sb(telnet);
+}
+
+/* send ZMP data using varargs  */
+void telnet_send_zmpv(telnet_t *telnet, ...) {
+	va_list va;
+	const char* arg;
+
+	/* ZMP header */
+	telnet_begin_sb(telnet, TELNET_TELOPT_ZMP);
+
+	/* send out each argument, including trailing NUL byte */
+	va_start(va, telnet);
+	while ((arg = va_arg(va, const char *)) != NULL)
+		telnet_send(telnet, arg, strlen(arg) + 1);
+	va_end(va);
+
+	/* ZMP footer */
+	telnet_finish_sb(telnet);
+}

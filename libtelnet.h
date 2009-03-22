@@ -12,6 +12,15 @@
 #if !defined(LIBTELNET_INCLUDE)
 #define LIBTELNET_INCLUDE 1
 
+/* printf type checking feature in GCC and some other compilers */
+#if __GNUC__
+# define TELNET_GNU_PRINTF(f,a) __attribute__((format(printf, f, a)))
+# define TELNET_GNU_SENTINEL __attribute__((sentinel))
+#else
+# define TELNET_GNU_PRINTF(f,a)
+# define TELNET_GNU_SENTINEL
+#endif
+
 /* forward declarations */
 typedef struct telnet_t telnet_t;
 typedef struct telnet_event_t telnet_event_t;
@@ -235,17 +244,16 @@ extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 /* begin sending compressed data (server only) */
 extern void telnet_begin_compress2(telnet_t *telnet);
 
-/* printf type checking feature in GCC and some other compilers */
-#if __GNUC__
-# define TELNET_GNU_PRINTF(f,a) __attribute__((printf(f, a)))
-#else
-# define TELNET_GNU_PRINTF(f,a)
-#endif
-
 /* send formatted data with \r and \n translated, and IAC escaped */
-extern int telnet_printf(telnet_t *telnet, const char *fmt, ...);
+extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
+		TELNET_GNU_PRINTF(2, 3);
 
 /* send formatted data with just IAC escaped */
-extern int telnet_printf2(telnet_t *telnet, const char *fmt, ...);
+extern int telnet_printf2(telnet_t *telnet, const char *fmt, ...)
+		TELNET_GNU_PRINTF(2, 3);
+
+/* send ZMP commands */
+extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
+extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
