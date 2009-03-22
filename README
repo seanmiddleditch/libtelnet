@@ -402,6 +402,14 @@ IId. Event Handling
    A subnegotiation should never be sent unless the specific option
    has been enabled through the use of the telnet negotiation
    feature.
+ 
+   ZMP SUPPORT:
+   The event->argc field is the number of ZMP parameters, including
+   the command name, that have been received.  The event->argv field
+   is an array of strings, one for each ZMP parameter.  The command
+   name will be in event->argv[0].  If the ZMP command could not be
+   parsed because it was malformed, event->argc will be 0 (zero) and
+   event->argv will be NULL.
 
  TELNET_EV_COMPRESS
    The COMPRESS event notifies the app that COMPRESS2/MCCP2
@@ -410,13 +418,6 @@ IId. Event Handling
 
    The event->command value will be 1 if compression has started and
    will be 0 if compression has ended.
- 
- TELNET_EV_ZMP
-   The ZMP event is sent whenever a ZMP command has been received.
-   The event->argc field is the number of ZMP parameters, including
-   the command name, that have been received.  The event->argv field
-   is an array of strings, one for each ZMP parameter.  The command
-   name will be in event->argv[0].
  
  TELNET_EV_WARNING
    The WARNING event is sent whenever something has gone wrong inside
@@ -529,8 +530,15 @@ enables the client to send ZMP commands.  The client must never
 attempt to negotiate ZMP directly using telnet_negotiate().
 
 Once ZMP is enabled, any ZMP commands received will automatically be
-sent to the event handler function with the TELNET_EV_ZMP event
-code.
+sent to the event handler function with the TELNET_EV_SUBNEGOTIATION
+event code.  The command will automatically be parsed and the ZMP
+parameters will be placed in the event->argv array and the number of
+parameters will be placed in the event->argc field.
+
+NOTE: if an error occured while parsing the ZMP command because it
+was malformed, the event->argc field will be equal to 0 and the
+event->argv field will be NULL.  You should always check for this
+before attempting to access the parameter array.
 
 To send ZMP commands to the remote end, use either telnet_send_zmp()
 or telnet_send_zmpv().

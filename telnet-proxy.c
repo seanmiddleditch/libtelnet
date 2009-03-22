@@ -224,14 +224,33 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* subnegotiation */
 	case TELNET_EV_SUBNEGOTIATION:
-		printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
-				get_opt(ev->telopt));
-		if (ev->size > 0) {
-			printf(" [%zi]: ", ev->size);
-			print_buffer(ev->buffer, ev->size);
+		if (ev->telopt == TELNET_TELOPT_ZMP) {
+			if (ev->argc != 0) {
+				size_t i;
+				printf("%s ZMP [%zi params]", conn->name, ev->argc);
+				for (i = 0; i != ev->argc; ++i) {
+					printf(" \"");
+					print_buffer(ev->argv[i], strlen(ev->argv[i]));
+					printf("\"");
+				}
+				printf(COLOR_NORMAL "\n");
+			} else {
+				printf("%s ZMP (malformed!) [%zi bytes]",
+						conn->name, ev->size);
+				print_buffer(ev->buffer, ev->size);
+				printf(COLOR_NORMAL "\n");
+			}
+		} else {
+			printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
+					get_opt(ev->telopt));
+			if (ev->size > 0) {
+				printf(" [%zi bytes]: ", ev->size);
+				print_buffer(ev->buffer, ev->size);
+			}
+			printf(COLOR_NORMAL "\n");
 		}
-		printf(COLOR_NORMAL "\n");
 
+		/* forward */
 		telnet_subnegotiation(&conn->remote->telnet, ev->telopt,
 				ev->buffer, ev->size);
 		break;
@@ -239,9 +258,6 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	case TELNET_EV_COMPRESS:
 		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,
 				ev->command ? "ON" : "OFF");
-		break;
-	/* ZMP command (ignored in PROXY mode) */
-	case TELNET_EV_ZMP:
 		break;
 	/* warning */
 	case TELNET_EV_WARNING:

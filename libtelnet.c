@@ -408,46 +408,53 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
  * must be aborted and reprocessed due to COMPRESS2 being activated
  */
 static int _subnegotiate(telnet_t *telnet) {
-	/* invoke callback */
-	_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
-			telnet->buffer, telnet->buffer_pos, 0, 0);
+	const char **argv;
+	const char *c;
+	size_t i, argc;
 
+	switch (telnet->sb_telopt) {
+#ifdef HAVE_ZLIB
 	/* received COMPRESS2 begin marker, setup our zlib box and
 	 * start handling the compressed stream if it's not already.
 	 */
-#ifdef HAVE_ZLIB
-	if (telnet->sb_telopt == TELNET_TELOPT_COMPRESS2) {
-		if (_init_zlib(telnet, 0, 1) != TELNET_EOK)
-			return 0;
+	case TELNET_TELOPT_COMPRESS2:
+		if (telnet->sb_telopt == TELNET_TELOPT_COMPRESS2) {
+			if (_init_zlib(telnet, 0, 1) != TELNET_EOK)
+				return 0;
 
-		/* notify app that compression was enabled */
-		_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0, 0, 0);
-		return 1;
-	}
+			/* standard SB notification */
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
+
+			/* notify app that compression was enabled */
+			_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0, 0, 0);
+			return 1;
+		}
+		break;
 #endif /* HAVE_ZLIB */
-
-	/* parse ZMP args */
-	if (telnet->sb_telopt == TELNET_TELOPT_ZMP) {
-		const char **argv;
-		const char *c = telnet->buffer;
-		size_t i, argc = 0;
-
+	/* ZMP command */
+	case TELNET_TELOPT_ZMP:
 		/* make sure this is a valid ZMP buffer */
-		if (telnet->buffer_pos == 0 || telnet->buffer[telnet->buffer_pos - 1]
-				!= 0)
+		if (telnet->buffer_pos == 0 ||
+				telnet->buffer[telnet->buffer_pos - 1] != 0) {
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"incomplete ZMP frame");
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
 			return 0;
+		}
 
 		/* count arguments */
-		while (c != telnet->buffer + telnet->buffer_pos) {
-			++argc;
+		for (argc = 0, c = telnet->buffer; c != telnet->buffer +
+				telnet->buffer_pos; ++argc)
 			c += strlen(c) + 1;
-		}
 
 		/* allocate argument array, bail on error */
 		if ((argv = (const char **)malloc(sizeof(char *) * argc)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"malloc() failed: %s", strerror(errno));
-			return 0;
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
 		}
 
 		/* populate argument array */
@@ -456,11 +463,18 @@ static int _subnegotiate(telnet_t *telnet) {
 			c += strlen(c) + 1;
 		}
 
-		/* invoke ZMP event */
-		_event(telnet, TELNET_EV_ZMP, 0, 0, 0, 0, argv, argc);
+		/* invoke event with our arguments */
+		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+				telnet->buffer, telnet->buffer_pos, argv, argc);
 
 		/* free argument array */
 		free(argv);
+		break;
+	/* other generic subnegotiation */
+	default:
+		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+				telnet->buffer, telnet->buffer_pos, 0, 0);
+		break;
 	}
 
 	return 0;
