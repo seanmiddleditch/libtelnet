@@ -29,6 +29,11 @@
 #define MAX_USERS 64
 #define LINEBUFFER_SIZE 256
 
+const telnet_telopt_t telopts[] = {
+	{ TELNET_TELOPT_COMPRESS2,	TELNET_WILL, TELNET_DONT },
+	{ -1, 0, 0 }
+};
+
 struct user_t {
 	char *name;
 	int sock;
@@ -291,7 +296,8 @@ int main(int argc, char **argv) {
 
 			/* init, welcome */
 			users[i].sock = rs;
-			telnet_init(&users[i].telnet, _event_handler, 0, &users[i]);
+			telnet_init(&users[i].telnet, telopts, _event_handler, 0,
+					&users[i]);
 			telnet_negotiate(&users[i].telnet, TELNET_WILL,
 					TELNET_TELOPT_COMPRESS2);
 			telnet_printf(&users[i].telnet, "Enter name: ");

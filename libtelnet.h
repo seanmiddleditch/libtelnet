@@ -15,6 +15,7 @@
 /* forward declarations */
 typedef struct telnet_t telnet_t;
 typedef struct telnet_event_t telnet_event_t;
+typedef struct telnet_telopt_t telnet_telopt_t;
 
 /* telnet special values */
 #define TELNET_IAC 255
@@ -22,7 +23,6 @@ typedef struct telnet_event_t telnet_event_t;
 #define TELNET_DO 253
 #define TELNET_WONT 252
 #define TELNET_WILL 251
-#define TELNET_SB 250
 #define TELNET_SB 250
 #define TELNET_GA 249
 #define TELNET_EL 248
@@ -148,18 +148,25 @@ struct telnet_event_t {
 	unsigned char command;
 	/* telopt info: for negotiation events SUBNEGOTIATION */
 	unsigned char telopt;
-	/* accept status: for WILL and DO events */
-	unsigned char accept;
 };
 
 /* event handler declaration */
 typedef void (*telnet_event_handler_t)(telnet_t *telnet,
 		telnet_event_t *event, void *user_data);
 
+/* telopt support table element; use telopt of -1 for end marker */
+struct telnet_telopt_t {
+	short telopt; /* one of the TELOPT codes or -1 */
+	unsigned char us; /* TELNET_WILL or TELNET_WONT */
+	unsigned char him; /* TELNET_DO or TELNET_DONT */
+};
+
 /* state tracker */
 struct telnet_t {
 	/* user data */
 	void *ud;
+	/* telopt support table */
+	const telnet_telopt_t *telopts;
 	/* event handler */
 	telnet_event_handler_t eh;
 #ifdef HAVE_ZLIB
@@ -185,8 +192,8 @@ struct telnet_t {
 };
 
 /* initialize a telnet state tracker */
-extern void telnet_init(telnet_t *telnet, telnet_event_handler_t eh,
-		unsigned char flags, void *user_data);
+extern void telnet_init(telnet_t *telnet, const telnet_telopt_t *telopts,
+		telnet_event_handler_t eh, unsigned char flags, void *user_data);
 
 /* free up any memory allocated by a state tracker */
 extern void telnet_free(telnet_t *telnet);
