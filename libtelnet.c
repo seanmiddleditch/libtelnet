@@ -24,7 +24,7 @@
 
 /* inlinable functions */
 #if __GNUC__ || __STDC_VERSION__ >= 199901L
-# define INLINE inline
+# define INLINE __inline__
 #else
 # define INLINE
 #endif
