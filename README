@@ -18,11 +18,6 @@ code under copyright law.
 
 *** TODO ***
 
- - the negotiate callback behavior needs to be redone so that the
-   app immediately confirms; right now if you set ev->accept=1 when
-   receiving a request to enable you can't immediately start sending
-   ubnegotiations because the confirmation hasn't been sent yet.  :/
- ? ZMP parsing
  ? MSSP parsing
  ? TTYPE parsing
  ? ENVIRON/NEW-ENVIRON parsing
@@ -416,6 +411,13 @@ IId. Event Handling
    The event->command value will be 1 if compression has started and
    will be 0 if compression has ended.
  
+ TELNET_EV_ZMP
+   The ZMP event is sent whenever a ZMP command has been received.
+   The event->argc field is the number of ZMP parameters, including
+   the command name, that have been received.  The event->argv field
+   is an array of strings, one for each ZMP parameter.  The command
+   name will be in event->argv[0].
+ 
  TELNET_EV_WARNING
    The WARNING event is sent whenever something has gone wrong inside
    of libtelnet (possibly due to malformed data sent by the other
@@ -501,7 +503,48 @@ If a connection is in PROXY mode and COMPRESS2 support is enabled
 then libtelnet will automatically detect the start of a COMPRESS2
 stream, in either the sending or receiving direction.
 
-VI. TELNET PROXY UTILITY
+VI. ZENITH MUD PROTOCOL (ZMP) SUPPORT
+=====================================================================
+
+The Zenith MUD Protocol allows applications to send messages across
+the TELNET connection outside of the normal user input/output data
+stream.  libtelnet offers some limited support for receiving and
+sending ZMP commands to make implementing a full ZMP stack easier.
+For more information on ZMP:
+
+ http://zmp.sourcemud.org/
+
+For a server to enable ZMP, it must send the WILL ZMP negotitaion:
+
+ telnet_negotiate(&telnet, TELNET_WILL, TELNET_TELOPT_ZMP);
+
+For a client to support ZMP it must include ZMP in the telopt table
+passed to telnet_init(), with the him field set to TELNET_DO:
+
+ { TELNET_TELOPT_ZMP,       TELNET_WONT, TELNET_DO   },
+
+Note that while ZMP is a bi-directional protocol, it is only ever
+enabled on the server end of the connection.  This automatically
+enables the client to send ZMP commands.  The client must never
+attempt to negotiate ZMP directly using telnet_negotiate().
+
+Once ZMP is enabled, any ZMP commands received will automatically be
+sent to the event handler function with the TELNET_EV_ZMP event
+code.
+
+To send ZMP commands to the remote end, use either telnet_send_zmp()
+or telnet_send_zmpv().
+
+ int telnet_send_zmp(telnet_t *telnet, size_t argv,
+    const char **argv);
+  Sends a ZMP command to the remote end.  The argc parameter is the
+  number of ZMP parameters (including the command name!) to be sent.
+  The argv parameter is an array of strings containing the
+  parameters.  The element in argv[0] is the command name itself.
+  The argv array must have at least as many elements as the value
+  argc.
+
+VII. TELNET PROXY UTILITY
 =====================================================================
 
 The telnet-proxy utility is a small application that serves both as a
