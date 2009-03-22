@@ -236,7 +236,10 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	}
 
 	/* we're going to need to track state for it, so grow the queue
-	 * and put the telopt into it; bail on allocation error
+	 * by 4 (four) elements and put the telopt into it; bail on allocation
+	 * error.  we go by four because it seems like a reasonable guess as
+	 * to the number of enabled options for most simple code, and it
+	 * allows for an acceptable number of reallocations for complex code.
 	 */
 	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q, sizeof(
 			telnet_rfc1143_t) * (telnet->q_size + 1))) == 0) {
@@ -244,6 +247,7 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 				"malloc() failed: %s", strerror(errno));
 		return;
 	}
+	memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t *) * 4);
 	telnet->q = qtmp;
 	telnet->q[telnet->q_size].telopt = telopt;
 	telnet->q[telnet->q_size].us = us;
