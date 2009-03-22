@@ -33,9 +33,9 @@ static telnet_t telnet;
 static int do_echo;
 
 static const telnet_telopt_t telopts[] = {
-	{ TELNET_TELOPT_ECHO, 0, 1 },
- 	{ TELNET_TELOPT_COMPRESS2, 0, 1 },
-	{ TELNET_TELOPT_TTYPE, 1, 0 },
+	{ TELNET_TELOPT_ECHO,		TELNET_WONT, TELNET_DO   },
+	{ TELNET_TELOPT_COMPRESS2,	TELNET_WONT, TELNET_DO   },
+	{ TELNET_TELOPT_TTYPE,		TELNET_WILL, TELNET_DONT },
 	{ -1, 0, 0 }
 };
 

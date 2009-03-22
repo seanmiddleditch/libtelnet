@@ -53,18 +53,59 @@ interface.
 
 IIa. Initialization
 
- struct telnet_t;
-   This structure represents the state of the TELNET protocol for a
-   single connection.  Each connection utilizing TELNET must have its
-   own telnet_t structure, which is passed to all libtelnet API
-   calls.
+ Using libtelnet requires the initialization of a telnet_t structure
+ which stores all current state for a single TELNET connection.
 
- void telnet_init(telnet_t *telnet, telnet_event_handler_t handler,
-     unsigned char flags, void *user_data);
+ Initializing a telnet_t structure requires several pieces of data.
+ One of these is the telopt support table, which specifies which
+ TELNET options your application supports both locally and remotely.
+ This table is comprised of telnet_telopt_t structures, one for each
+ supported option.  Each entry specifies the option supported,
+ whether the option is supported locally or remotely.
+
+  struct telnet_telopt_t {
+    short telopt;
+    unsigned char us;
+    unsigned char him;
+  };
+
+ The us field denotes whether your application supporst the telopt
+ locally.  It should be set to TELNET_WILL if you support it and to
+ TELNET_WONT if you don't.  The him field denotes whether the telopt
+ is supported on the remote end, and should be TELNET_DO if yes and
+ TELNET_DONT if not.
+
+ When definition the telopt table you must include an end marker
+ entry, which is simply an entry with telopt set to -1.  For
+ example:
+
+  static const telnet_telopt_t my_telopts[] = {
+    { TELNET_TELOPT_ECHO,      TELNET_WILL, TELNET_DONT },
+    { TELNET_TELOPT_TTYPE,     TELNET_WILL, TELNET_DONT },
+    { TELNET_TELOPT_COMPRESS2, TELNET_WONT, TELNET_DO   },
+    { TELNET_TELOPT_ZMP,       TELNET_WONT, TELNET_DO   },
+    { TELNET_TELOPT_MSSP,      TELNET_WONT, TELNET_DO   },
+    { TELNET_TELOPT_BINARY,    TELNET_WILL, TELNET_DO   },
+    { TELNET_TELOPT_NAWS,      TELNET_WILL, TELNET_DONT },
+    { -1, 0, 0 }
+  };
+ 
+ If you need to dynamically alter supported options on a
+ per-connection basis then you may use a different tables
+ (dynamically allocated if necessary) per call to telnet_init() or
+ you share a single constant table like the above example between
+ all connections if you support a fixed set of options.  Most
+ applications will support only a fixed set of options.
+
+ void telnet_init(telnet_t *telnet, const telnet_telopts_t *telopts,
+     telnet_event_handler_t handler, unsigned char flags,
+     void *user_data);
    The telnet_init() function is responsible for initializing the
    data in a telnet_t structure.  It must be called immediately after
    establishing a connection and before any other libtelnet API calls
    are made.
+
+   The telopts field is the telopt support table as described above.
 
    The handler parameter must be a function matching the
    telnet_event_handler_t definition.  More information about events

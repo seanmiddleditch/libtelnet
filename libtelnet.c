@@ -188,9 +188,16 @@ static INLINE int _check_telopt(telnet_t *telnet, unsigned char telopt,
 		return 0;
 
 	/* loop unti found or end marker (us and him both 0) */
-	for (i = 0; telnet->telopts[i].telopt != -1; ++i)
-		if (telnet->telopts[i].telopt == telopt)
-			return us ? telnet->telopts[i].us : telnet->telopts[i].him;
+	for (i = 0; telnet->telopts[i].telopt != -1; ++i) {
+		if (telnet->telopts[i].telopt == telopt) {
+			if (us && telnet->telopts[i].us == TELNET_WILL)
+				return 1;
+			else if (!us && telnet->telopts[i].him == TELNET_DO)
+				return 1;
+			else
+				return 0;
+		}
+	}
 
 	/* not found, so not supported */
 	return 0;

@@ -24,7 +24,6 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 #define TELNET_WONT 252
 #define TELNET_WILL 251
 #define TELNET_SB 250
-#define TELNET_SB 250
 #define TELNET_GA 249
 #define TELNET_EL 248
 #define TELNET_EC 247
@@ -153,8 +152,9 @@ typedef void (*telnet_event_handler_t)(telnet_t *telnet,
 
 /* telopt support table element; use telopt of -1 for end marker */
 struct telnet_telopt_t {
-	short telopt;
-	short us:1, him:1;
+	short telopt; /* one of the TELOPT codes or -1 */
+	unsigned char us; /* TELNET_WILL or TELNET_WONT */
+	unsigned char him; /* TELNET_DO or TELNET_DONT */
 };
 
 /* state tracker */
