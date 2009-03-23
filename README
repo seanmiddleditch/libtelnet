@@ -16,12 +16,6 @@ relinquishment in perpetuity of all present and future rights to this
 code under copyright law. 
 ---------------------------------------------------------------------
 
-*** TODO ***
-
- ? MSSP parsing
- ? TTYPE parsing
- ? ENVIRON/NEW-ENVIRON parsing
-
 I. INTRODUCTION
 =====================================================================
 
@@ -402,6 +396,25 @@ IId. Event Handling
    A subnegotiation should never be sent unless the specific option
    has been enabled through the use of the telnet negotiation
    feature.
+
+   TTYPE/ENVIRON/NEW-ENVIRON/MSSP SUPPORT:
+   These telopts all use a similar format to their subnegotiation
+   requests.  The data is arrnaged as a series of terms, with each
+   term beginning with a single byte type marker (a small integer in
+   the range of 0 to 3) followed by zero or more bytes until another
+   type marker or the end of the subnegotiation data.
+
+   libtelnet parses these.  The number of terms found is put in the
+   ev->argc field.  The terms themselves are stored as
+   NUL-terminated strings in the ev->argv array.  The type byte is
+   always the first byte of these strings, e.g. ev->argv[0][0].  Due
+   to the fact that 0 is a valid type marker, remember that
+   accessing the remainder of the term's data as a string must be
+   done as &ev->argv[term_index][1].
+
+   Note that libtelnet does not support the ESC byte for ENVIRON/
+   NEW-ENVIRON.  Data using escaped bytes will not be parsed
+   correctly.
  
    ZMP SUPPORT:
    The event->argc field is the number of ZMP parameters, including
