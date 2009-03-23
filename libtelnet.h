@@ -1,4 +1,6 @@
 /*
+ * libtelnet 0.9
+ *
  * Sean Middleditch
  * sean@sourcemud.org
  *
