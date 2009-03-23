@@ -16,8 +16,12 @@
 #include <string.h>
 #include <stdarg.h>
 
+#ifdef HAVE_ALLOCA
+#include <alloca.h>
+#endif
+
 #ifdef HAVE_ZLIB
-#include "zlib.h"
+#include <zlib.h>
 #endif
 
 #include "libtelnet.h"
@@ -247,12 +251,12 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 				"malloc() failed: %s", strerror(errno));
 		return;
 	}
-	memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t *) * 4);
+	memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t) * 4);
 	telnet->q = qtmp;
 	telnet->q[telnet->q_size].telopt = telopt;
 	telnet->q[telnet->q_size].us = us;
 	telnet->q[telnet->q_size].him = him;
-	++telnet->q_size;
+	telnet->q_size += 4;
 }
 
 /* send negotiation bytes */
@@ -412,8 +416,10 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
  * must be aborted and reprocessed due to COMPRESS2 being activated
  */
 static int _subnegotiate(telnet_t *telnet) {
-	const char **argv;
+	const char **argv; /* for ZMP */
+	char **argv2; /* for everything else */
 	const char *c;
+	const char *l;
 	size_t i, argc;
 
 	switch (telnet->sb_telopt) {
@@ -424,7 +430,7 @@ static int _subnegotiate(telnet_t *telnet) {
 	case TELNET_TELOPT_COMPRESS2:
 		if (telnet->sb_telopt == TELNET_TELOPT_COMPRESS2) {
 			if (_init_zlib(telnet, 0, 1) != TELNET_EOK)
-				return 0;
+				break;
 
 			/* standard SB notification */
 			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
@@ -436,6 +442,7 @@ static int _subnegotiate(telnet_t *telnet) {
 		}
 		break;
 #endif /* HAVE_ZLIB */
+#ifdef HAVE_ALLOCA
 	/* ZMP command */
 	case TELNET_TELOPT_ZMP:
 		/* make sure this is a valid ZMP buffer */
@@ -445,7 +452,7 @@ static int _subnegotiate(telnet_t *telnet) {
 					"incomplete ZMP frame");
 			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
 					telnet->buffer, telnet->buffer_pos, 0, 0);
-			return 0;
+			break;
 		}
 
 		/* count arguments */
@@ -454,11 +461,12 @@ static int _subnegotiate(telnet_t *telnet) {
 			c += strlen(c) + 1;
 
 		/* allocate argument array, bail on error */
-		if ((argv = (const char **)malloc(sizeof(char *) * argc)) == 0) {
+		if ((argv = (const char **)alloca(sizeof(char *) * argc)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"malloc() failed: %s", strerror(errno));
+					"alloca() failed: %s", strerror(errno));
 			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
 					telnet->buffer, telnet->buffer_pos, 0, 0);
+			break;
 		}
 
 		/* populate argument array */
@@ -470,10 +478,75 @@ static int _subnegotiate(telnet_t *telnet) {
 		/* invoke event with our arguments */
 		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
 				telnet->buffer, telnet->buffer_pos, argv, argc);
-
-		/* free argument array */
-		free(argv);
 		break;
+	/* any of a number of commands that use the form <BYTE>data<BYTE>data,
+	 * including TTYPE, ENVIRON, NEW-ENVIRON, and MSSP
+	 */
+	case TELNET_TELOPT_TTYPE:
+	case TELNET_TELOPT_ENVIRON:
+	case TELNET_TELOPT_NEW_ENVIRON:
+	case TELNET_TELOPT_MSSP:
+		/* if we have no data, just pass it through */
+		if (telnet->buffer_pos == 0) {
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
+			break;
+		}
+
+		/* very first byte must be in range 0-3 */
+		if ((unsigned)telnet->buffer[0] > 3) {
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"telopt %d subneg has invalid data", telnet->sb_telopt);
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
+			break;
+		}
+
+		/* count arguments; each argument is preceded by a byte in the
+		 * range 0-3, so just count those.
+		 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
+		 * properly at all.  guess that's a FIXME.
+		 */
+		for (argc = 0, i = 0; i != telnet->buffer_pos; ++i)
+			if ((unsigned)telnet->buffer[i] <= 3)
+				++argc;
+
+		/* allocate argument array, bail on error */
+		if ((argv2 = (char **)alloca(sizeof(char *) * argc)) == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"alloca() failed: %s", strerror(errno));
+			_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+					telnet->buffer, telnet->buffer_pos, 0, 0);
+			break;
+		}
+
+		/* allocate strings in argument array */
+		for (i = 0, l = telnet->buffer; i != argc; ++i) {
+			c = l + 1;
+			while (c != telnet->buffer + telnet->buffer_pos &&
+					(unsigned)*c > 3)
+				++c;
+			argv2[i] = (char *)alloca(c - l + 1);
+			l = c;
+			/* FIXME: check failure */
+		}
+
+		/* populate argument array */
+		for (i = 0, l = telnet->buffer; i != argc; ++i) {
+			c = l + 1;
+			while (c != telnet->buffer + telnet->buffer_pos &&
+					(unsigned)*c > 3)
+				++c;
+			memcpy(argv2[i], l, c - l);
+			argv2[i][c - l] = 0;
+			l = c;
+		}
+
+		/* invoke event with our arguments */
+		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
+				telnet->buffer, telnet->buffer_pos, (const char **)argv2, argc);
+		break;
+#endif /* HAVE_ALLOCA */
 	/* other generic subnegotiation */
 	default:
 		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
@@ -542,7 +615,6 @@ static telnet_error_t _buffer_byte(telnet_t *telnet,
 		if (i >= _buffer_sizes_count - 1) {
 			_error(telnet, __LINE__, __func__, TELNET_EOVERFLOW, 0,
 					"subnegotiation buffer size limit reached");
-			telnet_free(telnet);
 			return TELNET_EOVERFLOW;
 		}
 
@@ -551,7 +623,6 @@ static telnet_error_t _buffer_byte(telnet_t *telnet,
 		if (new_buffer == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"realloc() failed");
-			telnet_free(telnet);
 			return TELNET_ENOMEM;
 		}
 

@@ -34,8 +34,9 @@ static int do_echo;
 
 static const telnet_telopt_t telopts[] = {
 	{ TELNET_TELOPT_ECHO,		TELNET_WONT, TELNET_DO   },
-	{ TELNET_TELOPT_COMPRESS2,	TELNET_WONT, TELNET_DO   },
 	{ TELNET_TELOPT_TTYPE,		TELNET_WILL, TELNET_DONT },
+	{ TELNET_TELOPT_COMPRESS2,	TELNET_WONT, TELNET_DO   },
+	{ TELNET_TELOPT_MSSP,		TELNET_WONT, TELNET_DO   },
 	{ -1, 0, 0 }
 };
 
@@ -125,7 +126,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 			buffer[0] = 0; /* IS code for RFC 1091 */
 			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
 			telnet_subnegotiation(telnet, TELNET_TELOPT_TTYPE, buffer,
-					1 + strlen(buffer + 1));
+					strlen(getenv("TERM")) + 1);
 		}
 		break;
 	/* error */

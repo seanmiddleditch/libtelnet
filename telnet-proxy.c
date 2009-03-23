@@ -240,6 +240,19 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 				print_buffer(ev->buffer, ev->size);
 				printf(COLOR_NORMAL "\n");
 			}
+		} else if (ev->telopt == TELNET_TELOPT_TTYPE ||
+				ev->telopt == TELNET_TELOPT_ENVIRON ||
+				ev->telopt == TELNET_TELOPT_NEW_ENVIRON ||
+				ev->telopt == TELNET_TELOPT_MSSP) {
+			size_t i;
+			printf("%s %s [%zi parts]", conn->name, get_opt(ev->telopt),
+					ev->argc);
+			for (i = 0; i != ev->argc; ++i) {
+				printf(" \"");
+				print_buffer(ev->argv[i], strlen(ev->argv[i] + 1) + 1);
+				printf("\"");
+			}
+			printf(COLOR_NORMAL "\n");
 		} else {
 			printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
 					get_opt(ev->telopt));

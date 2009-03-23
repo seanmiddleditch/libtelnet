@@ -1,4 +1,4 @@
-CFLAGS = -Wall -g -O0 -DHAVE_ZLIB -DENABLE_COLOR
+CFLAGS = -Wall -g -O0 -DHAVE_ZLIB -DHAVE_ALLOCA -DENABLE_COLOR
 LFLAGS = -L. -ltelnet -lz
 
 all: telnet-proxy telnet-client telnet-chatd

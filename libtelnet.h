@@ -96,6 +96,21 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 
 #define TELNET_TELOPT_MCCP2 86
 
+/* special codes for the subnegotiation commands for certain telopts */
+#define TELNET_TTYPE_IS 0
+#define TELNET_TTYPE_SEND 1
+
+#define TELNET_ENVIRON_IS 0
+#define TELNET_ENVIRON_SEND 1
+#define TELNET_ENVIRON_INFO 2
+#define TELNET_ENVIRON_VAR 0
+#define TELNET_ENVIRON_VALUE 1
+#define TELNET_ENVIRON_ESC 2
+#define TELNET_ENVIRON_USERVAR 3
+
+#define TELNET_MSSP_VAR 1
+#define TELNET_MSSP_VAL 2
+
 /* libtelnet feature flags */
 #define TELNET_FLAG_PROXY (1<<0)
 
