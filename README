@@ -24,10 +24,15 @@ protocol.  In addition to the base TELNET protocol, libtelnet also
 implements the Q method of TELNET option negotiation.  libtelnet can
 be used for writing servers, clients, or proxies.
 
-For more information on the TELNET protocol, see:
+For more information on the TELNET standards supported by libtelnet,
+visit the following websites:
 
  http://www.faqs.org/rfcs/rfc854.html
+ http://www.faqs.org/rfcs/rfc855.html
+ http://www.faqs.org/rfcs/rfc1091.html
  http://www.faqs.org/rfcs/rfc1143.html
+ http://www.faqs.org/rfcs/rfc1408.html
+ http://www.faqs.org/rfcs/rfc1572.html
 
 II. LIBTELNET API
 =====================================================================
