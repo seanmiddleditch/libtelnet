@@ -1058,6 +1058,31 @@ int telnet_printf2(telnet_t *telnet, const char *fmt, ...) {
 	return rs;
 }
 
+/* send formatted subnegotiation data for TTYPE/ENVIRON/NEW-ENVIRON/MSSP */
+void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
+		size_t count, ...) {
+	va_list va;
+	size_t i;
+
+	/* subnegotiation header */
+	telnet_begin_sb(telnet, telopt);
+
+	/* iterate over the arguments pulling out integers and strings */
+	va_start(va, count);
+	for (i = 0; i != count; ++i) {
+		char t;
+		const char* s;
+		t = va_arg(va, int);
+		s = va_arg(va, const char *);
+		telnet_send(telnet, &t, 1);
+		telnet_send(telnet, s, strlen(s));
+	}
+	va_end(va);
+
+	/* footer */
+	telnet_finish_sb(telnet);
+}
+
 /* send ZMP data */
 void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv) {
 	size_t i;

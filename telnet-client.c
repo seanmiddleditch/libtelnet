@@ -116,17 +116,12 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* respond to particular subnegotiations */
 	case TELNET_EV_SUBNEGOTIATION:
+		/* if they just asked for our terminal type, response with it */
 		/* respond with our terminal type */
-		if (ev->telopt == TELNET_TELOPT_TTYPE) {
-			/* NOTE: we just assume the server sent a legitimate
-			 * sub-negotiation, as there really isn't anything else
-			 * it's allowed to send
-			 */
-			char buffer[64];
-			buffer[0] = 0; /* IS code for RFC 1091 */
-			snprintf(buffer + 1, sizeof(buffer) - 1, "%s", getenv("TERM"));
-			telnet_subnegotiation(telnet, TELNET_TELOPT_TTYPE, buffer,
-					strlen(getenv("TERM")) + 1);
+		if (ev->telopt == TELNET_TELOPT_TTYPE &&
+				ev->argc >= 1 && ev->argv[0][0] == TELNET_TTYPE_SEND) {
+			telnet_format_sb(telnet, TELNET_TELOPT_TTYPE, 1,
+					TELNET_TTYPE_IS, getenv("TERM"));
 		}
 		break;
 	/* error */

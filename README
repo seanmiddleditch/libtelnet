@@ -218,6 +218,47 @@ IIc. Sending Data
   translated.  This should be used if you are attempting to send
   raw data inside a subnegotiation or if you have already manually
   escaped newlines.
+ 
+ void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
+    size_t count, ...);
+  This is a helper function for sending the specially formatted
+  data used in the TTYPE, ENVIRON/NEW-ENVIRON, and MSSP telopt
+  subnegotiations.
+
+  The variadic arguments must be given as a series of pairs of
+  markers and strings.  The markers are different for each telopt;
+  they are defined in libtelnet.h and include:
+
+   /* TTYPE markers */
+   #define TELNET_TTYPE_IS 0
+   #define TELNET_TTYPE_SEND 1
+
+   /* ENVIRON/NEW-ENVIRON markers */
+   #define TELNET_ENVIRON_IS 0
+   #define TELNET_ENVIRON_SEND 1
+   #define TELNET_ENVIRON_INFO 2
+   #define TELNET_ENVIRON_VAR 0
+   #define TELNET_ENVIRON_VALUE 1
+   #define TELNET_ENVIRON_ESC 2
+   #define TELNET_ENVIRON_USERVAR 3
+
+   /* MSSP markers */
+   #define TELNET_MSSP_VAR 1
+   #define TELNET_MSSP_VAL 2
+
+  So to send a TTYPE subnegotiation from the server (just an IS
+  command), you would use:
+
+   telnet_format_sb(&telnet, TELNET_TELOPT_TTYPE, 1,
+     TELNET_TTYPE_SEND);
+
+  The client response for an xterm-compatible terminal would be:
+
+   telnet_format_sb(&telnet, TELNET_TELOPT_TTYPE, 1,
+     TELNET_TTYPE_IS, "xterm");
+
+  For more information on the meaning of the markers and strings,
+  please refer to the specific RFC for the telopt in question.
 
 IId. Event Handling
 
