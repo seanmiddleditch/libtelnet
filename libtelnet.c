@@ -241,8 +241,8 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	 * to the number of enabled options for most simple code, and it
 	 * allows for an acceptable number of reallocations for complex code.
 	 */
-	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q, sizeof(
-			telnet_rfc1143_t) * (telnet->q_size + 1))) == 0) {
+	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q,
+			sizeof(telnet_rfc1143_t) * (telnet->q_size + 4))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 				"malloc() failed: %s", strerror(errno));
 		return;
