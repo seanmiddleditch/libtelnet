@@ -1,0 +1,4 @@
+Version 0.10
+============
+
+* use automake/autoconf/libtool for building
