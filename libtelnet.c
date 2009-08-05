@@ -241,8 +241,8 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	 * to the number of enabled options for most simple code, and it
 	 * allows for an acceptable number of reallocations for complex code.
 	 */
-	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q, sizeof(
-			telnet_rfc1143_t) * (telnet->q_size + 1))) == 0) {
+	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q,
+			sizeof(telnet_rfc1143_t) * (telnet->q_size + 4))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 				"malloc() failed: %s", strerror(errno));
 		return;
@@ -932,7 +932,7 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 
 	for (l = i = 0; i != size; ++i) {
 		/* dump prior portion of text, send escaped bytes */
-		if (buffer[i] == TELNET_IAC) {
+		if (buffer[i] == (char)TELNET_IAC) {
 			/* dump prior text if any */
 			if (i != l)
 				_send(telnet, buffer + l, i - l);
@@ -1017,7 +1017,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 	/* send */
 	for (l = i = 0; i != rs; ++i) {
 		/* special characters */
-		if (buffer[i] == TELNET_IAC || buffer[i] == '\r' ||
+		if (buffer[i] == (char)TELNET_IAC || buffer[i] == '\r' ||
 				buffer[i] == '\n') {
 			/* dump prior portion of text */
 			if (i != l)
@@ -1025,7 +1025,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 			l = i + 1;
 
 			/* IAC -> IAC IAC */
-			if (buffer[i] == TELNET_IAC)
+			if (buffer[i] == (char)TELNET_IAC)
 				telnet_iac(telnet, TELNET_IAC);
 			/* automatic translation of \r -> CRNUL */
 			else if (buffer[i] == '\r')
