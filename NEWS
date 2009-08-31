@@ -1,3 +1,8 @@
+Version 0.11
+============
+
+* fix autoconf rules to find and use zlib
+
 Version 0.10
 ============
 
