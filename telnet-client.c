@@ -55,14 +55,15 @@ static void _input(char *buffer, int size) {
 		 */
 		if (buffer[i] == '\r' || buffer[i] == '\n') {
 			if (do_echo)
-				(void)write(STDOUT_FILENO, crlf, 2);
+				printf("\r\n");
 			telnet_send(&telnet, crlf, 2);
 		} else {
 			if (do_echo)
-				(void)write(STDOUT_FILENO, buffer + i, 1);
+				putchar(buffer[i]);
 			telnet_send(&telnet, buffer + i, 1);
 		}
 	}
+	fflush(stdout);
 }
 
 static void _send(int sock, const char *buffer, size_t size) {
@@ -91,7 +92,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	switch (ev->type) {
 	/* data received */
 	case TELNET_EV_DATA:
-		(void)write(STDOUT_FILENO, ev->buffer, ev->size);
+		printf("%.*s", ev->size, ev->buffer);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
