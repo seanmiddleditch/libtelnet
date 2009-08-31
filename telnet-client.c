@@ -92,7 +92,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	switch (ev->type) {
 	/* data received */
 	case TELNET_EV_DATA:
-		printf("%.*s", ev->size, ev->buffer);
+		printf("%.*s", (int)ev->size, ev->buffer);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
