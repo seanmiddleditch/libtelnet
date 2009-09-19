@@ -91,13 +91,13 @@ IIa. Initialization
  all connections if you support a fixed set of options.  Most
  applications will support only a fixed set of options.
 
- void telnet_init(telnet_t *telnet, const telnet_telopts_t *telopts,
+ telnet_t *telnet_init(const telnet_telopts_t *telopts,
      telnet_event_handler_t handler, unsigned char flags,
      void *user_data);
-   The telnet_init() function is responsible for initializing the
-   data in a telnet_t structure.  It must be called immediately after
-   establishing a connection and before any other libtelnet API calls
-   are made.
+   The telnet_init() function is responsible for allocating memory
+   and initializing the data in a telnet_t structure.  It must be
+   called immediately after establishing a connection and before any
+   other libtelnet API calls are made.
 
    The telopts field is the telopt support table as described above.
 
@@ -116,11 +116,15 @@ IIa. Initialization
     TELNET_FLAG_PROXY
       Operate in proxy mode.  This disables the RFC1143 support and
       enables automatic detection of COMPRESS2 streams.
+
+   If telnet_init() fails to allocate the required memory, the
+   returned pointer will be zero.
  
- boid telnet_free(telnet_t *telnet);
-   Releases any internal memory allocated by libtelnet.  This must be
-   called whenever a connection is closed, or you will incur memory
-   leaks.
+ void telnet_free(telnet_t *telnet);
+   Releases any internal memory allocated by libtelnet for the given
+   telnet pointer.  This must be called whenever a connection is
+   closed, or you will incur memory leaks.  The pointer passed in may
+   no longer be used afterwards.
 
 IIb. Receiving Data
 

@@ -1,3 +1,10 @@
+Version 0.12
+============
+
+* added pkg-config file
+* telnet_t is now a private data structure
+* telnet_init() allocates memory and returns a pointer
+
 Version 0.11
 ============
 
