@@ -19,3 +19,4 @@ autom4te.cache
 telnet-proxy
 telnet-client
 telnet-chatd
+libtelnet.pc
