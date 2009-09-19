@@ -35,6 +35,36 @@
 # define INLINE
 #endif
 
+/* telnet state */
+struct telnet_t {
+	/* user data */
+	void *ud;
+	/* telopt support table */
+	const telnet_telopt_t *telopts;
+	/* event handler */
+	telnet_event_handler_t eh;
+#ifdef HAVE_ZLIB
+	/* zlib (mccp2) compression */
+	z_stream *z;
+#endif
+	/* RFC1143 option negotiation states */
+	struct telnet_rfc1143_t *q;
+	/* sub-request buffer */
+	char *buffer;
+	/* current size of the buffer */
+	size_t buffer_size;
+	/* current buffer write position (also length of buffer data) */
+	size_t buffer_pos;
+	/* current state */
+	enum telnet_state_t state;
+	/* option flags */
+	unsigned char flags;
+	/* current subnegotiation telopt */
+	unsigned char sb_telopt;
+	/* length of RFC1143 queue */
+	unsigned char q_size;
+};
+
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
 	unsigned char telopt;
@@ -559,13 +589,20 @@ static int _subnegotiate(telnet_t *telnet) {
 }
 
 /* initialize a telnet state tracker */
-void telnet_init(telnet_t *telnet, const telnet_telopt_t *telopts,
+telnet_t *telnet_init(const telnet_telopt_t *telopts,
 		telnet_event_handler_t eh, unsigned char flags, void *user_data) {
-	memset(telnet, 0, sizeof(telnet_t));
+	/* allocate structure */
+	struct telnet_t *telnet = (telnet_t*)calloc(1, sizeof(telnet_t));
+	if (telnet == 0)
+		return 0;
+
+	/* initialize data */
 	telnet->ud = user_data;
 	telnet->telopts = telopts;
 	telnet->eh = eh;
 	telnet->flags = flags;
+
+	return telnet;
 }
 
 /* free up any memory allocated by a state tracker */
@@ -596,6 +633,9 @@ void telnet_free(telnet_t *telnet) {
 		telnet->q = 0;
 		telnet->q_size = 0;
 	}
+
+	/* free the telnet structure itself */
+	free(telnet);
 }
 
 /* push a byte into the telnet buffer */

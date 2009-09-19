@@ -186,38 +186,11 @@ struct telnet_telopt_t {
 	unsigned char him; /* TELNET_DO or TELNET_DONT */
 };
 
-/* state tracker */
-struct telnet_t {
-	/* user data */
-	void *ud;
-	/* telopt support table */
-	const telnet_telopt_t *telopts;
-	/* event handler */
-	telnet_event_handler_t eh;
-#ifdef HAVE_ZLIB
-	/* zlib (mccp2) compression */
-	z_stream *z;
-#endif
-	/* RFC1143 option negotiation states */
-	struct telnet_rfc1143_t *q;
-	/* sub-request buffer */
-	char *buffer;
-	/* current size of the buffer */
-	size_t buffer_size;
-	/* current buffer write position (also length of buffer data) */
-	size_t buffer_pos;
-	/* current state */
-	enum telnet_state_t state;
-	/* option flags */
-	unsigned char flags;
-	/* current subnegotiation telopt */
-	unsigned char sb_telopt;
-	/* length of RFC1143 queue */
-	unsigned char q_size;
-};
+/* state tracker -- private data structure */
+struct telnet_t;
 
 /* initialize a telnet state tracker */
-extern void telnet_init(telnet_t *telnet, const telnet_telopt_t *telopts,
+extern telnet_t* telnet_init(const telnet_telopt_t *telopts,
 		telnet_event_handler_t eh, unsigned char flags, void *user_data);
 
 /* free up any memory allocated by a state tracker */

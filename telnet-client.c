@@ -29,7 +29,7 @@
 #include "libtelnet.h"
 
 static struct termios orig_tios;
-static telnet_t telnet;
+static telnet_t *telnet;
 static int do_echo;
 
 static const telnet_telopt_t telopts[] = {
@@ -56,11 +56,11 @@ static void _input(char *buffer, int size) {
 		if (buffer[i] == '\r' || buffer[i] == '\n') {
 			if (do_echo)
 				printf("\r\n");
-			telnet_send(&telnet, crlf, 2);
+			telnet_send(telnet, crlf, 2);
 		} else {
 			if (do_echo)
 				putchar(buffer[i]);
-			telnet_send(&telnet, buffer + i, 1);
+			telnet_send(telnet, buffer + i, 1);
 		}
 	}
 	fflush(stdout);
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
 	do_echo = 1;
 
 	/* initialize telnet box */
-	telnet_init(&telnet, telopts, _event_handler, 0, &sock);
+	telnet = telnet_init(telopts, _event_handler, 0, &sock);
 
 	/* initialize poll descriptors */
 	memset(pfd, 0, sizeof(pfd));
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 		/* read from client */
 		if (pfd[1].revents & POLLIN) {
 			if ((rs = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
-				telnet_recv(&telnet, buffer, rs);
+				telnet_recv(telnet, buffer, rs);
 			} else if (rs == 0) {
 				break;
 			} else {
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* clean up */
-	telnet_free(&telnet);
+	telnet_free(telnet);
 	close(sock);
 
 	return 0;

@@ -37,7 +37,7 @@ const telnet_telopt_t telopts[] = {
 struct user_t {
 	char *name;
 	int sock;
-	telnet_t telnet;
+	telnet_t *telnet;
 	char linebuf[256];
 	int linepos;
 };
@@ -79,7 +79,7 @@ static void _message(const char *from, const char *msg) {
 	int i;
 	for (i = 0; i != MAX_USERS; ++i) {
 		if (users[i].sock != -1) {
-			telnet_printf(&users[i].telnet, "%s: %s\n", from, msg);
+			telnet_printf(users[i].telnet, "%s: %s\n", from, msg);
 		}
 	}
 }
@@ -120,21 +120,21 @@ static void _online(const char *line, int overflow, void *ud) {
 	if (user->name == 0) {
 		/* must not be empty, must be at least 32 chars */
 		if (strlen(line) == 0 || strlen(line) > 32) {
-			telnet_printf(&user->telnet, "Invalid name.\nEnter name: ");
+			telnet_printf(user->telnet, "Invalid name.\nEnter name: ");
 			return;
 		}
 
 		/* must not already be in use */
 		for (i = 0; i != MAX_USERS; ++i) {
 			if (users[i].name != 0 && strcmp(users[i].name, line) == 0) {
-				telnet_printf(&user->telnet, "Name in use.\nEnter name: ");
+				telnet_printf(user->telnet, "Name in use.\nEnter name: ");
 				return;
 			}
 		}
 
 		/* keep name */
 		user->name = strdup(line);
-		telnet_printf(&user->telnet, "Welcome, %s!\n", line);
+		telnet_printf(user->telnet, "Welcome, %s!\n", line);
 		return;
 	}
 
@@ -187,7 +187,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 			free(user->name);
 			user->name = 0;
 		}
-		telnet_free(&user->telnet);
+		telnet_free(user->telnet);
 		break;
 	default:
 		/* ignore */
@@ -296,11 +296,11 @@ int main(int argc, char **argv) {
 
 			/* init, welcome */
 			users[i].sock = rs;
-			telnet_init(&users[i].telnet, telopts, _event_handler, 0,
+			users[i].telnet = telnet_init(telopts, _event_handler, 0,
 					&users[i]);
-			telnet_negotiate(&users[i].telnet, TELNET_WILL,
+			telnet_negotiate(users[i].telnet, TELNET_WILL,
 					TELNET_TELOPT_COMPRESS2);
-			telnet_printf(&users[i].telnet, "Enter name: ");
+			telnet_printf(users[i].telnet, "Enter name: ");
 		}
 
 		/* read from client */
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
 
 			if (pfd[i].revents & POLLIN) {
 				if ((rs = recv(users[i].sock, buffer, sizeof(buffer), 0)) > 0) {
-					telnet_recv(&users[i].telnet, buffer, rs);
+					telnet_recv(users[i].telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("Connection closed.\n");
 					close(users[i].sock);
@@ -320,7 +320,7 @@ int main(int argc, char **argv) {
 						free(users[i].name);
 						users[i].name = 0;
 					}
-					telnet_free(&users[i].telnet);
+					telnet_free(users[i].telnet);
 					users[i].sock = -1;
 					break;
 				} else if (errno != EINTR) {
