@@ -6,6 +6,7 @@ libtelnet_include_HEADERS = libtelnet.h
 
 lib_LTLIBRARIES = libtelnet.la
 libtelnet_la_SOURCES = libtelnet.c libtelnet.h
+libtelnet_la_LDFLAGS = -version-info 1:0:0
 
 bin_PROGRAMS = telnet-client telnet-chatd telnet-proxy
 
