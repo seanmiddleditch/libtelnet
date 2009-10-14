@@ -238,7 +238,7 @@ extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
 /* send formatted data with just IAC escaped */
-extern int telnet_printf2(telnet_t *telnet, const char *fmt, ...)
+extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
 /* send TTYPE/ENVIRON/NEW-ENVIRON/MSSP data */

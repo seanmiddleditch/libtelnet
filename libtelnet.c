@@ -1084,7 +1084,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 }
 
 /* send formatted data through telnet_send */
-int telnet_printf2(telnet_t *telnet, const char *fmt, ...) {
+int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
 	char buffer[4096];
 	va_list va;
 	int rs;
