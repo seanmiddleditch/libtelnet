@@ -118,20 +118,6 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 
 #define TELNET_PFLAG_DEFLATE (1<<7)
 
-/* telnet states */
-enum telnet_state_t {
-	TELNET_STATE_DATA = 0,
-	TELNET_STATE_IAC,
-	TELNET_STATE_WILL,
-	TELNET_STATE_WONT,
-	TELNET_STATE_DO,
-	TELNET_STATE_DONT,
-	TELNET_STATE_SB,
-	TELNET_STATE_SB_DATA,
-	TELNET_STATE_SB_DATA_IAC
-};
-typedef enum telnet_state_t telnet_state_t;
-
 /* error codes */
 enum telnet_error_t {
 	TELNET_EOK = 0,
