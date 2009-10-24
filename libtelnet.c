@@ -1,5 +1,5 @@
 /*
- * libtelnet 0.9
+ * libtelnet - TELNET protocol handling library
  *
  * Sean Middleditch
  * sean@sourcemud.org
