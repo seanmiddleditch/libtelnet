@@ -1,6 +1,8 @@
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libtelnet.pc
 
+dist_man_MANS = libtelnet.3 telnet_init.3 telnet_free.3
+
 libtelnet_includedir = $(includedir)
 libtelnet_include_HEADERS = libtelnet.h
 

@@ -1,4 +1,4 @@
-AC_INIT([libtelnet], [0.12], [http://github.com/elanthis/libtelnet/tree/master])
+AC_INIT([libtelnet], [0.13], [http://github.com/elanthis/libtelnet/tree/master])
 
 AM_INIT_AUTOMAKE
 
