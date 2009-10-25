@@ -18,18 +18,18 @@
 #include <string.h>
 #include <stdarg.h>
 
-#ifdef HAVE_ALLOCA
-#include <alloca.h>
+#if defined(HAVE_ALLOCA)
+# include <alloca.h>
 #endif
 
-#ifdef HAVE_ZLIB
-#include <zlib.h>
+#if defined(HAVE_ZLIB)
+# include <zlib.h>
 #endif
 
 #include "libtelnet.h"
 
 /* inlinable functions */
-#if __GNUC__ || __STDC_VERSION__ >= 199901L
+#if defined(__GNUC__) || __STDC_VERSION__ >= 199901L
 # define INLINE __inline__
 #else
 # define INLINE
@@ -57,7 +57,7 @@ struct telnet_t {
 	const telnet_telopt_t *telopts;
 	/* event handler */
 	telnet_event_handler_t eh;
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* zlib (mccp2) compression */
 	z_stream *z;
 #endif
@@ -137,7 +137,7 @@ static telnet_error_t _error(telnet_t *telnet, unsigned line,
 	return err;
 }
 
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 /* initialize the zlib box for a telnet box; if deflate is non-zero, it
  * initializes zlib for delating (compression), otherwise for inflating
  * (decompression).  returns TELNET_EOK on success, something else on
@@ -178,12 +178,12 @@ telnet_error_t _init_zlib(telnet_t *telnet, int deflate, int err_fatal) {
 
 	return TELNET_EOK;
 }
-#endif
+#endif /* defined(HAVE_ZLIB) */
 
 /* push bytes out, compressing them first if need be */
 static void _send(telnet_t *telnet, const char *buffer,
 		size_t size) {
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* if we have a deflate (compression) zlib box, use it */
 	if (telnet->z != 0 && telnet->flags & TELNET_PFLAG_DEFLATE) {
 		char deflate_buffer[1024];
@@ -217,7 +217,7 @@ static void _send(telnet_t *telnet, const char *buffer,
 
 	/* COMPRESS2 is not negotiated, just send */
 	} else
-#endif /* HAVE_ZLIB */
+#endif /* defined(HAVE_ZLIB) */
 		_event(telnet, TELNET_EV_SEND, 0, 0, buffer, size, 0, 0);
 }
 
@@ -457,7 +457,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
  */
 static int _subnegotiate(telnet_t *telnet) {
 	switch (telnet->sb_telopt) {
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* received COMPRESS2 begin marker, setup our zlib box and
 	 * start handling the compressed stream if it's not already.
 	 */
@@ -475,8 +475,8 @@ static int _subnegotiate(telnet_t *telnet) {
 			return 1;
 		}
 		return 0;
-#endif /* HAVE_ZLIB */
-#ifdef HAVE_ALLOCA
+#endif /* defined(HAVE_ZLIB) */
+#if defined(HAVE_ALLOCA)
 
 	/* ZMP command */
 	case TELNET_TELOPT_ZMP: {
@@ -592,7 +592,7 @@ static int _subnegotiate(telnet_t *telnet) {
 				telnet->buffer, telnet->buffer_pos, (const char **)argv, argc);
 		return 0;
 	}
-#endif /* HAVE_ALLOCA */
+#endif /* defined(HAVE_ALLOCA) */
 
 	/* other generic subnegotiation */
 	default:
@@ -629,7 +629,7 @@ void telnet_free(telnet_t *telnet) {
 		telnet->buffer_pos = 0;
 	}
 
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* free zlib box */
 	if (telnet->z != 0) {
 		if (telnet->flags & TELNET_PFLAG_DEFLATE)
@@ -639,7 +639,7 @@ void telnet_free(telnet_t *telnet) {
 		free(telnet->z);
 		telnet->z = 0;
 	}
-#endif
+#endif /* defined(HAVE_ZLIB) */
 
 	/* free RFC1143 queue */
 	if (telnet->q) {
@@ -843,7 +843,7 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 /* push a bytes into the state tracker */
 void telnet_recv(telnet_t *telnet, const char *buffer,
 		size_t size) {
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* if we have an inflate (decompression) zlib stream, use it */
 	if (telnet->z != 0 && !(telnet->flags & TELNET_PFLAG_DEFLATE)) {
 		char inflate_buffer[4096];
@@ -887,7 +887,7 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 
 	/* COMPRESS2 is not negotiated, just process */
 	} else
-#endif /* HAVE_ZLIB */
+#endif /* defined(HAVE_ZLIB) */
 		_process(telnet, buffer, size);
 }
 
@@ -1019,7 +1019,7 @@ void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 	telnet_send(telnet, buffer, size);
 	_send(telnet, se, 2);
 
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	/* if we're a proxy and we just sent the COMPRESS2 marker, we must
 	 * make sure all further data is compressed if not already.
 	 */
@@ -1032,11 +1032,11 @@ void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		/* notify app that compression was enabled */
 		_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0, 0, 0);
 	}
-#endif /* HAVE_ZLIB */
+#endif /* defined(HAVE_ZLIB) */
 }
 
 void telnet_begin_compress2(telnet_t *telnet) {
-#ifdef HAVE_ZLIB
+#if defined(HAVE_ZLIB)
 	static const char compress2[] = { TELNET_IAC, TELNET_SB,
 			TELNET_TELOPT_COMPRESS2, TELNET_IAC, TELNET_SE };
 
@@ -1052,7 +1052,7 @@ void telnet_begin_compress2(telnet_t *telnet) {
 
 	/* notify app that compression was successfully enabled */
 	_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0, 0, 0);
-#endif /* HAVE_ZLIB */
+#endif /* defined(HAVE_ZLIB) */
 }
 
 /* send formatted data with \r and \n translation in addition to IAC IAC */
