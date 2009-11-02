@@ -1,0 +1,24 @@
+.TH telnet_send 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_send\fP - sends data with proper protocol escaping
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_send(telnet_t *\fBtelnet\fR, const char *\fBbuffer\fR, size_t \fIsize\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_recv\fP function must be called by the host application whenever data is received on the underlying network socket associated with the TELNET connection.  The received data is passed in, processed by the \fBlibtelnet\fP library, and events are generated corresponding to the parsed input.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+The parameter \fIbuffer\fP is the byte buffer into which received data has been read, usually by a called to \fBrecv\fP.
+
+The parameter \fIsize\fP is the number of bytes in the \fIbuffer\fP parameter, which is the same as the positive return value of \fBrecv\fP.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3), \fBtelnet_recv\fR(3), \fBsend\fR(3)

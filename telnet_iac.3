@@ -1,0 +1,28 @@
+.TH telnet_iac 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_iac\fP - sends any TELNET command code
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_iac(telnet_t *\fBtelnet\fR, unsigned char\fBcmd\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_iac\fP function sends any TELNET command code with the IAC (0xFF) command marker automatically prepended.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+The parameter \fIcmd\fP is the TELNET command code to send.
+
+.SH NOTES
+.PP
+Most TELNET commands are best use with more specialized libtelnet functions.  The primary uses of the \fBtelnet_iac\fP function is to send simple commands like TELNET_GA (GO-AHEAD).
+
+For option negotiation, always use \fBtelnet_negotiate\fP.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3), \fBtelnet_send\fR(3), \fBtelnet_negotiate\fR(3)

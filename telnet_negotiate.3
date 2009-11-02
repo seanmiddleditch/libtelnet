@@ -1,0 +1,40 @@
+.TH telnet_negotiate 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_negotiate\fP - TELNET option negotiation
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_negotiate(telnet_t *\fBtelnet\fR, unsigned char \fBcmd\fR, unsigned char \fIopt\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_negotiate\fP function is used to request option negotiation.  RFC1143 negotiation (Q-method negotiation) is automatically used by libtelnet internally.  If the requested option is not already enabled/disabled as desired, negotiation will take place; otherwise, nothing will happen.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+The parameter \fIcmd\fP must be one of:
+.TP
+\fBTELNET_WILL\fP
+Request permission to enable an option on the local end.
+
+.TP
+\fBTELNET_WONT\fP
+Request permission to disable an option on the local end.
+
+.TP
+\fBTELNET_DO\fP
+Request for the peer to enable an option on the peer's end.
+
+.TP
+\fBTELNET_DONT\fP
+Request for the peer to disable an option on the peer's end.
+
+.PP
+The parameter \fIopt\fP is the TELNET option being negotiated.  It should be one of the TELNET_OPTION_* constants.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3), \fBtelnet_send\fR(3), \fBtelnet_iac\fR(3)
