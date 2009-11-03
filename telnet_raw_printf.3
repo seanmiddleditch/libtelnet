@@ -1,0 +1,22 @@
+.TH telnet_raw_printf 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_raw_printf\fP - send formatted text without TELNET escaping
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_raw_printf(telnet_t *\fBtelnet\fR, unsigned char \fBcmd\fR, unsigned char \fIopt\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_raw_printf\fP function sends formatted data across the connection.  Formatting is the same as in \fBprint\fP(3), and the result is passed on through a SEND callback event with no further processing.  Note in particular that this means that data send by \fBtelnet_raw_printf\fP is not escaped.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+The parameter \fIfmt\fP is a format string, as used by \fBprintf\fP.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3), \fBtelnet_send\fR(3), \fBtelnet_printf\fR(3)

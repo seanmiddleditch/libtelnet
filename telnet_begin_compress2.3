@@ -1,0 +1,20 @@
+.TH telnet_begin_compress2 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_begin_compress2\fP - begin sending compressed data via MCCP2
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_begin_compress2(telnet_t *\fBtelnet\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_begin_compress2\fI function will enable the sending of compressed data using the MCCP2 protocol.  Before enabling the sending of compressed data, libtelnet will first attempt negotiation of the MCCP2 feature.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3)
