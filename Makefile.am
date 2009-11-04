@@ -1,11 +1,11 @@
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libtelnet.pc
 
-dist_man_MANS = libtelnet.3 telnet_init.3 telnet_free.3 telnet_send.3 \
-		telnet_recv.3 telnet_iac.3 telnet_negotiate.3 telnet_printf.3 \
-		telnet_raw_printf.3 telnet_begin_compress2.3 telnet_begin_sb.3 \
-		telnet_finish_sb.3 \
-		telnet-proxy.1 telnet-client.1 telnet-chatd.1
+dist_man_MANS = man/libtelnet.3 man/telnet_init.3 man/telnet_free.3 \
+		man/telnet_send.3 man/telnet_recv.3 man/telnet_iac.3 \
+		man/telnet_negotiate.3 man/telnet_printf.3 man/telnet_raw_printf.3 \
+		man/telnet_begin_compress2.3 man/telnet_begin_sb.3 man/telnet_finish_sb.3 \
+		man/telnet-proxy.1 man/telnet-client.1 man/telnet-chatd.1
 
 libtelnet_includedir = $(includedir)
 libtelnet_include_HEADERS = libtelnet.h
