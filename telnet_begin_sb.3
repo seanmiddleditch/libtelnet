@@ -1,0 +1,22 @@
+.TH telnet_begin_sb 3 LIBTELNET "" "TELNET Library"
+
+.SH NAME
+\fBtelnet_begin_sb\fP - begin a TELNET sub-negotiation command
+
+.SH SYNOPSIS
+.PP
+\fB#include <libtelnet.h>\fP
+.sp
+.B "void telnet_begin_sb(telnet_t *\fBtelnet\fR, unsigned char \fBopt\fR);"
+
+.SH DESCRIPTION
+.PP
+The \fBtelnet_begin_sb\fR function sends the initial TELNET byte sequence to begin a TELNET sub-negotiation command.  All data sent over the connecton following this call will be part of the sub-negotiation comman data.  A call to \fBtelnet_finish_sb\fR MUST be made to complete the sub-negotiation.
+
+The parameter \fItelnet\fP is a state tracker instance created by a prior call to \fBtelnet_init\fP.
+
+The parameter \fIopt\fP is the TELNET option code for the sub-negotiation option being started.
+
+.SH SEE ALSO
+.PP
+\fBlibtelnet\fR(3), \fBtelnet_send\fR(3), \fBtelnet_finish_sb\fR(3)
