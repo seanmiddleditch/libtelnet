@@ -221,6 +221,9 @@ static void _send(telnet_t *telnet, const char *buffer,
 		_event(telnet, TELNET_EV_SEND, 0, 0, buffer, size, 0, 0);
 }
 
+/* to send bags of unsigned chars */
+#define _sendu(t, d, s) _send((t), (const char*)(d), (s))
+
 /* check if we support a particular telopt; if us is non-zero, we
  * check if we (local) supports it, otherwise we check if he (remote)
  * supports it.  return non-zero if supported, zero if not supported.
@@ -302,8 +305,8 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 /* send negotiation bytes */
 static INLINE void _send_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
-	char bytes[3] = { TELNET_IAC, cmd, telopt };
-	_send(telnet, bytes, 3);
+	const unsigned char bytes[3] = { TELNET_IAC, cmd, telopt };
+	_sendu(telnet, bytes, 3);
 }
 
 /* negotiation handling magic for RFC1143 */
@@ -893,8 +896,8 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 
 /* send an iac command */
 void telnet_iac(telnet_t *telnet, unsigned char cmd) {
-	char bytes[2] = { TELNET_IAC, cmd };
-	_send(telnet, bytes, 2);
+	const unsigned char bytes[2] = { TELNET_IAC, cmd };
+	_sendu(telnet, bytes, 2);
 }
 
 /* send negotiation */
@@ -904,8 +907,8 @@ void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 
 	/* if we're in proxy mode, just send it now */
 	if (telnet->flags & TELNET_FLAG_PROXY) {
-		char bytes[3] = { TELNET_IAC, cmd, telopt };
-		_send(telnet, bytes, 3);
+		const unsigned char bytes[3] = { TELNET_IAC, cmd, telopt };
+		_sendu(telnet, bytes, 3);
 		return;
 	}
 	
@@ -1004,20 +1007,20 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 
 /* send subnegotiation header */
 void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
-	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
-	_send(telnet, sb, 3);
+	const unsigned char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
+	_sendu(telnet, sb, 3);
 }
 
 
 /* send complete subnegotiation */
 void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size) {
-	const char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
-	static const char se[2] = { TELNET_IAC, TELNET_SE };
+	const unsigned char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
+	const unsigned char se[2] = { TELNET_IAC, TELNET_SE };
 
-	_send(telnet, sb, 3);
+	_sendu(telnet, sb, 3);
 	telnet_send(telnet, buffer, size);
-	_send(telnet, se, 2);
+	_sendu(telnet, se, 2);
 
 #if defined(HAVE_ZLIB)
 	/* if we're a proxy and we just sent the COMPRESS2 marker, we must
@@ -1037,7 +1040,7 @@ void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 
 void telnet_begin_compress2(telnet_t *telnet) {
 #if defined(HAVE_ZLIB)
-	static const char compress2[] = { TELNET_IAC, TELNET_SB,
+	static const unsigned char compress2[] = { TELNET_IAC, TELNET_SB,
 			TELNET_TELOPT_COMPRESS2, TELNET_IAC, TELNET_SE };
 
 	/* attempt to create output stream first, bail if we can't */
@@ -1048,7 +1051,7 @@ void telnet_begin_compress2(telnet_t *telnet) {
 	 * instead of passing through _send because _send would result in
 	 * the compress marker itself being compressed.
 	 */
-	_event(telnet, TELNET_EV_SEND, 0, 0, compress2, sizeof(compress2), 0, 0);
+	_event(telnet, TELNET_EV_SEND, 0, 0, (const char*)compress2, sizeof(compress2), 0, 0);
 
 	/* notify app that compression was successfully enabled */
 	_event(telnet, TELNET_EV_COMPRESS, 1, 0, 0, 0, 0, 0);
