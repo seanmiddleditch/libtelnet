@@ -14,6 +14,11 @@
 #if !defined(LIBTELNET_INCLUDE)
 #define LIBTELNET_INCLUDE 1
 
+/* C++ support */
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /* printf type checking feature in GCC and some other compilers */
 #if __GNUC__
 # define TELNET_GNU_PRINTF(f,a) __attribute__((format(printf, f, a)))
@@ -234,5 +239,10 @@ extern void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
 /* send ZMP commands */
 extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
 extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
+
+/* C++ support */
+#if defined(__cplusplus)
+} /* extern "C" */
+#endif
 
 #endif /* !defined(LIBTELNET_INCLUDE) */
