@@ -232,9 +232,15 @@ extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
 extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
-/* send TTYPE/ENVIRON/NEW-ENVIRON/MSSP data */
-extern void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
+/* send NEW-ENVIRON SEND command */
+extern void telnet_newenviron_send(telnet_t *telnet, unsigned char cmd,
 		size_t count, ...);
+
+/* send TERMINAL-TYPE SEND command */
+extern void telnet_ttype_send(telnet_t *telnet);
+
+/* send TERMINAL-TYPE IS command */
+extern void telnet_ttype_is(telnet_t *telnet, const char* ttype);
 
 /* send ZMP commands */
 extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);

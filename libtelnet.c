@@ -1118,7 +1118,7 @@ int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
 }
 
 /* send formatted subnegotiation data for TTYPE/ENVIRON/NEW-ENVIRON/MSSP */
-void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
+void telnet_newenviron_send(telnet_t *telnet, unsigned char telopt,
 		size_t count, ...) {
 	va_list va;
 	size_t i;
@@ -1139,6 +1139,22 @@ void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
 	va_end(va);
 
 	/* footer */
+	telnet_finish_sb(telnet);
+}
+
+/* send TERMINAL-TYPE SEND command */
+void telnet_ttype_send(telnet_t *telnet) {
+    static const char SEND[] = { TELNET_IAC, TELNET_SB, TELNET_TELOPT_TTYPE,
+			TELNET_TTYPE_SEND, TELNET_IAC, TELNET_SE };
+	_send(telnet, SEND, sizeof(SEND));
+}
+
+/* send TERMINAL-TYPE IS command */
+void telnet_ttype_is(telnet_t *telnet, const char* ttype) {
+	static const char IS[] = { TELNET_IAC, TELNET_SB, TELNET_TELOPT_TTYPE,
+			TELNET_TTYPE_IS };
+	_send(telnet, IS, sizeof(IS));
+	_send(telnet, ttype, strlen(ttype));
 	telnet_finish_sb(telnet);
 }
 

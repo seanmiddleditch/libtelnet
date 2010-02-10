@@ -121,8 +121,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		/* respond with our terminal type */
 		if (ev->telopt == TELNET_TELOPT_TTYPE &&
 				ev->argc >= 1 && ev->argv[0][0] == TELNET_TTYPE_SEND) {
-			telnet_format_sb(telnet, TELNET_TELOPT_TTYPE, 1,
-					TELNET_TTYPE_IS, getenv("TERM"));
+			telnet_ttype_is(telnet, getenv("TERM"));
 		}
 		break;
 	/* error */
