@@ -27,6 +27,7 @@
 #endif
 
 #include "libtelnet.h"
+#include "libtelnetutil.h"
 
 static struct termios orig_tios;
 static telnet_t *telnet;

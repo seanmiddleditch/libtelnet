@@ -224,22 +224,6 @@ extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 /* begin sending compressed data (server only) */
 extern void telnet_begin_compress2(telnet_t *telnet);
 
-/* send formatted data with \r and \n translated, and IAC escaped */
-extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
-		TELNET_GNU_PRINTF(2, 3);
-
-/* send formatted data with just IAC escaped */
-extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
-		TELNET_GNU_PRINTF(2, 3);
-
-/* send TTYPE/ENVIRON/NEW-ENVIRON/MSSP data */
-extern void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
-		size_t count, ...);
-
-/* send ZMP commands */
-extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
-extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
-
 /* C++ support */
 #if defined(__cplusplus)
 } /* extern "C" */

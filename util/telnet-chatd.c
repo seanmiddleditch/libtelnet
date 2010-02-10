@@ -25,6 +25,7 @@
 #endif
 
 #include "libtelnet.h"
+#include "libtelnetutil.h"
 
 #define MAX_USERS 64
 #define LINEBUFFER_SIZE 256
