@@ -11,7 +11,7 @@
  * all present and future rights to this code under copyright law. 
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
