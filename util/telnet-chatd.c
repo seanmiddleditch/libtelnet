@@ -167,15 +167,15 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	switch (ev->type) {
 	/* data received */
 	case TELNET_EV_DATA:
-		_input(user, ev->buffer, ev->size);
+		_input(user, ev->data.buffer, ev->data.size);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
-		_send(user->sock, ev->buffer, ev->size);
+		_send(user->sock, ev->data.buffer, ev->data.size);
 		break;
 	/* enable compress2 if accepted by client */
 	case TELNET_EV_DO:
-		if (ev->telopt == TELNET_TELOPT_COMPRESS2)
+		if (ev->neg.telopt == TELNET_TELOPT_COMPRESS2)
 			telnet_begin_compress2(telnet);
 		break;
 	/* error */

@@ -30,7 +30,7 @@ extern "C" {
 
 /* forward declarations */
 typedef struct telnet_t telnet_t;
-typedef struct telnet_event_t telnet_event_t;
+typedef union telnet_event_t telnet_event_t;
 typedef struct telnet_telopt_t telnet_telopt_t;
 
 /* telnet special values */
@@ -145,25 +145,63 @@ enum telnet_event_type_t {
 	TELNET_EV_DONT,
 	TELNET_EV_SUBNEGOTIATION,
 	TELNET_EV_COMPRESS,
+	TELNET_EV_ZMP, /* specialization of SUBNEGOTIATION */
+	TELNET_EV_TTYPE, /* specialization of SUBNEGOTIATION */
 	TELNET_EV_WARNING,
 	TELNET_EV_ERROR
 };
 typedef enum telnet_event_type_t telnet_event_type_t;
 
 /* event information */
-struct telnet_event_t {
-	/* ZMP argument list */
-	const char **argv;
-	size_t argc;
-	/* data buffer: for DATA, SEND, SUBNEGOTIATION, and ERROR events */
-	const char *buffer;
-	size_t size;
+union telnet_event_t {
 	/* type of event */ 
 	enum telnet_event_type_t type;
-	/* IAC command */
-	unsigned char command;
-	/* telopt info: for negotiation events SUBNEGOTIATION */
-	unsigned char telopt;
+
+	/* data event: for DATA, SEND, ERROR, WARNING events */
+	struct data_t {
+		enum telnet_event_type_t _type;
+		const char *buffer;
+		size_t size;
+	} data;
+
+	/* command event: for IAC */
+	struct iac_t {
+		enum telnet_event_type_t _type;
+		unsigned char cmd;
+	} iac;
+
+	/* negotiation event: WILL, WONT, DO, DONT */
+	struct negotiate_t {
+		enum telnet_event_type_t _type;
+		unsigned char telopt; /* option being negotiated */
+	} neg;
+
+	/* subnegotiation event */
+	struct subnegotiate_t {
+		enum telnet_event_type_t _type;
+		unsigned char telopt; /* option code for negotiation */
+		const char *buffer;
+		size_t size;
+	} sub;
+
+	/* ZMP event */
+	struct zmp_t {
+		enum telnet_event_type_t _type;
+		const char **argv;
+		size_t argc;
+	} zmp;
+
+	/* TTYPE event */
+	struct ttype_t {
+		enum telnet_event_type_t _type;
+		unsigned char cmd; /* TELNET_TTYPE_IS or TELNET_TTYPE_SEND */
+		const char* name; /* only set for IS, will be NULL for SEND */
+	} ttype;
+
+	/* COMPRESS event */
+	struct compress_t {
+		unsigned char state; /* 1 if compression is enabled, 0 if disabled */
+	} compress;
 };
 
 /* event handler declaration */
@@ -236,6 +274,11 @@ extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 extern void telnet_newenviron_send(telnet_t *telnet, unsigned char cmd,
 		size_t count, ...);
 
+extern void telnet_begin_newenviron(telnet_t *telnet, unsigned char type);
+extern void telnet_newenviron_value(telnet_t* telnet, unsigned char type,
+		const char *atring);
+#define telnet_finish_newenviron(t) telnet_finish_sb((t))
+
 /* send TERMINAL-TYPE SEND command */
 extern void telnet_ttype_send(telnet_t *telnet);
 
@@ -245,6 +288,10 @@ extern void telnet_ttype_is(telnet_t *telnet, const char* ttype);
 /* send ZMP commands */
 extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
 extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
+
+extern void telnet_begin_zmp(telnet_t *telnet, const char *cmd);
+extern void telnet_zmp_arg(telnet_t *telnet, const char *arg);
+#define telnet_finish_zmp(t) telnet_finish_sb((t))
 
 /* C++ support */
 #if defined(__cplusplus)

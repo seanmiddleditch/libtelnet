@@ -173,10 +173,10 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	/* data received */
 	case TELNET_EV_DATA:
 		printf("%s DATA: ", conn->name);
-		print_buffer(ev->buffer, ev->size);
+		print_buffer(ev->data.buffer, ev->data.size);
 		printf(COLOR_NORMAL "\n");
 
-		telnet_send(conn->remote->telnet, ev->buffer, ev->size);
+		telnet_send(conn->remote->telnet, ev->data.buffer, ev->data.size);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
@@ -186,99 +186,104 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		printf(COLOR_BOLD "\n");
 		*/
 
-		_send(conn->sock, ev->buffer, ev->size);
+		_send(conn->sock, ev->data.buffer, ev->data.size);
 		break;
 	/* IAC command */
 	case TELNET_EV_IAC:
 		printf("%s IAC %s" COLOR_NORMAL "\n", conn->name,
-				get_cmd(ev->command));
+				get_cmd(ev->iac.cmd));
 
-		telnet_iac(conn->remote->telnet, ev->command);
+		telnet_iac(conn->remote->telnet, ev->iac.cmd);
 		break;
 	/* negotiation, WILL */
 	case TELNET_EV_WILL:
 		printf("%s IAC WILL %d (%s)" COLOR_NORMAL "\n", conn->name,
-				(int)ev->telopt, get_opt(ev->telopt));
+				(int)ev->neg.telopt, get_opt(ev->neg.telopt));
 		telnet_negotiate(conn->remote->telnet, TELNET_WILL,
-				ev->telopt);
+				ev->neg.telopt);
 		break;
 	/* negotiation, WONT */
 	case TELNET_EV_WONT:
 		printf("%s IAC WONT %d (%s)" COLOR_NORMAL "\n", conn->name,
-				(int)ev->telopt, get_opt(ev->telopt));
+				(int)ev->neg.telopt, get_opt(ev->neg.telopt));
 		telnet_negotiate(conn->remote->telnet, TELNET_WONT,
-				ev->telopt);
+				ev->neg.telopt);
 		break;
 	/* negotiation, DO */
 	case TELNET_EV_DO:
 		printf("%s IAC DO %d (%s)" COLOR_NORMAL "\n", conn->name,
-				(int)ev->telopt, get_opt(ev->telopt));
+				(int)ev->neg.telopt, get_opt(ev->neg.telopt));
 		telnet_negotiate(conn->remote->telnet, TELNET_DO,
-				ev->telopt);
+				ev->neg.telopt);
 		break;
 	case TELNET_EV_DONT:
 		printf("%s IAC DONT %d (%s)" COLOR_NORMAL "\n", conn->name,
-				(int)ev->telopt, get_opt(ev->telopt));
+				(int)ev->neg.telopt, get_opt(ev->neg.telopt));
 		telnet_negotiate(conn->remote->telnet, TELNET_DONT,
-				ev->telopt);
+				ev->neg.telopt);
 		break;
-	/* subnegotiation */
+	/* generic subnegotiation */
 	case TELNET_EV_SUBNEGOTIATION:
-		if (ev->telopt == TELNET_TELOPT_ZMP) {
-			if (ev->argc != 0) {
-				size_t i;
-				printf("%s ZMP [%zi params]", conn->name, ev->argc);
-				for (i = 0; i != ev->argc; ++i) {
-					printf(" \"");
-					print_buffer(ev->argv[i], strlen(ev->argv[i]));
-					printf("\"");
-				}
-				printf(COLOR_NORMAL "\n");
-			} else {
-				printf("%s ZMP (malformed!) [%zi bytes]",
-						conn->name, ev->size);
-				print_buffer(ev->buffer, ev->size);
-				printf(COLOR_NORMAL "\n");
-			}
-		} else if (ev->telopt == TELNET_TELOPT_TTYPE ||
-				ev->telopt == TELNET_TELOPT_ENVIRON ||
-				ev->telopt == TELNET_TELOPT_NEW_ENVIRON ||
-				ev->telopt == TELNET_TELOPT_MSSP) {
+		printf("%s SUB %d (%s)", conn->name, (int)ev->sub.telopt,
+				get_opt(ev->sub.telopt));
+		if (ev->sub.size > 0) {
+			printf(" [%zi bytes]: ", ev->sub.size);
+			print_buffer(ev->sub.buffer, ev->sub.size);
+		}
+		printf(COLOR_NORMAL "\n");
+
+		/* forward */
+		telnet_subnegotiation(conn->remote->telnet, ev->sub.telopt,
+				ev->sub.buffer, ev->sub.size);
+		break;
+	/* ZMP command */
+	case TELNET_EV_ZMP:
+		if (ev->zmp.argc != 0) {
 			size_t i;
-			printf("%s %s [%zi parts]", conn->name, get_opt(ev->telopt),
-					ev->argc);
-			for (i = 0; i != ev->argc; ++i) {
+			printf("%s ZMP [%zi params]", conn->name, ev->zmp.argc);
+			for (i = 0; i != ev->zmp.argc; ++i) {
 				printf(" \"");
-				print_buffer(ev->argv[i], strlen(ev->argv[i] + 1) + 1);
+				print_buffer(ev->zmp.argv[i], strlen(ev->zmp.argv[i]));
 				printf("\"");
 			}
 			printf(COLOR_NORMAL "\n");
-		} else {
-			printf("%s SUB %d (%s)", conn->name, (int)ev->telopt,
-					get_opt(ev->telopt));
-			if (ev->size > 0) {
-				printf(" [%zi bytes]: ", ev->size);
-				print_buffer(ev->buffer, ev->size);
-			}
-			printf(COLOR_NORMAL "\n");
 		}
-
-		/* forward */
-		telnet_subnegotiation(conn->remote->telnet, ev->telopt,
-				ev->buffer, ev->size);
 		break;
+	/* TERMINAL-TYPE command */
+	case TELNET_EV_TTYPE:
+		printf("%s TTYPE %s %s", conn->name, ev->ttype.cmd ? "SEND" : "IS",
+				ev->ttype.name ? ev->ttype.name : "");
+		break;
+	/* FIXME:
+	case TELOPT_ENVIRON:
+		break;
+	case TELOPT_NEW_ENVIRON:
+		break;
+	case TELOPT_MSSP:
+		break;
+
+		size_t i;
+		printf("%s %s [%zi parts]", conn->name, get_opt(ev->telopt),
+				ev->argc);
+		for (i = 0; i != ev->argc; ++i) {
+			printf(" \"");
+			print_buffer(ev->argv[i], strlen(ev->argv[i] + 1) + 1);
+			printf("\"");
+		}
+		printf(COLOR_NORMAL "\n");
+	*/
 	/* compression notification */
 	case TELNET_EV_COMPRESS:
 		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,
-				ev->command ? "ON" : "OFF");
+				ev->compress.state ? "ON" : "OFF");
 		break;
 	/* warning */
 	case TELNET_EV_WARNING:
-		printf("%s WARNING: %s" COLOR_NORMAL "\n", conn->name, ev->buffer);
+		printf("%s WARNING: %s" COLOR_NORMAL "\n", conn->name, ev->data.buffer);
 		break;
 	/* error */
 	case TELNET_EV_ERROR:
-		printf("%s ERROR: %s" COLOR_NORMAL "\n", conn->name, ev->buffer);
+		printf("%s ERROR: %s" COLOR_NORMAL "\n", conn->name, ev->data.buffer);
 		exit(1);
 	}
 }

@@ -92,21 +92,21 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	switch (ev->type) {
 	/* data received */
 	case TELNET_EV_DATA:
-		printf("%.*s", (int)ev->size, ev->buffer);
+		printf("%.*s", (int)ev->data.size, ev->data.buffer);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
-		_send(sock, ev->buffer, ev->size);
+		_send(sock, ev->data.buffer, ev->data.size);
 		break;
 	/* request to enable remote feature (or receipt) */
 	case TELNET_EV_WILL:
 		/* we'll agree to turn off our echo if server wants us to stop */
-		if (ev->telopt == TELNET_TELOPT_ECHO)
+		if (ev->neg.telopt == TELNET_TELOPT_ECHO)
 			do_echo = 0;
 		break;
 	/* notification of disabling remote feature (or receipt) */
 	case TELNET_EV_WONT:
-		if (ev->telopt == TELNET_TELOPT_ECHO)
+		if (ev->neg.telopt == TELNET_TELOPT_ECHO)
 			do_echo = 1;
 		break;
 	/* request to enable local feature (or receipt) */
@@ -115,18 +115,19 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	/* demand to disable local feature (or receipt) */
 	case TELNET_EV_DONT:
 		break;
-	/* respond to particular subnegotiations */
-	case TELNET_EV_SUBNEGOTIATION:
-		/* if they just asked for our terminal type, response with it */
-		/* respond with our terminal type */
-		if (ev->telopt == TELNET_TELOPT_TTYPE &&
-				ev->argc >= 1 && ev->argv[0][0] == TELNET_TTYPE_SEND) {
+	/* respond to TTYPE commands */
+	case TELNET_EV_TTYPE:
+		/* respond with our terminal type, if requested */
+		if (ev->ttype.cmd == TELNET_TTYPE_SEND) {
 			telnet_ttype_is(telnet, getenv("TERM"));
 		}
 		break;
+	/* respond to particular subnegotiations */
+	case TELNET_EV_SUBNEGOTIATION:
+		break;
 	/* error */
 	case TELNET_EV_ERROR:
-		fprintf(stderr, "ERROR: %s\n", ev->buffer);
+		fprintf(stderr, "ERROR: %s\n", ev->data.buffer);
 		exit(1);
 	default:
 		/* ignore */
