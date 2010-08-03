@@ -530,10 +530,47 @@ static int _subnegotiate(telnet_t *telnet) {
 		return 0;
 	}
 
+	/* TERMINAL-TYPE processing */
+	case TELNET_TELOPT_TTYPE:
+		/* make sure request is not empty */
+		if (telnet->buffer_pos == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"incomplete TERMINAL-TYPE request");
+			return 0;
+		}
+
+		/* make sure request has valid command type */
+		if (telnet->buffer[0] != TELNET_TTYPE_IS &&
+				telnet->buffer != TELNET_TTYPE_SEND) {
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"TERMINAL-TYPE request has invalid type");
+			return 0;
+		}
+
+		/* send proper event */
+		if (telnet->buffer[0] == TELNET_TTYPE_IS) {
+			ev.type = TELNET_EV_TTYPE;
+			ev.ttype.cmd = TELNET_TTYPE_IS;
+			if ((ev.ttype.name = (char *)alloca(telnet->buffer_pos - 1)) == 0) {
+				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+						"alloca() failed: %s", strerror(errno));
+				return 0;
+			}
+			memcpy(ev.ttype.name, telnet->buffer + 1, telnet->buffer_pos - 1);
+			ev.ttype.name[telnet->buffer_pos - 1] = '\0';
+			telnet->eh(telnet, &ev, telnet->ud);
+		} else {
+			ev.type = TELNET_EV_TTYPE;
+			ev.ttype.cmd = TELNET_TTYPE_SEND;
+			ev.ttype.name = NULL;
+			telnet->eh(telnet, &ev, telnet->ud);
+		}
+
+		break;
+
 	/* any of a number of commands that use the form <BYTE>data<BYTE>data,
 	 * including TTYPE, ENVIRON, NEW-ENVIRON, and MSSP
 	 */
-	case TELNET_TELOPT_TTYPE:
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
 	case TELNET_TELOPT_MSSP: {
