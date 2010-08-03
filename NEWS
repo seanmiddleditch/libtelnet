@@ -2,6 +2,9 @@ Version 0.13
 ============
 
 * added basic man pages
+* major revamp of event API
+* new APIs for ZMP, TERMINAL-TYPE, NEW-ENVIRON, and MSSP
+* added a test suite
 
 Version 0.12
 ============
