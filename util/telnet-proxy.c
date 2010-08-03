@@ -254,24 +254,23 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		printf("%s TTYPE %s %s", conn->name, ev->ttype.cmd ? "SEND" : "IS",
 				ev->ttype.name ? ev->ttype.name : "");
 		break;
+	/* ENVIRON command */
 	/* FIXME:
-	case TELOPT_ENVIRON:
+	case TELNET_EV_ENVIRON:
 		break;
-	case TELOPT_NEW_ENVIRON:
-		break;
-	case TELOPT_MSSP:
-		break;
-
+	*/
+	case TELNET_EV_MSSP: {
 		size_t i;
-		printf("%s %s [%zi parts]", conn->name, get_opt(ev->telopt),
-				ev->argc);
-		for (i = 0; i != ev->argc; ++i) {
+		printf("%s MSSP [%zi parts]", conn->name, ev->mssp.size);
+		for (i = 0; i != ev->mssp.size; ++i) {
 			printf(" \"");
-			print_buffer(ev->argv[i], strlen(ev->argv[i] + 1) + 1);
+			print_buffer(ev->mssp.values[i].var, strlen(ev->mssp.values[i].var));
+			printf("\"=\"");
+			print_buffer(ev->mssp.values[i].value, strlen(ev->mssp.values[i].value));
 			printf("\"");
 		}
 		printf(COLOR_NORMAL "\n");
-	*/
+	}
 	/* compression notification */
 	case TELNET_EV_COMPRESS:
 		printf("%s COMPRESSION %s" COLOR_NORMAL "\n", conn->name,

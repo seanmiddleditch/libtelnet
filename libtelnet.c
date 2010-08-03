@@ -459,6 +459,179 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	}
 }
 
+/* process an ENVIRON/NEW-ENVIRON/MSSP subnegotiation buffer */
+static int _environ(telnet_t *telnet, unsigned char type,
+		const char* buffer, size_t size) {
+	telnet_event_t ev;
+	struct telnet_environ_t *values;
+	char *var = NULL, *value = NULL;
+	char *tmp;
+	const char *c, *last;
+	size_t i, count;
+
+	/* if we have no data, just pass it through */
+	if (size == 0) {
+		return 0;
+	}
+
+	/* very first byte must be in range 0-3 */
+	if ((unsigned)buffer[0] > 3) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"telopt %d subneg has invalid data", type);
+		return 0;
+	}
+
+	/* assign ENVIRON/NEW-ENVIRON command type */
+	ev.ttype.cmd = buffer[0];
+
+	/* count arguments; each argument is preceded by a byte in the
+	 * range 0-3, so just count those.
+	 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
+	 * properly at all.  guess that's a FIXME.
+	 */
+	for (count = 0, i = 1; i != size; ++i) {
+		if ((unsigned)buffer[i] <= 3) {
+			++count;
+		}
+	}
+
+	/* allocate argument array, bail on error */
+	if ((values = (struct telnet_environ_t *)alloca(
+			sizeof(struct telnet_environ_t) * count)) == 0) {
+		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+				"alloca() failed: %s", strerror(errno));
+		return 0;
+	}
+
+	ev.environ.values = values;
+	ev.environ.size = count;
+
+	/* allocate strings in argument array */
+	for (i = 0, last = buffer + 1; i != count; ++i) {
+		/* search for end marker */
+		c = last + 1;
+		while (c != buffer + size && (unsigned)*c > 3) {
+			++c;
+		}
+
+		/* allocate space; bail on error */
+		if ((tmp = (char *)alloca(c - last)) == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"alloca() failed: %s", strerror(errno));
+			return 0;
+		}
+
+		/* copy data */
+		memcpy(tmp, last + 1, c - last);
+		tmp[c - last] = 0;
+
+		/* assign temporary data to appropriate place */
+		if (*last == TELNET_ENVIRON_VAR || *last == TELNET_ENVIRON_USERVAR) {
+			var = tmp;
+		} else {
+			value = tmp;
+		}
+
+		/* fill in values struct */
+		values[i].type = *last;
+		values[i].var = var;
+		values[i].value = value;
+
+		/* prepare for next loop */
+		last = c;
+	}
+
+	/* invoke event with our arguments */
+	ev.type = TELNET_EV_ENVIRON;
+	telnet->eh(telnet, &ev, telnet->ud);
+	return 0;
+}
+
+/* process an ENVIRON/NEW-ENVIRON/MSSP subnegotiation buffer */
+static int _mssp(telnet_t *telnet, unsigned char type,
+		const char* buffer, size_t size) {
+	telnet_event_t ev;
+	struct telnet_environ_t *values;
+	char *var = NULL, *value = NULL;
+	char *tmp;
+	const char *c, *last;
+	size_t i, count;
+
+	/* if we have no data, just pass it through */
+	if (size == 0) {
+		return 0;
+	}
+
+	/* very first byte must be in range 0-3 */
+	if ((unsigned)buffer[0] > 3) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"telopt %d subneg has invalid data", type);
+		return 0;
+	}
+
+	/* count arguments; each argument is preceded by a byte in the
+	 * range 0-3, so just count those.
+	 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
+	 * properly at all.  guess that's a FIXME.
+	 */
+	for (count = 0, i = 1; i != size; ++i) {
+		if ((unsigned)buffer[i] <= 3) {
+			++count;
+		}
+	}
+
+	/* allocate argument array, bail on error */
+	if ((values = (struct telnet_environ_t *)alloca(
+			sizeof(struct telnet_environ_t) * count)) == 0) {
+		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+				"alloca() failed: %s", strerror(errno));
+		return 0;
+	}
+
+	ev.mssp.values = values;
+	ev.mssp.size = count;
+
+	/* allocate strings in argument array */
+	for (i = 0, last = buffer + 1; i != count; ++i) {
+		/* search for end marker */
+		c = last + 1;
+		while (c != buffer + size && (unsigned)*c > 3) {
+			++c;
+		}
+
+		/* allocate space; bail on error */
+		if ((tmp = (char *)alloca(c - last)) == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"alloca() failed: %s", strerror(errno));
+			return 0;
+		}
+
+		/* copy data */
+		memcpy(tmp, last + 1, c - last);
+		tmp[c - last] = 0;
+
+		/* assign temporary data to appropriate place */
+		if (*last == TELNET_MSSP_VAR) {
+			var = tmp;
+		} else {
+			value = tmp;
+		}
+
+		/* fill in values struct */
+		values[i].type = *last;
+		values[i].var = var;
+		values[i].value = value;
+
+		/* prepare for next loop */
+		last = c;
+	}
+
+	/* invoke event with our arguments */
+	ev.type = TELNET_EV_MSSP;
+	telnet->eh(telnet, &ev, telnet->ud);
+	return 0;
+}
+
 /* process a subnegotiation buffer; return non-zero if the current buffer
  * must be aborted and reprocessed due to COMPRESS2 being activated
  */
@@ -578,77 +751,9 @@ static int _subnegotiate(telnet_t *telnet) {
 	 */
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
-	case TELNET_TELOPT_MSSP: {
-		struct telnet_environ_t *values;
-		char *c, *l, *buffer;
-		size_t i, size;
-
-		/* if we have no data, just pass it through */
-		if (telnet->buffer_pos == 0) {
-			return 0;
-		}
-
-		/* very first byte must be in range 0-3 */
-		if ((unsigned)telnet->buffer[0] > 3) {
-			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-					"telopt %d subneg has invalid data", telnet->sb_telopt);
-			return 0;
-		}
-
-		/* count arguments; each argument is preceded by a byte in the
-		 * range 0-3, so just count those.
-		 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
-		 * properly at all.  guess that's a FIXME.
-		 */
-		for (size = 0, i = 0; i != telnet->buffer_pos; ++i) {
-			if ((unsigned)telnet->buffer[i] <= 3) {
-				++size;
-			}
-		}
-
-		/* allocate argument array, bail on error */
-		if ((values = (struct telnet_environ_t *)alloca(
-				sizeof(struct telnet_environ_t) * size)) == 0) {
-			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"alloca() failed: %s", strerror(errno));
-			return 0;
-		}
-
-		/* allocate strings in argument array */
-		for (i = 0, l = telnet->buffer; i != size; ++i) {
-			/* search for end marker */
-			c = l + 1;
-			while (c != telnet->buffer + telnet->buffer_pos &&
-					(unsigned)*c > 3) {
-				++c;
-			}
-
-			/* set command type */
-			values[i].cmd = *l;
-
-			/* allocate space; bail on error */
-			if ((buffer = (char *)alloca(c - l)) == 0) {
-				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-						"alloca() failed: %s", strerror(errno));
-				return 0;
-			}
-			values[i].value = buffer;
-
-			/* copy data */
-			memcpy(buffer, l + 1, c - l);
-			buffer[c - l] = 0;
-
-			/* prepare for next loop */
-			l = c;
-		}
-
-		/* invoke event with our arguments */
-		ev.type = TELNET_EV_ENVIRON;
-		ev.environ.values = values;
-		ev.environ.size = size;
-		telnet->eh(telnet, &ev, telnet->ud);
-		return 0;
-	}
+		return _environ(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
+	case TELNET_TELOPT_MSSP:
+		return _mssp(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
 #endif /* defined(HAVE_ALLOCA) */
 	}
 }
@@ -1064,8 +1169,9 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 		/* dump prior portion of text, send escaped bytes */
 		if (buffer[i] == (char)TELNET_IAC) {
 			/* dump prior text if any */
-			if (i != l)
+			if (i != l) {
 				_send(telnet, buffer + l, i - l);
+			}
 			l = i + 1;
 
 			/* send escape */
@@ -1074,8 +1180,9 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 	}
 
 	/* send whatever portion of buffer is left */
-	if (i != l)
+	if (i != l) {
 		_send(telnet, buffer + l, i - l);
+	}
 }
 
 /* send subnegotiation header */
@@ -1177,8 +1284,9 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 	}
 
 	/* send whatever portion of buffer is left */
-	if (i != l)
+	if (i != l) {
 		_send(telnet, buffer + l, i - l);
+	}
 
 	return rs;
 }
