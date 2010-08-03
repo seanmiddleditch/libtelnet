@@ -278,11 +278,13 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* warning */
 	case TELNET_EV_WARNING:
-		printf("%s WARNING: %s" COLOR_NORMAL "\n", conn->name, ev->data.buffer);
+		printf("%s WARNING: %s in %s,%d: %s" COLOR_NORMAL "\n", conn->name,
+				ev->error.func, ev->error.file, ev->error.line, ev->error.msg);
 		break;
 	/* error */
 	case TELNET_EV_ERROR:
-		printf("%s ERROR: %s" COLOR_NORMAL "\n", conn->name, ev->data.buffer);
+		printf("%s ERROR: %s in %s,%d: %s" COLOR_NORMAL "\n", conn->name,
+				ev->error.func, ev->error.file, ev->error.line, ev->error.msg);
 		exit(1);
 	}
 }

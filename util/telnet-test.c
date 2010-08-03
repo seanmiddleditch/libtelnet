@@ -211,10 +211,10 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		printf("COMPRESSION %s\n", ev->compress.state ? "ON" : "OFF");
 		break;
 	case TELNET_EV_WARNING:
-		printf("WARNING: %s\n", ev->data.buffer);
+		printf("WARNING: %s\n", ev->error.msg);
 		break;
 	case TELNET_EV_ERROR:
-		printf("ERROR: %s\n", ev->data.buffer);
+		printf("ERROR: %s\n", ev->error.msg);
 		break;
 	}
 }

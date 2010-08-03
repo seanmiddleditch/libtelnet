@@ -127,7 +127,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		break;
 	/* error */
 	case TELNET_EV_ERROR:
-		fprintf(stderr, "ERROR: %s\n", ev->data.buffer);
+		fprintf(stderr, "ERROR: %s\n", ev->error.msg);
 		exit(1);
 	default:
 		/* ignore */

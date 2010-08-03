@@ -112,19 +112,17 @@ static telnet_error_t _error(telnet_t *telnet, unsigned line,
 	char buffer[512];
 	va_list va;
 
-	/* format error intro */
-	snprintf(buffer, sizeof(buffer), "%s:%u in %s: ", __FILE__, line, func);
-
 	/* format informational text */
 	va_start(va, fmt);
-	vsnprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer),
-			fmt, va);
+	vsnprintf(buffer, sizeof(buffer), fmt, va);
 	va_end(va);
 
 	/* send error event to the user */
 	ev.type = fatal ? TELNET_EV_ERROR : TELNET_EV_WARNING;
-	ev.data.buffer = buffer;
-	ev.data.size = strlen(buffer);
+	ev.error.file = __FILE__;
+	ev.error.func = func;
+	ev.error.line = line;
+	ev.error.msg = buffer;
 	telnet->eh(telnet, &ev, telnet->ud);
 	
 	return err;

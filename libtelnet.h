@@ -166,12 +166,21 @@ union telnet_event_t {
 	/* type of event */ 
 	enum telnet_event_type_t type;
 
-	/* data event: for DATA, SEND, ERROR, WARNING events */
+	/* data event: for DATA and SEND events */
 	struct data_t {
 		enum telnet_event_type_t _type;
 		const char *buffer;
 		size_t size;
 	} data;
+
+	/* WARNING and ERROR events */
+	struct error_t {
+		enum telnet_event_type_t _type;
+		const char *file;
+		const char *func;
+		int line;
+		const char *msg;
+	} error;
 
 	/* command event: for IAC */
 	struct iac_t {
