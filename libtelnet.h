@@ -147,10 +147,19 @@ enum telnet_event_type_t {
 	TELNET_EV_COMPRESS,
 	TELNET_EV_ZMP, /* specialization of SUBNEGOTIATION */
 	TELNET_EV_TTYPE, /* specialization of SUBNEGOTIATION */
+	TELNET_EV_ENVIRON, /* specializataion of SUBNEGOTIATION */
+	TELNET_EV_MSSP, /* specialization of SUBNEGOTIATION */
 	TELNET_EV_WARNING,
 	TELNET_EV_ERROR
 };
 typedef enum telnet_event_type_t telnet_event_type_t;
+
+/* environ/MSSP command information */
+struct telnet_environ_t {
+	unsigned char cmd;
+	const char *name;
+	const char *value;
+};
 
 /* event information */
 union telnet_event_t {
@@ -200,8 +209,16 @@ union telnet_event_t {
 
 	/* COMPRESS event */
 	struct compress_t {
+		enum telnet_event_type_t _type;
 		unsigned char state; /* 1 if compression is enabled, 0 if disabled */
 	} compress;
+
+	/* ENVIRON, NEW-ENVIRON, and MSSP events */
+	struct environ_t {
+		enum telnet_event_type_t _type;
+		struct telnet_environ_t *values;
+		size_t size;
+	} environ, mssp;
 };
 
 /* event handler declaration */

@@ -5,6 +5,8 @@ AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
+AC_FUNC_ALLOCA
+
 # zlib support
 AC_CHECK_LIB(z,deflate,ZLIB=yes,ZLIB=no)
 if test "x$ZLIB" = "xyes" ; then

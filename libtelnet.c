@@ -541,7 +541,7 @@ static int _subnegotiate(telnet_t *telnet) {
 
 		/* make sure request has valid command type */
 		if (telnet->buffer[0] != TELNET_TTYPE_IS &&
-				telnet->buffer != TELNET_TTYPE_SEND) {
+				telnet->buffer[0] != TELNET_TTYPE_SEND) {
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"TERMINAL-TYPE request has invalid type");
 			return 0;
@@ -549,15 +549,20 @@ static int _subnegotiate(telnet_t *telnet) {
 
 		/* send proper event */
 		if (telnet->buffer[0] == TELNET_TTYPE_IS) {
-			ev.type = TELNET_EV_TTYPE;
-			ev.ttype.cmd = TELNET_TTYPE_IS;
-			if ((ev.ttype.name = (char *)alloca(telnet->buffer_pos - 1)) == 0) {
+			char *name;
+
+			/* allocate space for name */
+			if ((name = (char *)alloca(telnet->buffer_pos - 1)) == 0) {
 				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 						"alloca() failed: %s", strerror(errno));
 				return 0;
 			}
-			memcpy(ev.ttype.name, telnet->buffer + 1, telnet->buffer_pos - 1);
-			ev.ttype.name[telnet->buffer_pos - 1] = '\0';
+			memcpy(name, telnet->buffer + 1, telnet->buffer_pos - 1);
+			name[telnet->buffer_pos - 1] = '\0';
+
+			ev.type = TELNET_EV_TTYPE;
+			ev.ttype.cmd = TELNET_TTYPE_IS;
+			ev.ttype.name = name;
 			telnet->eh(telnet, &ev, telnet->ud);
 		} else {
 			ev.type = TELNET_EV_TTYPE;
@@ -574,8 +579,9 @@ static int _subnegotiate(telnet_t *telnet) {
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
 	case TELNET_TELOPT_MSSP: {
-		char **argv, *c, *l;
-		size_t i, argc;
+		struct telnet_environ_t *values;
+		char *c, *l, *buffer;
+		size_t i, size;
 
 		/* if we have no data, just pass it through */
 		if (telnet->buffer_pos == 0) {
@@ -594,43 +600,53 @@ static int _subnegotiate(telnet_t *telnet) {
 		 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
 		 * properly at all.  guess that's a FIXME.
 		 */
-		for (argc = 0, i = 0; i != telnet->buffer_pos; ++i)
-			if ((unsigned)telnet->buffer[i] <= 3)
-				++argc;
+		for (size = 0, i = 0; i != telnet->buffer_pos; ++i) {
+			if ((unsigned)telnet->buffer[i] <= 3) {
+				++size;
+			}
+		}
 
 		/* allocate argument array, bail on error */
-		if ((argv = (char **)alloca(sizeof(char *) * argc)) == 0) {
+		if ((values = (struct telnet_environ_t *)alloca(
+				sizeof(struct telnet_environ_t) * size)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"alloca() failed: %s", strerror(errno));
 			return 0;
 		}
 
 		/* allocate strings in argument array */
-		for (i = 0, l = telnet->buffer; i != argc; ++i) {
+		for (i = 0, l = telnet->buffer; i != size; ++i) {
 			/* search for end marker */
 			c = l + 1;
 			while (c != telnet->buffer + telnet->buffer_pos &&
-					(unsigned)*c > 3)
+					(unsigned)*c > 3) {
 				++c;
+			}
+
+			/* set command type */
+			values[i].cmd = *l;
 
 			/* allocate space; bail on error */
-			if ((argv[i] = (char *)alloca(c - l + 1)) == 0) {
+			if ((buffer = (char *)alloca(c - l)) == 0) {
 				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 						"alloca() failed: %s", strerror(errno));
 				return 0;
 			}
+			values[i].value = buffer;
 
 			/* copy data */
-			memcpy(argv[i], l, c - l);
-			argv[i][c - l] = 0;
+			memcpy(buffer, l + 1, c - l);
+			buffer[c - l] = 0;
 
 			/* prepare for next loop */
 			l = c;
 		}
 
 		/* invoke event with our arguments */
-		_event(telnet, TELNET_EV_SUBNEGOTIATION, 0, telnet->sb_telopt,
-				telnet->buffer, telnet->buffer_pos, (const char **)argv, argc);
+		ev.type = TELNET_EV_ENVIRON;
+		ev.environ.values = values;
+		ev.environ.size = size;
+		telnet->eh(telnet, &ev, telnet->ud);
 		return 0;
 	}
 #endif /* defined(HAVE_ALLOCA) */
