@@ -137,13 +137,16 @@ static void decode(char *buffer, size_t size) {
 				}
 				*out = c;
 			}
-		} else {
+			++out;
+		} else if (isprint(*in)) {
 			*out = *in;
+			++out;
 		}
 
-		++out;
 		++in;
 	}
+
+	*out = '\0';
 }
 
 static void print_encode(const char *buffer, size_t size) {
@@ -243,8 +246,10 @@ int main(int argc, char** argv) {
 
 	/* read input until we hit EOF or marker */
 	while (fgets(buffer, sizeof(buffer), fh) != NULL && strcmp(buffer, "%%\n") != 0) {
-		decode(buffer, strlen(buffer) + 1);
-		telnet_recv(telnet, buffer, strlen(buffer));
+		if (buffer[0] != '#') {
+			decode(buffer, strlen(buffer));
+			telnet_recv(telnet, buffer, strlen(buffer));
+		}
 	}
 
 	/* clean up */
