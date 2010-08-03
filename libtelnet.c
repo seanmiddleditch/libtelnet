@@ -459,7 +459,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	}
 }
 
-/* process an ENVIRON/NEW-ENVIRON/MSSP subnegotiation buffer */
+/* process an ENVIRON/NEW-ENVIRON subnegotiation buffer */
 static int _environ(telnet_t *telnet, unsigned char type,
 		const char* buffer, size_t size) {
 	telnet_event_t ev;
@@ -480,9 +480,6 @@ static int _environ(telnet_t *telnet, unsigned char type,
 				"telopt %d subneg has invalid data", type);
 		return 0;
 	}
-
-	/* assign ENVIRON/NEW-ENVIRON command type */
-	ev.ttype.cmd = buffer[0];
 
 	/* count arguments; each argument is preceded by a byte in the
 	 * range 0-3, so just count those.
@@ -547,7 +544,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	return 0;
 }
 
-/* process an ENVIRON/NEW-ENVIRON/MSSP subnegotiation buffer */
+/* process an MSSP subnegotiation buffer */
 static int _mssp(telnet_t *telnet, unsigned char type,
 		const char* buffer, size_t size) {
 	telnet_event_t ev;
@@ -562,20 +559,16 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 		return 0;
 	}
 
-	/* very first byte must be in range 0-3 */
-	if ((unsigned)buffer[0] > 3) {
+	/* first byte must be a VAR */
+	if ((unsigned)buffer[0] != TELNET_MSSP_VAR) {
 		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 				"telopt %d subneg has invalid data", type);
 		return 0;
 	}
 
-	/* count arguments; each argument is preceded by a byte in the
-	 * range 0-3, so just count those.
-	 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
-	 * properly at all.  guess that's a FIXME.
-	 */
-	for (count = 0, i = 1; i != size; ++i) {
-		if ((unsigned)buffer[i] <= 3) {
+	/* count the arguments, any part that starts with VALUE */
+	for (count = 0, i = 0; i != size; ++i) {
+		if ((unsigned)buffer[i] == TELNET_MSSP_VAL) {
 			++count;
 		}
 	}
@@ -592,10 +585,11 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	ev.mssp.size = count;
 
 	/* allocate strings in argument array */
-	for (i = 0, last = buffer + 1; i != count; ++i) {
+	for (i = 0, last = buffer; i != count;) {
 		/* search for end marker */
 		c = last + 1;
-		while (c != buffer + size && (unsigned)*c > 3) {
+		while (c != buffer + size && (unsigned)*c != TELNET_MSSP_VAR &&
+				(unsigned)*c != TELNET_MSSP_VAL) {
 			++c;
 		}
 
@@ -610,20 +604,19 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 		memcpy(tmp, last + 1, c - last);
 		tmp[c - last] = 0;
 
-		/* assign temporary data to appropriate place */
+		/* if it's a variable name, just store the name for now */
 		if (*last == TELNET_MSSP_VAR) {
 			var = tmp;
 		} else {
-			value = tmp;
+			/* fill in values struct */
+			values[i].type = *last;
+			values[i].var = var;
+			values[i].value = tmp;
+
+			/* prepare for next loop */
+			last = c;
+			++i;
 		}
-
-		/* fill in values struct */
-		values[i].type = *last;
-		values[i].var = var;
-		values[i].value = value;
-
-		/* prepare for next loop */
-		last = c;
 	}
 
 	/* invoke event with our arguments */
