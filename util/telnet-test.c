@@ -106,8 +106,8 @@ static const char *get_opt(unsigned char opt) {
 	}
 }
 
-static void decode(char *buffer, size_t size) {
-	const char *in = buffer, *end = buffer + size;
+static void decode(char *buffer, size_t *size) {
+	const char *in = buffer, *end = buffer + *size;
 	char *out = buffer;
 	int c;
 
@@ -147,6 +147,7 @@ static void decode(char *buffer, size_t size) {
 	}
 
 	*out = '\0';
+	*size = out - buffer;
 }
 
 static void print_encode(const char *buffer, size_t size) {
@@ -222,6 +223,7 @@ int main(int argc, char** argv) {
 	FILE *fh;
 	telnet_t *telnet;
 	char buffer[4096];
+	size_t len;
 
 	/* check for a requested input file */
 	if (argc != 2) {
@@ -247,8 +249,9 @@ int main(int argc, char** argv) {
 	/* read input until we hit EOF or marker */
 	while (fgets(buffer, sizeof(buffer), fh) != NULL && strcmp(buffer, "%%\n") != 0) {
 		if (buffer[0] != '#') {
-			decode(buffer, strlen(buffer));
-			telnet_recv(telnet, buffer, strlen(buffer));
+			len = strlen(buffer);
+			decode(buffer, &len);
+			telnet_recv(telnet, buffer, len);
 		}
 	}
 
