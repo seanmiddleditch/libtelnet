@@ -1,7 +1,0 @@
-Test a single IAC (GA) %FF%F9 and done
-%%
-DATA [23]
-  ==> Test a single IAC (GA) 
-IAC 249 (GA)
-DATA [10]
-  ==>  and done%0A

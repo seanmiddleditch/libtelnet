@@ -14,5 +14,5 @@ if test "x$ZLIB" = "xyes" ; then
 	AC_DEFINE(HAVE_ZLIB, 1, [We have zlib])
 fi
 
-AC_CONFIG_FILES([Makefile util/Makefile man/Makefile libtelnet.pc])
+AC_CONFIG_FILES([Makefile util/Makefile man/Makefile test/Makefile libtelnet.pc])
 AC_OUTPUT

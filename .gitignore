@@ -19,5 +19,6 @@ autom4te.cache
 telnet-proxy
 telnet-client
 telnet-chatd
+telnet-test
 libtelnet.pc
 INSTALL

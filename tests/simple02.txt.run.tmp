@@ -1,5 +1,0 @@
-DATA [23]
-  ==> Test a single IAC (GA) 
-IAC 249 (GA)
-DATA [10]
-  ==>  and done%0A

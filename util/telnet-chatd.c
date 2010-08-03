@@ -29,7 +29,7 @@
 #define MAX_USERS 64
 #define LINEBUFFER_SIZE 256
 
-const telnet_telopt_t telopts[] = {
+static const telnet_telopt_t telopts[] = {
 	{ TELNET_TELOPT_COMPRESS2,	TELNET_WILL, TELNET_DONT },
 	{ -1, 0, 0 }
 };

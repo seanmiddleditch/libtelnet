@@ -10,4 +10,9 @@ telnet_chatd_LDADD = ../libtelnet.la
 telnet_proxy_SOURCES = telnet-proxy.c ../libtelnet.h
 telnet_proxy_LDADD = ../libtelnet.la
 
+telnet_test_SOURCES = telnet-test.c ../libtelnet.h
+telnet_test_LDADD = ../libtelnet.la
+
 bin_PROGRAMS = telnet-client telnet-chatd telnet-proxy
+
+noinst_PROGRAMS = telnet-test
