@@ -18,10 +18,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-#if defined(HAVE_ALLOCA)
-# include <alloca.h>
-#endif
-
 #if defined(HAVE_ZLIB)
 # include <zlib.h>
 #endif
@@ -457,12 +453,28 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	}
 }
 
+/* free all the names and values stored in the telnet_environ_t struct array */
+static void _free_environ(struct telnet_environ_t *values, size_t count) {
+	size_t i;
+
+	for (i = 0; i != count; ++i) {
+		if (values[i].var != 0) {
+			free(values[i].var);
+		}
+		if (values[i].value != 0) {
+			free(values[i].value);
+		}
+	}
+
+	free(values);
+}
+
 /* process an ENVIRON/NEW-ENVIRON subnegotiation buffer */
 static int _environ(telnet_t *telnet, unsigned char type,
 		const char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
-	char *var = NULL, *value = NULL;
+	char *var = 0, *value = 0;
 	char *tmp;
 	const char *c, *last;
 	size_t i, count;
@@ -491,10 +503,10 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	}
 
 	/* allocate argument array, bail on error */
-	if ((values = (struct telnet_environ_t *)alloca(
-			sizeof(struct telnet_environ_t) * count)) == 0) {
+	if ((values = (struct telnet_environ_t *)calloc(count,
+			sizeof(struct telnet_environ_t))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-				"alloca() failed: %s", strerror(errno));
+				"calloc() failed: %s", strerror(errno));
 		return 0;
 	}
 
@@ -509,10 +521,14 @@ static int _environ(telnet_t *telnet, unsigned char type,
 			++c;
 		}
 
+		/* set type */
+		values[i].type = *last;
+
 		/* allocate space; bail on error */
-		if ((tmp = (char *)alloca(c - last)) == 0) {
+		if ((tmp = (char *)malloc(c - last)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"alloca() failed: %s", strerror(errno));
+					"malloc() failed: %s", strerror(errno));
+			_environ_free(values);
 			return 0;
 		}
 
@@ -523,14 +539,24 @@ static int _environ(telnet_t *telnet, unsigned char type,
 		/* assign temporary data to appropriate place */
 		if (*last == TELNET_ENVIRON_VAR || *last == TELNET_ENVIRON_USERVAR) {
 			var = tmp;
-		} else {
-			value = tmp;
-		}
+		} else if (var != 0) {
+			if ((values[i].var = strdup(var)) == 0) {
+				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+						"strdup() failed: %s", strerror(errno));
+				free(tmp);
+				free(var);
+				_environ_free(values);
+				return 0;
+			}
 
-		/* fill in values struct */
-		values[i].type = *last;
-		values[i].var = var;
-		values[i].value = value;
+			values[i].value = tmp;
+		} else {
+			_warning(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"invalid ENVIRON subnegotiation data");
+			free(tmp);
+			_environ_free(values);
+			return 0;
+		}
 
 		/* prepare for next loop */
 		last = c;
@@ -539,6 +565,13 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	/* invoke event with our arguments */
 	ev.type = TELNET_EV_ENVIRON;
 	telnet->eh(telnet, &ev, telnet->ud);
+
+	/* clean up */
+	_environ_free(values);
+	if (var != 0) {
+		free(var);
+	}
+
 	return 0;
 }
 
@@ -547,7 +580,7 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 		const char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
-	char *var = NULL, *value = NULL;
+	char *var = 0, *value = 0;
 	char *tmp;
 	const char *c, *last;
 	size_t i, count;
@@ -572,10 +605,10 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	}
 
 	/* allocate argument array, bail on error */
-	if ((values = (struct telnet_environ_t *)alloca(
-			sizeof(struct telnet_environ_t) * count)) == 0) {
+	if ((values = (struct telnet_environ_t *)calloc(count,
+			sizeof(struct telnet_environ_t))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-				"alloca() failed: %s", strerror(errno));
+				"calloc() failed: %s", strerror(errno));
 		return 0;
 	}
 
@@ -591,10 +624,13 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 			++c;
 		}
 
+		values[i].type = *last;
+
 		/* allocate space; bail on error */
-		if ((tmp = (char *)alloca(c - last)) == 0) {
+		if ((tmp = (char *)malloc(c - last)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"alloca() failed: %s", strerror(errno));
+					"malloc() failed: %s", strerror(errno));
+			_free_environ(values, count);
 			return 0;
 		}
 
@@ -605,22 +641,55 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 		/* if it's a variable name, just store the name for now */
 		if (*last == TELNET_MSSP_VAR) {
 			var = tmp;
-		} else {
+		} else if (var != 0) {
+			if ((values[i].var = strdup(var)) == 0) {
+				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+						"strdup() failed: %s", strerror(errno));
+				free(var);
+				free(tmp);
+				_environ_free(values, count);
+				return 0;
+			}
+
 			/* fill in values struct */
-			values[i].type = *last;
-			values[i].var = var;
 			values[i].value = tmp;
 
 			/* prepare for next loop */
 			last = c;
 			++i;
+		} else {
+			_warning(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+					"invalid MSSP subnegotiation data");
+			free(tmp);
+			_environ_free(values, count);
+			return 0;
 		}
 	}
 
 	/* invoke event with our arguments */
 	ev.type = TELNET_EV_MSSP;
 	telnet->eh(telnet, &ev, telnet->ud);
+
+	/* clean up */
+	_environ_free(values, count);
+	if (var != 0) {
+		free(var);
+	}
+
 	return 0;
+}
+
+/* free the memory allocated for a ZMP argument array */
+static void _free_argv(char **argv, size_t argc) {
+	size_t i;
+
+	for (i = 0; i != argc; ++i) {
+		if (argv[i] != 0) {
+			free(argv[i]);
+		}
+	}
+
+	free(argv);
 }
 
 /* process a subnegotiation buffer; return non-zero if the current buffer
@@ -654,11 +723,10 @@ static int _subnegotiate(telnet_t *telnet) {
 		}
 		return 0;
 #endif /* defined(HAVE_ZLIB) */
-#if defined(HAVE_ALLOCA)
 
 	/* ZMP command */
 	case TELNET_TELOPT_ZMP: {
-		const char **argv, *c;
+		char **argv, *c;
 		size_t i, argc;
 		/* make sure this is a valid ZMP buffer */
 		if (telnet->buffer_pos == 0 ||
@@ -674,9 +742,9 @@ static int _subnegotiate(telnet_t *telnet) {
 			c += strlen(c) + 1;
 
 		/* allocate argument array, bail on error */
-		if ((argv = (const char **)alloca(sizeof(char *) * argc)) == 0) {
+		if ((argv = (char **)calloc(argc, sizeof(char *))) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"alloca() failed: %s", strerror(errno));
+					"calloc() failed: %s", strerror(errno));
 			return 0;
 		}
 
@@ -688,9 +756,12 @@ static int _subnegotiate(telnet_t *telnet) {
 
 		/* invoke event with our arguments */
 		ev.type = TELNET_EV_ZMP;
-		ev.zmp.argv = argv;
+		ev.zmp.argv = (const char **)argv;
 		ev.zmp.argc = argc;
 		telnet->eh(telnet, &ev, telnet->ud);
+
+		/* clean up */
+		_free_argv(argv, argc);
 		return 0;
 	}
 
@@ -716,9 +787,9 @@ static int _subnegotiate(telnet_t *telnet) {
 			char *name;
 
 			/* allocate space for name */
-			if ((name = (char *)alloca(telnet->buffer_pos - 1)) == 0) {
+			if ((name = (char *)malloc(telnet->buffer_pos - 1)) == 0) {
 				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-						"alloca() failed: %s", strerror(errno));
+						"malloc() failed: %s", strerror(errno));
 				return 0;
 			}
 			memcpy(name, telnet->buffer + 1, telnet->buffer_pos - 1);
@@ -728,10 +799,13 @@ static int _subnegotiate(telnet_t *telnet) {
 			ev.ttype.cmd = TELNET_TTYPE_IS;
 			ev.ttype.name = name;
 			telnet->eh(telnet, &ev, telnet->ud);
+
+			/* clean up */
+			free(name);
 		} else {
 			ev.type = TELNET_EV_TTYPE;
 			ev.ttype.cmd = TELNET_TTYPE_SEND;
-			ev.ttype.name = NULL;
+			ev.ttype.name = 0;
 			telnet->eh(telnet, &ev, telnet->ud);
 		}
 
@@ -745,7 +819,6 @@ static int _subnegotiate(telnet_t *telnet) {
 		return _environ(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_MSSP:
 		return _mssp(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
-#endif /* defined(HAVE_ALLOCA) */
 	}
 }
 
@@ -1355,7 +1428,7 @@ void telnet_send_zmpv(telnet_t *telnet, ...) {
 
 	/* send out each argument, including trailing NUL byte */
 	va_start(va, telnet);
-	while ((arg = va_arg(va, const char *)) != NULL)
+	while ((arg = va_arg(va, const char *)) != 0)
 		telnet_zmp_arg(telnet, arg);
 	va_end(va);
 

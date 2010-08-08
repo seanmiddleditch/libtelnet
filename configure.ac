@@ -5,8 +5,6 @@ AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
-AC_FUNC_ALLOCA
-
 # disable building of tools
 AC_ARG_ENABLE(util,
 	[AC_HELP_STRING([--disable-util],
