@@ -679,19 +679,6 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	return 0;
 }
 
-/* free the memory allocated for a ZMP argument array */
-static void _free_argv(char **argv, size_t argc) {
-	size_t i;
-
-	for (i = 0; i != argc; ++i) {
-		if (argv[i] != 0) {
-			free(argv[i]);
-		}
-	}
-
-	free(argv);
-}
-
 /* process a subnegotiation buffer; return non-zero if the current buffer
  * must be aborted and reprocessed due to COMPRESS2 being activated
  */
@@ -761,7 +748,7 @@ static int _subnegotiate(telnet_t *telnet) {
 		telnet->eh(telnet, &ev, telnet->ud);
 
 		/* clean up */
-		_free_argv(argv, argc);
+		free(argv);
 		return 0;
 	}
 
