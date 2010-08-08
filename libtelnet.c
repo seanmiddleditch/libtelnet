@@ -576,8 +576,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 }
 
 /* process an MSSP subnegotiation buffer */
-static int _mssp(telnet_t *telnet, unsigned char type,
-		const char* buffer, size_t size) {
+static int _mssp(telnet_t *telnet, const char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
 	char *var = 0, *value = 0;
@@ -593,7 +592,7 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	/* first byte must be a VAR */
 	if ((unsigned)buffer[0] != TELNET_MSSP_VAR) {
 		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-				"telopt %d subneg has invalid data", type);
+				"MSSP subnegotiation has invalid data");
 		return 0;
 	}
 
@@ -679,6 +678,97 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	return 0;
 }
 
+/* parse ZMP command subnegotiation buffers */
+static int _zmp(telnet_t *telnet, const char* buffer, size_t size) {
+	telnet_event_t ev;
+	const char **argv;
+	const char *c;
+	size_t i, argc;
+
+	/* make sure this is a valid ZMP buffer */
+	if (size == 0 || buffer[size - 1] != 0) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"incomplete ZMP frame");
+		return 0;
+	}
+
+	/* count arguments */
+	for (argc = 0, c = buffer; c != buffer + size; ++argc)
+		c += strlen(c) + 1;
+
+	/* allocate argument array, bail on error */
+	if ((argv = (const char **)calloc(argc, sizeof(char *))) == 0) {
+		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+				"calloc() failed: %s", strerror(errno));
+		return 0;
+	}
+
+	/* populate argument array */
+	for (i = 0, c = buffer; i != argc; ++i) {
+		argv[i] = c;
+		c += strlen(c) + 1;
+	}
+
+	/* invoke event with our arguments */
+	ev.type = TELNET_EV_ZMP;
+	ev.zmp.argv = argv;
+	ev.zmp.argc = argc;
+	telnet->eh(telnet, &ev, telnet->ud);
+
+	/* clean up */
+	free(argv);
+	return 0;
+}
+
+/* parse TERMINAL-TYPE command subnegotiation buffers */
+static int _ttype(telnet_t *telnet, const char* buffer, size_t size) {
+	telnet_event_t ev;
+
+	/* make sure request is not empty */
+	if (size == 0) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"incomplete TERMINAL-TYPE request");
+		return 0;
+	}
+
+	/* make sure request has valid command type */
+	if (buffer[0] != TELNET_TTYPE_IS &&
+			buffer[0] != TELNET_TTYPE_SEND) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"TERMINAL-TYPE request has invalid type");
+		return 0;
+	}
+
+	/* send proper event */
+	if (buffer[0] == TELNET_TTYPE_IS) {
+		char *name;
+
+		/* allocate space for name */
+		if ((name = (char *)malloc(size - 1)) == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"malloc() failed: %s", strerror(errno));
+			return 0;
+		}
+		memcpy(name, buffer + 1, size - 1);
+		name[size - 1] = '\0';
+
+		ev.type = TELNET_EV_TTYPE;
+		ev.ttype.cmd = TELNET_TTYPE_IS;
+		ev.ttype.name = name;
+		telnet->eh(telnet, &ev, telnet->ud);
+
+		/* clean up */
+		free(name);
+	} else {
+		ev.type = TELNET_EV_TTYPE;
+		ev.ttype.cmd = TELNET_TTYPE_SEND;
+		ev.ttype.name = 0;
+		telnet->eh(telnet, &ev, telnet->ud);
+	}
+
+	return 0;
+}
+
 /* process a subnegotiation buffer; return non-zero if the current buffer
  * must be aborted and reprocessed due to COMPRESS2 being activated
  */
@@ -711,101 +801,16 @@ static int _subnegotiate(telnet_t *telnet) {
 		return 0;
 #endif /* defined(HAVE_ZLIB) */
 
-	/* ZMP command */
-	case TELNET_TELOPT_ZMP: {
-		char **argv, *c;
-		size_t i, argc;
-		/* make sure this is a valid ZMP buffer */
-		if (telnet->buffer_pos == 0 ||
-				telnet->buffer[telnet->buffer_pos - 1] != 0) {
-			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-					"incomplete ZMP frame");
-			return 0;
-		}
-
-		/* count arguments */
-		for (argc = 0, c = telnet->buffer; c != telnet->buffer +
-				telnet->buffer_pos; ++argc)
-			c += strlen(c) + 1;
-
-		/* allocate argument array, bail on error */
-		if ((argv = (char **)calloc(argc, sizeof(char *))) == 0) {
-			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"calloc() failed: %s", strerror(errno));
-			return 0;
-		}
-
-		/* populate argument array */
-		for (i = 0, c = telnet->buffer; i != argc; ++i) {
-			argv[i] = c;
-			c += strlen(c) + 1;
-		}
-
-		/* invoke event with our arguments */
-		ev.type = TELNET_EV_ZMP;
-		ev.zmp.argv = (const char **)argv;
-		ev.zmp.argc = argc;
-		telnet->eh(telnet, &ev, telnet->ud);
-
-		/* clean up */
-		free(argv);
-		return 0;
-	}
-
-	/* TERMINAL-TYPE processing */
+	/* specially handled subnegotiation telopt types */
+	case TELNET_TELOPT_ZMP:
+		return _zmp(telnet, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_TTYPE:
-		/* make sure request is not empty */
-		if (telnet->buffer_pos == 0) {
-			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-					"incomplete TERMINAL-TYPE request");
-			return 0;
-		}
-
-		/* make sure request has valid command type */
-		if (telnet->buffer[0] != TELNET_TTYPE_IS &&
-				telnet->buffer[0] != TELNET_TTYPE_SEND) {
-			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-					"TERMINAL-TYPE request has invalid type");
-			return 0;
-		}
-
-		/* send proper event */
-		if (telnet->buffer[0] == TELNET_TTYPE_IS) {
-			char *name;
-
-			/* allocate space for name */
-			if ((name = (char *)malloc(telnet->buffer_pos - 1)) == 0) {
-				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-						"malloc() failed: %s", strerror(errno));
-				return 0;
-			}
-			memcpy(name, telnet->buffer + 1, telnet->buffer_pos - 1);
-			name[telnet->buffer_pos - 1] = '\0';
-
-			ev.type = TELNET_EV_TTYPE;
-			ev.ttype.cmd = TELNET_TTYPE_IS;
-			ev.ttype.name = name;
-			telnet->eh(telnet, &ev, telnet->ud);
-
-			/* clean up */
-			free(name);
-		} else {
-			ev.type = TELNET_EV_TTYPE;
-			ev.ttype.cmd = TELNET_TTYPE_SEND;
-			ev.ttype.name = 0;
-			telnet->eh(telnet, &ev, telnet->ud);
-		}
-
-		break;
-
-	/* any of a number of commands that use the form <BYTE>data<BYTE>data,
-	 * including TTYPE, ENVIRON, NEW-ENVIRON, and MSSP
-	 */
+		return _ttype(telnet, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
 		return _environ(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_MSSP:
-		return _mssp(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
+		return _mssp(telnet, telnet->buffer, telnet->buffer_pos);
 	}
 }
 
