@@ -1,0 +1,18 @@
+# basic TERMINAL-TYPE test
+
+# proper usages
+%FF%FA%18%01%FF%F0
+%FF%FA%18%00xterm%FF%F0
+
+# improper usages
+%FF%FA%18%00%FF%F0
+%FF%FA%18%01xterm%FF%F0
+%%
+SUB 24 (TTYPE) [1]
+TTYPE SEND 
+SUB 24 (TTYPE) [6]
+TTYPE IS xterm
+SUB 24 (TTYPE) [1]
+TTYPE IS 
+SUB 24 (TTYPE) [6]
+TTYPE SEND 
