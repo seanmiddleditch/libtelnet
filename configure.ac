@@ -7,6 +7,14 @@ AC_PROG_LIBTOOL
 
 AC_FUNC_ALLOCA
 
+# disable building of tools
+AC_ARG_ENABLE(util,
+	[AC_HELP_STRING([--disable-util],
+		[disable the building of programs in util/ directory])],
+	[BUILD_UTIL=$enableval],
+	[BUILD_UTIL=yes])
+AM_CONDITIONAL([BUILD_UTIL], [test "x$BUILD_UTIL" = "xyes"])
+
 # zlib support
 AC_CHECK_LIB(z,deflate,ZLIB=yes,ZLIB=no)
 if test "x$ZLIB" = "xyes" ; then

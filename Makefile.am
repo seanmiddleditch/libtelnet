@@ -1,4 +1,4 @@
-SUBDIRS = . util man test
+SUBDIRS = . man util test
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libtelnet.pc
