@@ -197,9 +197,9 @@ union telnet_event_t {
 	/* subnegotiation event */
 	struct subnegotiate_t {
 		enum telnet_event_type_t _type;
-		unsigned char telopt; /* option code for negotiation */
 		const char *buffer;
 		size_t size;
+		unsigned char telopt; /* option code for negotiation */
 	} sub;
 
 	/* ZMP event */
