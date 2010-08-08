@@ -303,7 +303,7 @@ extern void telnet_newenviron_send(telnet_t *telnet, unsigned char cmd,
 
 extern void telnet_begin_newenviron(telnet_t *telnet, unsigned char type);
 extern void telnet_newenviron_value(telnet_t* telnet, unsigned char type,
-		const char *atring);
+		const char *string);
 #define telnet_finish_newenviron(t) telnet_finish_sb((t))
 
 /* send TERMINAL-TYPE SEND command */

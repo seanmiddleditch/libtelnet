@@ -1310,10 +1310,7 @@ void telnet_newenviron_value(telnet_t *telnet, unsigned char type,
 	telnet_send(telnet, (char*)&type, 1);
 
 	if (string != 0) {
-		size_t i, e;
-		for (i = 0, e = strlen(string); i != e; ++i) {
-			telnet_send(telnet, string + i, 1);
-		}
+		telnet_send(telnet, string, strlen(string));
 	}
 }
 
