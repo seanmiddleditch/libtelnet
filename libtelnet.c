@@ -528,7 +528,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 		if ((tmp = (char *)malloc(c - last)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"malloc() failed: %s", strerror(errno));
-			_environ_free(values);
+			_free_environ(values, count);
 			return 0;
 		}
 
@@ -545,16 +545,16 @@ static int _environ(telnet_t *telnet, unsigned char type,
 						"strdup() failed: %s", strerror(errno));
 				free(tmp);
 				free(var);
-				_environ_free(values);
+				_free_environ(values, count);
 				return 0;
 			}
 
 			values[i].value = tmp;
 		} else {
-			_warning(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"invalid ENVIRON subnegotiation data");
 			free(tmp);
-			_environ_free(values);
+			_free_environ(values, count);
 			return 0;
 		}
 
@@ -567,7 +567,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	telnet->eh(telnet, &ev, telnet->ud);
 
 	/* clean up */
-	_environ_free(values);
+	_free_environ(values, count);
 	if (var != 0) {
 		free(var);
 	}
@@ -647,7 +647,7 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 						"strdup() failed: %s", strerror(errno));
 				free(var);
 				free(tmp);
-				_environ_free(values, count);
+				_free_environ(values, count);
 				return 0;
 			}
 
@@ -658,10 +658,10 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 			last = c;
 			++i;
 		} else {
-			_warning(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"invalid MSSP subnegotiation data");
 			free(tmp);
-			_environ_free(values, count);
+			_free_environ(values, count);
 			return 0;
 		}
 	}
@@ -671,7 +671,7 @@ static int _mssp(telnet_t *telnet, unsigned char type,
 	telnet->eh(telnet, &ev, telnet->ud);
 
 	/* clean up */
-	_environ_free(values, count);
+	_free_environ(values, count);
 	if (var != 0) {
 		free(var);
 	}
