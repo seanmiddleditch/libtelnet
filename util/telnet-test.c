@@ -192,7 +192,18 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		printf("DONT %d (%s)\n", (int)ev->neg.telopt, get_opt(ev->neg.telopt));
 		break;
 	case TELNET_EV_SUBNEGOTIATION:
-		printf("SUB %d (%s) [%zi]\n", (int)ev->sub.telopt, get_opt(ev->sub.telopt), ev->sub.size);
+		switch (ev->sub.telopt) {
+		case TELNET_TELOPT_ENVIRON:
+		case TELNET_TELOPT_NEW_ENVIRON:
+		case TELNET_TELOPT_TTYPE:
+		case TELNET_TELOPT_ZMP:
+		case TELNET_TELOPT_MSSP:
+			/* print nothing */
+			break;
+		default:
+			printf("SUB %d (%s) [%zi]\n", (int)ev->sub.telopt, get_opt(ev->sub.telopt), ev->sub.size);
+			break;
+		}
 		break;
 	case TELNET_EV_ZMP:
 		printf("ZMP (%s) [%zi]\n", ev->zmp.argv[0], ev->zmp.argc);

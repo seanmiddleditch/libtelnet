@@ -32,12 +32,7 @@
 %FF%F0
 
 %%
-SUB 70 (MSSP) [0]
-SUB 70 (MSSP) [8]
 MSSP [1] ==> "FOO"="BAR"
-SUB 70 (MSSP) [12]
 MSSP [2] ==> "FOO"="BAR" "FOO"="BAZ"
-SUB 70 (MSSP) [12]
 MSSP [0] ==>
-SUB 70 (MSSP) [12]
 MSSP [1] ==> "FOO"="BAR"
