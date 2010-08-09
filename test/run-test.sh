@@ -6,14 +6,17 @@ while [ "x$1" != "x" ] ; do
 
 	"$DIR/../util/telnet-test" "$1" > "$1.run.tmp"
 	sed -n '/%%/,$p' < "$1" | tail -n+2 > "$1.out.tmp"
-	if diff -u "$1.out.tmp" "$1.run.tmp" > "$1.diff.tmp" ; then
+	if cmp -s "$1.out.tmp" "$1.run.tmp" ; then
 		echo "OK"
 	else
 		echo "FAIL"
-		cat "$1.diff.tmp"
+		echo "EXPECTED:"
+		sed 's/^/\t/' < "$1.out.tmp"
+		echo "GOT:"
+		sed 's/^/\t/' < "$1.run.tmp"
 		RS=1
 	fi
-	rm -f "$1.run.tmp" "$1.out.tmp" "$1.diff.tmp"
+	rm -f "$1.run.tmp" "$1.out.tmp"
 
 	shift
 done

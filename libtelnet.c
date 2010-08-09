@@ -288,7 +288,7 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q,
 			sizeof(telnet_rfc1143_t) * (telnet->q_size + 4))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-				"malloc() failed: %s", strerror(errno));
+				"realloc() failed: %s", strerror(errno));
 		return;
 	}
 	memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t) * 4);
@@ -469,15 +469,26 @@ static void _free_environ(struct telnet_environ_t *values, size_t count) {
 	free(values);
 }
 
-/* process an ENVIRON/NEW-ENVIRON subnegotiation buffer */
+/* process an ENVIRON/NEW-ENVIRON subnegotiation buffer
+ *
+ * the algorithm and approach used here is kind of a hack,
+ * but it reduces the number of memory allocations we have
+ * to make.
+ *
+ * we copy the bytes back into the buffer, starting at the very
+ * beginning, which makes it easy to handle the ENVIRON ESC
+ * escape mechanism as well as ensure the variable name and
+ * value strings are NUL-terminated, all while fitting inside
+ * of the original buffer.
+ */
 static int _environ(telnet_t *telnet, unsigned char type,
-		const char* buffer, size_t size) {
+		char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
 	char *var = 0, *value = 0;
-	char *tmp;
-	const char *c, *last;
+	char *c, *last, *out;
 	size_t i, count;
+	unsigned char next_type;
 
 	/* if we have no data, just pass it through */
 	if (size == 0) {
@@ -491,14 +502,14 @@ static int _environ(telnet_t *telnet, unsigned char type,
 		return 0;
 	}
 
-	/* count arguments; each argument is preceded by a byte in the
-	 * range 0-3, so just count those.
-	 * NOTE: we don't support the ENVIRON/NEW-ENVIRON ESC handling
-	 * properly at all.  guess that's a FIXME.
-	 */
-	for (count = 0, i = 1; i != size; ++i) {
-		if ((unsigned)buffer[i] <= 3) {
+	/* count arguments; each valid entry starts with VAR or USERVAR */
+	for (count = 0, i = 1; i < size; ++i) {
+		if (buffer[i] == TELNET_ENVIRON_VAR ||
+				buffer[i] == TELNET_ENVIRON_USERVAR) {
 			++count;
+		} else if (buffer[i] == TELNET_ENVIRON_ESC) {
+			/* skip the next byte */
+			++i;
 		}
 	}
 
@@ -510,56 +521,38 @@ static int _environ(telnet_t *telnet, unsigned char type,
 		return 0;
 	}
 
+	ev.environ.cmd = buffer[0];
 	ev.environ.values = values;
 	ev.environ.size = count;
 
-	/* allocate strings in argument array */
-	for (i = 0, last = buffer + 1; i != count; ++i) {
+	/* parse argument array */
+	out = last = buffer;
+	next_type = buffer[1];
+	for (i = 0, c = buffer + 2; c < buffer + size;) {
 		/* search for end marker */
-		c = last + 1;
-		while (c != buffer + size && (unsigned)*c > 3) {
-			++c;
+		while (c < buffer + size && (unsigned)*c > 3) {
+			*out++ = *c++;
 		}
-
-		/* set type */
-		values[i].type = *last;
-
-		/* allocate space; bail on error */
-		if ((tmp = (char *)malloc(c - last)) == 0) {
-			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"malloc() failed: %s", strerror(errno));
-			_free_environ(values, count);
-			return 0;
-		}
-
-		/* copy data */
-		memcpy(tmp, last + 1, c - last);
-		tmp[c - last] = 0;
+		*out++ = '\0';
 
 		/* assign temporary data to appropriate place */
-		if (*last == TELNET_ENVIRON_VAR || *last == TELNET_ENVIRON_USERVAR) {
-			var = tmp;
-		} else if (var != 0) {
-			if ((values[i].var = strdup(var)) == 0) {
-				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-						"strdup() failed: %s", strerror(errno));
-				free(tmp);
-				free(var);
-				_free_environ(values, count);
-				return 0;
-			}
-
-			values[i].value = tmp;
+		if (next_type == TELNET_ENVIRON_VAR ||
+				next_type == TELNET_ENVIRON_USERVAR) {
+			values[i].type = next_type;
+			values[i].var = last;
+			++i;
+		} else if (i != 0) {
+			values[i - 1].value = last;
 		} else {
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"invalid ENVIRON subnegotiation data");
-			free(tmp);
-			_free_environ(values, count);
+			free(values);
 			return 0;
 		}
 
-		/* prepare for next loop */
-		last = c;
+		/* remember our next type and increment c for next loop run */
+		last = out;
+		next_type = *c++;
 	}
 
 	/* invoke event with our arguments */
@@ -567,7 +560,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	telnet->eh(telnet, &ev, telnet->ud);
 
 	/* clean up */
-	_free_environ(values, count);
+	free(values);
 	if (var != 0) {
 		free(var);
 	}
@@ -639,6 +632,10 @@ static int _mssp(telnet_t *telnet, const char* buffer, size_t size) {
 
 		/* if it's a variable name, just store the name for now */
 		if (*last == TELNET_MSSP_VAR) {
+			if (var != 0) {
+				free(var);
+			}
+
 			var = tmp;
 		} else if (var != 0) {
 			if ((values[i].var = strdup(var)) == 0) {

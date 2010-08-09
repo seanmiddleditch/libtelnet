@@ -153,7 +153,6 @@ static void decode(char *buffer, size_t *size) {
 static void print_encode(const char *buffer, size_t size) {
 	const char *in = buffer, *end = buffer + size;
 
-	printf("  ==> ");
 	while (in != end) {
 		if (*in == '%') {
 			printf("%%%%");
@@ -164,14 +163,14 @@ static void print_encode(const char *buffer, size_t size) {
 		}
 		++in;
 	}
-	printf("\n");
 }
 
 static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 	switch (ev->type) {
 	case TELNET_EV_DATA:
-		printf("DATA [%zi]\n", ev->data.size);
+		printf("DATA [%zi] ==> ", ev->data.size);
 		print_encode(ev->data.buffer, ev->data.size);
+		printf("\n");
 		break;
 	case TELNET_EV_SEND:
 		break;
@@ -200,10 +199,27 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		printf("TTYPE %s %s\n", ev->ttype.cmd ? "SEND" : "IS",
 				ev->ttype.name ? ev->ttype.name : "");
 		break;
-	/* FIXME:
-	case TELNET_EV_ENVIRON:
+	/* ENVIRON/NEW-ENVIRON commands */
+	case TELNET_EV_ENVIRON: {
+		size_t i;
+		printf("ENVIRON (%s) [%zi parts] ==>", ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : (ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO"), ev->mssp.size);
+		for (i = 0; i != ev->environ.size; ++i) {
+			printf(" %s \"", ev->environ.values[i].type == TELNET_ENVIRON_VAR ? "VAR" : "USERVAR");
+			if (ev->environ.values[i].var != 0) {
+				print_encode(ev->environ.values[i].var, strlen(ev->environ.values[i].var));
+			}
+			printf("\"");
+			if (ev->environ.cmd != TELNET_ENVIRON_SEND) {
+				printf("=\"");
+				if (ev->environ.values[i].value != 0) {
+					print_encode(ev->environ.values[i].value, strlen(ev->environ.values[i].value));
+				}
+				printf("\"");
+			}
+		}
+		printf("\n");
 		break;
-	*/
+	}
 	case TELNET_EV_MSSP: {
 		printf("MSSP [%zi]\n", ev->mssp.size);
 	}
