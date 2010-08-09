@@ -285,6 +285,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 			printf("\"");
 		}
 		printf(COLOR_NORMAL "\n");
+		break;
 	}
 	/* compression notification */
 	case TELNET_EV_COMPRESS:

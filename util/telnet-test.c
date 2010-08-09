@@ -166,6 +166,8 @@ static void print_encode(const char *buffer, size_t size) {
 }
 
 static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
+	size_t i;
+
 	switch (ev->type) {
 	case TELNET_EV_DATA:
 		printf("DATA [%zi] ==> ", ev->data.size);
@@ -200,8 +202,7 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 				ev->ttype.name ? ev->ttype.name : "");
 		break;
 	/* ENVIRON/NEW-ENVIRON commands */
-	case TELNET_EV_ENVIRON: {
-		size_t i;
+	case TELNET_EV_ENVIRON:
 		printf("ENVIRON (%s) [%zi parts] ==>", ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : (ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO"), ev->mssp.size);
 		for (i = 0; i != ev->environ.size; ++i) {
 			printf(" %s \"", ev->environ.values[i].type == TELNET_ENVIRON_VAR ? "VAR" : "USERVAR");
@@ -219,10 +220,17 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		}
 		printf("\n");
 		break;
-	}
-	case TELNET_EV_MSSP: {
-		printf("MSSP [%zi]\n", ev->mssp.size);
-	}
+	case TELNET_EV_MSSP:
+		printf("MSSP [%zi] ==>", ev->mssp.size);
+		for (i = 0; i != ev->mssp.size; ++i) {
+			printf(" \"");
+			print_encode(ev->mssp.values[i].var, strlen(ev->mssp.values[i].var));
+			printf("\"=\"");
+			print_encode(ev->mssp.values[i].value, strlen(ev->mssp.values[i].value));
+			printf("\"");
+		}
+		printf("\n");
+		break;
 	case TELNET_EV_COMPRESS:
 		printf("COMPRESSION %s\n", ev->compress.state ? "ON" : "OFF");
 		break;

@@ -453,22 +453,6 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	}
 }
 
-/* free all the names and values stored in the telnet_environ_t struct array */
-static void _free_environ(struct telnet_environ_t *values, size_t count) {
-	size_t i;
-
-	for (i = 0; i != count; ++i) {
-		if (values[i].var != 0) {
-			free(values[i].var);
-		}
-		if (values[i].value != 0) {
-			free(values[i].value);
-		}
-	}
-
-	free(values);
-}
-
 /* process an ENVIRON/NEW-ENVIRON subnegotiation buffer
  *
  * the algorithm and approach used here is kind of a hack,
@@ -480,12 +464,13 @@ static void _free_environ(struct telnet_environ_t *values, size_t count) {
  * escape mechanism as well as ensure the variable name and
  * value strings are NUL-terminated, all while fitting inside
  * of the original buffer.
+ *
+ * FIXME: we don't actually support the ESC parsing properly yet
  */
 static int _environ(telnet_t *telnet, unsigned char type,
 		char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
-	char *var = 0, *value = 0;
 	char *c, *last, *out;
 	size_t i, count;
 	unsigned char next_type;
@@ -530,7 +515,9 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	next_type = buffer[1];
 	for (i = 0, c = buffer + 2; c < buffer + size;) {
 		/* search for end marker */
-		while (c < buffer + size && (unsigned)*c > 3) {
+		while (c < buffer + size && (unsigned)*c != TELNET_ENVIRON_VAR &&
+				(unsigned)*c != TELNET_ENVIRON_VALUE &&
+				(unsigned)*c != TELNET_ENVIRON_USERVAR) {
 			*out++ = *c++;
 		}
 		*out++ = '\0';
@@ -561,21 +548,19 @@ static int _environ(telnet_t *telnet, unsigned char type,
 
 	/* clean up */
 	free(values);
-	if (var != 0) {
-		free(var);
-	}
 
 	return 0;
 }
 
 /* process an MSSP subnegotiation buffer */
-static int _mssp(telnet_t *telnet, const char* buffer, size_t size) {
+static int _mssp(telnet_t *telnet, char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
-	char *var = 0, *value = 0;
+	char *var = 0;
 	char *tmp;
-	const char *c, *last;
+	char *c, *last, *out;
 	size_t i, count;
+	unsigned char next_type;
 
 	/* if we have no data, just pass it through */
 	if (size == 0) {
@@ -608,58 +593,33 @@ static int _mssp(telnet_t *telnet, const char* buffer, size_t size) {
 	ev.mssp.size = count;
 
 	/* allocate strings in argument array */
-	for (i = 0, last = buffer; i != count;) {
+	out = last = buffer;
+	next_type = buffer[0];
+	for (i = 0, c = buffer + 1; c < buffer + size;) {
 		/* search for end marker */
-		c = last + 1;
-		while (c != buffer + size && (unsigned)*c != TELNET_MSSP_VAR &&
+		while (c < buffer + size && (unsigned)*c != TELNET_MSSP_VAR &&
 				(unsigned)*c != TELNET_MSSP_VAL) {
-			++c;
+			*out++ = *c++;
 		}
-
-		values[i].type = *last;
-
-		/* allocate space; bail on error */
-		if ((tmp = (char *)malloc(c - last)) == 0) {
-			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-					"malloc() failed: %s", strerror(errno));
-			_free_environ(values, count);
-			return 0;
-		}
-
-		/* copy data */
-		memcpy(tmp, last + 1, c - last);
-		tmp[c - last] = 0;
+		*out++ = '\0';
 
 		/* if it's a variable name, just store the name for now */
-		if (*last == TELNET_MSSP_VAR) {
-			if (var != 0) {
-				free(var);
-			}
-
-			var = tmp;
-		} else if (var != 0) {
-			if ((values[i].var = strdup(var)) == 0) {
-				_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
-						"strdup() failed: %s", strerror(errno));
-				free(var);
-				free(tmp);
-				_free_environ(values, count);
-				return 0;
-			}
-
-			/* fill in values struct */
-			values[i].value = tmp;
-
-			/* prepare for next loop */
-			last = c;
+		if (next_type == TELNET_MSSP_VAR) {
+			var = last;
+		} else if (next_type == TELNET_MSSP_VAL && var != 0) {
+			values[i].var = var;
+			values[i].value = last;
 			++i;
 		} else {
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"invalid MSSP subnegotiation data");
-			free(tmp);
-			_free_environ(values, count);
+			free(values);
 			return 0;
 		}
+
+		/* remember our next type and increment c for next loop run */
+		last = out;
+		next_type = *c++;
 	}
 
 	/* invoke event with our arguments */
@@ -667,10 +627,7 @@ static int _mssp(telnet_t *telnet, const char* buffer, size_t size) {
 	telnet->eh(telnet, &ev, telnet->ud);
 
 	/* clean up */
-	_free_environ(values, count);
-	if (var != 0) {
-		free(var);
-	}
+	free(values);
 
 	return 0;
 }
