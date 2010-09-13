@@ -235,83 +235,84 @@ union telnet_event_t {
 	 * data event: for DATA and SEND events 
 	 */
 	struct data_t {
-		enum telnet_event_type_t _type;
-		const char *buffer;
-		size_t size;
+		enum telnet_event_type_t _type; /*!< alias for type */
+		const char *buffer;             /*!< byte buffer */
+		size_t size;                    /*!< number of bytes in buffer */
 	} data;
 
 	/*! 
 	 * WARNING and ERROR events 
 	 */
 	struct error_t {
-		enum telnet_event_type_t _type;
-		const char *file;
-		const char *func;
-		const char *msg;
-		int line;
-		telnet_error_t errcode;
+		enum telnet_event_type_t _type; /*!< alias for type */
+		const char *file;               /*!< file the error occured in */
+		const char *func;               /*!< function the error occured in */
+		const char *msg;                /*!< error message string */
+		int line;                       /*!< line of file error occured on */
+		telnet_error_t errcode;         /*!< error code */
 	} error;
 
 	/*! 
 	 * command event: for IAC 
 	 */
 	struct iac_t {
-		enum telnet_event_type_t _type;
-		unsigned char cmd;
+		enum telnet_event_type_t _type; /*!< alias for type */
+		unsigned char cmd;              /*!< telnet command received */
 	} iac;
 
 	/*! 
 	 * negotiation event: WILL, WONT, DO, DONT 
 	 */
 	struct negotiate_t {
-		enum telnet_event_type_t _type;
-		unsigned char telopt; /* option being negotiated */
+		enum telnet_event_type_t _type; /*!< alias for type */
+		unsigned char telopt;           /*!< option being negotiated */
 	} neg;
 
 	/*! 
 	 * subnegotiation event 
 	 */
 	struct subnegotiate_t {
-		enum telnet_event_type_t _type;
-		const char *buffer;
-		size_t size;
-		unsigned char telopt; /* option code for negotiation */
+		enum telnet_event_type_t _type; /*!< alias for type */
+		const char *buffer;             /*!< data of sub-negotiation */
+		size_t size;                    /*!< number of bytes in buffer */
+		unsigned char telopt;           /*!< option code for negotiation */
 	} sub;
 
 	/*! 
 	 * ZMP event 
 	 */
 	struct zmp_t {
-		enum telnet_event_type_t _type;
-		const char **argv;
-		size_t argc;
+		enum telnet_event_type_t _type; /*!< alias for type */
+		const char **argv;              /*!< array of argument string */
+		size_t argc;                    /*!< number of elements in argv */
 	} zmp;
 
 	/*! 
 	 * TTYPE event 
 	 */
 	struct ttype_t {
-		enum telnet_event_type_t _type;
-		unsigned char cmd; /* TELNET_TTYPE_IS or TELNET_TTYPE_SEND */
-		const char* name; /* only set for IS, will be NULL for SEND */
+		enum telnet_event_type_t _type; /*!< alias for type */
+		unsigned char cmd;              /*!< TELNET_TTYPE_IS or TELNET_TTYPE_SEND */
+		const char* name;               /*!< terminal type name (IS only) */
 	} ttype;
 
 	/*! 
 	 * COMPRESS event 
 	 */
 	struct compress_t {
-		enum telnet_event_type_t _type;
-		unsigned char state; /* 1 if compression is enabled, 0 if disabled */
+		enum telnet_event_type_t _type; /*!< alias for type */
+		unsigned char state;            /*!< 1 if compression is enabled,
+	                                         0 if disabled */
 	} compress;
 
 	/*! 
 	 * ENVIRON, NEW-ENVIRON, and MSSP events 
 	 */
 	struct environ_t {
-		enum telnet_event_type_t _type;
-		const struct telnet_environ_t *values;
-		size_t size;
-		unsigned char cmd;
+		enum telnet_event_type_t _type;        /*!< alias for type */
+		const struct telnet_environ_t *values; /*!< array of variable values */
+		size_t size;                           /*!< number of elements in values */
+		unsigned char cmd;                     /*!< SEND, IS, or INFO */
 	} environ, mssp;
 };
 
