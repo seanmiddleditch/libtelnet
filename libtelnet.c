@@ -464,37 +464,68 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
  * escape mechanism as well as ensure the variable name and
  * value strings are NUL-terminated, all while fitting inside
  * of the original buffer.
- *
- * FIXME: we don't actually support the ESC parsing properly yet
  */
 static int _environ(telnet_t *telnet, unsigned char type,
 		char* buffer, size_t size) {
 	telnet_event_t ev;
-	struct telnet_environ_t *values;
+	struct telnet_environ_t *values = 0;
 	char *c, *last, *out;
-	size_t i, count;
-	unsigned char next_type;
+	size_t index, count;
+	unsigned char vartype, next_vartype;
 
 	/* if we have no data, just pass it through */
 	if (size == 0) {
 		return 0;
 	}
 
-	/* very first byte must be in range 0-3 */
-	if ((unsigned)buffer[0] > 3) {
+	/* first byte must be a valid command */
+	if ((unsigned)buffer[0] != TELNET_ENVIRON_SEND &&
+			(unsigned)buffer[0] != TELNET_ENVIRON_IS && 
+			(unsigned)buffer[0] != TELNET_ENVIRON_INFO) {
 		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-				"telopt %d subneg has invalid data", type);
+				"telopt %d subneg has invalid command", type);
+		return 0;
+	}
+
+	/* store ENVIRON command */
+	ev.environ.cmd = buffer[0];
+
+	/* if we have no arguments, send an event with no data end return */
+	if (size == 1) {
+		/* no list of variables given */
+		ev.environ.values = 0;
+		ev.environ.size = 0;
+
+		/* invoke event with our arguments */
+		ev.type = TELNET_EV_ENVIRON;
+		telnet->eh(telnet, &ev, telnet->ud);
+
+		return 1;
+	}
+
+	/* very second byte must be VAR or USERVAR, if present */
+	if ((unsigned)buffer[1] != TELNET_ENVIRON_VAR &&
+			(unsigned)buffer[1] != TELNET_ENVIRON_USERVAR) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"telopt %d subneg missing variable type", type);
+		return 0;
+	}
+
+	/* ensure last byte is not an escape byte (makes parsing later easier) */
+	if ((unsigned)buffer[size - 1] == TELNET_ENVIRON_ESC) {
+		_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
+				"telopt %d subneg ends with ESC", type);
 		return 0;
 	}
 
 	/* count arguments; each valid entry starts with VAR or USERVAR */
-	for (count = 0, i = 1; i < size; ++i) {
-		if (buffer[i] == TELNET_ENVIRON_VAR ||
-				buffer[i] == TELNET_ENVIRON_USERVAR) {
+	count = 0;
+	for (c = buffer + 1; c < buffer + size; ++c) {
+		if (*c == TELNET_ENVIRON_VAR || *c == TELNET_ENVIRON_USERVAR) {
 			++count;
-		} else if (buffer[i] == TELNET_ENVIRON_ESC) {
+		} else if (*c == TELNET_ENVIRON_ESC) {
 			/* skip the next byte */
-			++i;
+			++c;
 		}
 	}
 
@@ -506,41 +537,66 @@ static int _environ(telnet_t *telnet, unsigned char type,
 		return 0;
 	}
 
-	ev.environ.cmd = buffer[0];
-	ev.environ.values = values;
-	ev.environ.size = count;
+	/* parse argument array strings */
+	out = buffer;
+	c = buffer + 1;
+	for (index = 0; index != count; ++index) {
+		/* remember the variable type (will be VAR or USERVAR) */
+		values[index].type = *c++;
 
-	/* parse argument array */
-	out = last = buffer;
-	next_type = buffer[1];
-	for (i = 0, c = buffer + 2; c < buffer + size;) {
-		/* search for end marker */
-		while (c < buffer + size && (unsigned)*c != TELNET_ENVIRON_VAR &&
-				(unsigned)*c != TELNET_ENVIRON_VALUE &&
-				(unsigned)*c != TELNET_ENVIRON_USERVAR) {
+		/* scan until we find an end-marker, and buffer up unescaped
+		 * bytes into our buffer */
+		last = out;
+		while (c < buffer + size) {
+			/* stop at the next variable or at the value */
+			if ((unsigned)*c == TELNET_ENVIRON_VAR ||
+					(unsigned)*c == TELNET_ENVIRON_VALUE ||
+					(unsigned)*c == TELNET_ENVIRON_USERVAR) {
+				break;
+			}
+
+			/* buffer next byte (taking into account ESC) */
+			if (*c == TELNET_ENVIRON_ESC) {
+				++c;
+			}
+
 			*out++ = *c++;
 		}
 		*out++ = '\0';
 
-		/* assign temporary data to appropriate place */
-		if (next_type == TELNET_ENVIRON_VAR ||
-				next_type == TELNET_ENVIRON_USERVAR) {
-			values[i].type = next_type;
-			values[i].var = last;
-			++i;
-		} else if (i != 0) {
-			values[i - 1].value = last;
-		} else {
-			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
-					"invalid ENVIRON subnegotiation data");
-			free(values);
-			return 0;
-		}
+		/* store the variable name we have just received */
+		values[index].var = last;
+		values[index].value = "";
 
-		/* remember our next type and increment c for next loop run */
-		last = out;
-		next_type = *c++;
+		/* if we got a value, find the next end marker and
+		 * store the value; otherwise, store empty string */
+		if (c < buffer + size && *c == TELNET_ENVIRON_VALUE) {
+			++c;
+			last = out;
+			while (c < buffer + size) {
+				/* stop when we find the start of the next variable */
+				if ((unsigned)*c == TELNET_ENVIRON_VAR ||
+						(unsigned)*c == TELNET_ENVIRON_USERVAR) {
+					break;
+				}
+
+				/* buffer next byte (taking into account ESC) */
+				if (*c == TELNET_ENVIRON_ESC) {
+					++c;
+				}
+
+				*out++ = *c++;
+			}
+			*out++ = '\0';
+
+			/* store the variable value */
+			values[index].value = last;
+		}
 	}
+
+	/* pass values array and count to event */
+	ev.environ.values = values;
+	ev.environ.size = count;
 
 	/* invoke event with our arguments */
 	ev.type = TELNET_EV_ENVIRON;
@@ -548,8 +604,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 
 	/* clean up */
 	free(values);
-
-	return 0;
+	return 1;
 }
 
 /* process an MSSP subnegotiation buffer */
@@ -762,7 +817,8 @@ static int _subnegotiate(telnet_t *telnet) {
 		return _ttype(telnet, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
-		return _environ(telnet, telnet->sb_telopt, telnet->buffer, telnet->buffer_pos);
+		return _environ(telnet, telnet->sb_telopt, telnet->buffer,
+				telnet->buffer_pos);
 	case TELNET_TELOPT_MSSP:
 		return _mssp(telnet, telnet->buffer, telnet->buffer_pos);
 	}
@@ -828,8 +884,9 @@ static telnet_error_t _buffer_byte(telnet_t *telnet,
 	if (telnet->buffer_pos == telnet->buffer_size) {
 		/* find the next buffer size */
 		for (i = 0; i != _buffer_sizes_count; ++i) {
-			if (_buffer_sizes[i] == telnet->buffer_size)
+			if (_buffer_sizes[i] == telnet->buffer_size) {
 				break;
+			}
 		}
 
 		/* overflow -- can't grow any more */

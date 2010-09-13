@@ -214,7 +214,7 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		break;
 	/* ENVIRON/NEW-ENVIRON commands */
 	case TELNET_EV_ENVIRON:
-		printf("ENVIRON (%s) [%zi parts] ==>", ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : (ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO"), ev->mssp.size);
+		printf("ENVIRON [%zi parts] ==> %s", ev->mssp.size, ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : (ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO"));
 		for (i = 0; i != ev->environ.size; ++i) {
 			printf(" %s \"", ev->environ.values[i].type == TELNET_ENVIRON_VAR ? "VAR" : "USERVAR");
 			if (ev->environ.values[i].var != 0) {

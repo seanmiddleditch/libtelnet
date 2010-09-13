@@ -12,13 +12,6 @@
 %01
 %FF%F0
 
-# send me info on all USERVARs
-%FF%FA%24
-%01
-%03
-%FF%F0
-
 %%
-ENVIRON (SEND) [2 parts] ==> VAR "FOO" USERVAR "BAR"
-ENVIRON (SEND) [0 parts] ==>
-ENVIRON (SEND) [1 parts] ==> VAR ""
+ENVIRON [2 parts] ==> SEND VAR "FOO" USERVAR "BAR"
+ENVIRON [0 parts] ==> SEND
