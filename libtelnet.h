@@ -306,14 +306,23 @@ union telnet_event_t {
 	} compress;
 
 	/*! 
-	 * ENVIRON, NEW-ENVIRON, and MSSP events 
+	 * ENVIRON/NEW-ENVIRON event
 	 */
 	struct environ_t {
 		enum telnet_event_type_t _type;        /*!< alias for type */
 		const struct telnet_environ_t *values; /*!< array of variable values */
 		size_t size;                           /*!< number of elements in values */
 		unsigned char cmd;                     /*!< SEND, IS, or INFO */
-	} environ, mssp;
+	} environ;
+	
+	/*!
+	 * MSSP event
+	 */
+	struct mssp_t {
+		enum telnet_event_type_t _type;        /*!< alias for type */
+		const struct telnet_environ_t *values; /*!< array of variable values */
+		size_t size;                           /*!< number of elements in values */
+	} mssp;
 };
 
 /*! 
