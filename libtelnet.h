@@ -47,19 +47,25 @@ extern "C" {
 
 /* printf type checking feature in GCC and some other compilers */
 #if __GNUC__
-# define TELNET_GNU_PRINTF(f,a) __attribute__((format(printf, f, a)))
-# define TELNET_GNU_SENTINEL __attribute__((sentinel))
+# define TELNET_GNU_PRINTF(f,a) __attribute__((format(printf, f, a))) /*!< internal helper */
+# define TELNET_GNU_SENTINEL __attribute__((sentinel)) /*!< internal helper */
 #else
-# define TELNET_GNU_PRINTF(f,a)
-# define TELNET_GNU_SENTINEL
+# define TELNET_GNU_PRINTF(f,a) /*!< internal helper */
+# define TELNET_GNU_SENTINEL /*!< internal helper */
 #endif
 
-/* forward declarations */
+/*! Telnet state tracker object type. */
 typedef struct telnet_t telnet_t;
+
+/*! Telnet event object type. */
 typedef union telnet_event_t telnet_event_t;
+
+/*! Telnet option table element type. */
 typedef struct telnet_telopt_t telnet_telopt_t;
 
-/* telnet special values */
+/*! \name Telnet commands */
+/*@{*/
+/*! Telnet commands and special values. */
 #define TELNET_IAC 255
 #define TELNET_DONT 254
 #define TELNET_DO 253
@@ -80,8 +86,11 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 #define TELNET_ABORT 238
 #define TELNET_SUSP 237
 #define TELNET_EOF 236
+/*@}*/
 
-/* telnet options */
+/*! \name Telnet option values. */
+/*@{*/
+/*! Telnet options. */
 #define TELNET_TELOPT_BINARY 0
 #define TELNET_TELOPT_ECHO 1
 #define TELNET_TELOPT_RCP 2
@@ -128,11 +137,18 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 #define TELNET_TELOPT_EXOPL 255
 
 #define TELNET_TELOPT_MCCP2 86
+/*@}*/
 
-/* special codes for the subnegotiation commands for certain telopts */
+/*! \name Protocol codes for TERMINAL-TYPE commands. */
+/*@{*/
+/*! TERMINAL-TYPE codes. */
 #define TELNET_TTYPE_IS 0
 #define TELNET_TTYPE_SEND 1
+/*@}*/
 
+/*! \name Protocol codes for NEW-ENVIRON/ENVIRON commands. */
+/*@{*/
+/*! NEW-ENVIRON/ENVIRON codes. */
 #define TELNET_ENVIRON_IS 0
 #define TELNET_ENVIRON_SEND 1
 #define TELNET_ENVIRON_INFO 2
@@ -140,14 +156,22 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 #define TELNET_ENVIRON_VALUE 1
 #define TELNET_ENVIRON_ESC 2
 #define TELNET_ENVIRON_USERVAR 3
+/*@}*/
 
+/*! \name Protocol codes for MSSP commands. */
+/*@{*/
+/*! MSSP codes. */
 #define TELNET_MSSP_VAR 1
 #define TELNET_MSSP_VAL 2
+/*@}*/
 
-/* libtelnet feature flags */
+/*! \name Telnet state tracker flags. */
+/*@{*/
+/*! Control behavior of telnet state tracker. */
 #define TELNET_FLAG_PROXY (1<<0)
 
 #define TELNET_PFLAG_DEFLATE (1<<7)
+/*@}*/
 
 /*! 
  * error codes 
@@ -160,7 +184,7 @@ enum telnet_error_t {
 	TELNET_EPROTOCOL, /*!< invalid sequence of special bytes */
 	TELNET_ECOMPRESS  /*!< error handling compressed streams */
 };
-typedef enum telnet_error_t telnet_error_t;
+typedef enum telnet_error_t telnet_error_t; /*!< Error code type. */
 
 /*! 
  * event codes 
@@ -182,7 +206,7 @@ enum telnet_event_type_t {
 	TELNET_EV_WARNING,         /*!< recoverable error has occured */
 	TELNET_EV_ERROR            /*!< non-recoverable error has occured */
 };
-typedef enum telnet_event_type_t telnet_event_type_t;
+typedef enum telnet_event_type_t telnet_event_type_t; /*!< Telnet event type. */
 
 /*! 
  * environ/MSSP command information 
@@ -320,48 +344,131 @@ struct telnet_telopt_t {
  */
 struct telnet_t;
 
-/* initialize a telnet state tracker */
+/*!
+ * \brief Initialize a telnet state tracker.
+ *
+ * This function initializes a new state tracker, which is used for all
+ * other libtelnet functions.  Each connection must have its own
+ * telnet state tracker object.
+ *
+ * \param telopts   Table of TELNET options the application supports.
+ * \param eh        Event handler function called for every event.
+ * \param flags     0 or TELNET_FLAG_PROXY.
+ * \param user_data Optional data pointer that will be passsed to eh.
+ * \return Telent state tracker object.
+ */
 extern telnet_t* telnet_init(const telnet_telopt_t *telopts,
 		telnet_event_handler_t eh, unsigned char flags, void *user_data);
 
-/* free up any memory allocated by a state tracker */
+/*!
+ * \brief Free up any memory allocated by a state tracker.
+ *
+ * This function must be called when a telnet state tracker is no
+ * longer needed (such as after the connection has been closed) to
+ * release any memory resources used by the state tracker.
+ *
+ * \param telnet Telnet state tracker object.
+ */
 extern void telnet_free(telnet_t *telnet);
 
-/* push a byte buffer into the state tracker */
+/*!
+ * \brief Push a byte buffer into the state tracker.
+ *
+ * Passes one or more bytes to the telnet state tracker for
+ * protocol parsing.  The byte buffer is most often going to be
+ * the buffer that recv() was called for while handling the
+ * connection.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param buffer Pointer to byte buffer.
+ * \param size   Number of bytes pointed to by buffer.
+ */
 extern void telnet_recv(telnet_t *telnet, const char *buffer,
 		size_t size);
 
-/* send an iac command */
+/*!
+ * \brief Send a telnet command.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param cmd    Command to send.
+ */
 extern void telnet_iac(telnet_t *telnet, unsigned char cmd);
 
-/* send negotiation, with RFC1143 checking.
- * will not actually send unless necessary, but will update internal
- * negotiation queue.
+/*!
+ * \brief Send negotiation command.
+ *
+ * Internally, libtelnet uses RFC1143 option negotiation rules.
+ * The negotiation commands sent with this function may be ignored
+ * if they are determined to be redundant.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param cmd    TELNET_WILL, TELNET_WONT, TELNET_DO, or TELNET_DONT.
+ * \param opt    One of the TELNET_TELOPT_* values.
  */
 extern void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char opt);
 
-/* send non-command data (escapes IAC bytes) */
+/*!
+ * Send non-command data (escapes IAC bytes).
+ *
+ * \param telnet Telnet state tracker object.
+ * \param buffer Buffer of bytes to send.
+ * \param size   Number of bytes to send.
+ */
 extern void telnet_send(telnet_t *telnet,
 		const char *buffer, size_t size);
 
-/* send IAC SB followed by the telopt code */
+/*!
+ * \brief Begin a sub-negotiation command.
+ *
+ * Sends IAC SB followed by the telopt code.  All following data sent
+ * will be part of the sub-negotiation, until telnet_finish_sb() is
+ * called.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param telopt One of the TELNET_TELOPT_* values.
+ */
 extern void telnet_begin_sb(telnet_t *telnet,
 		unsigned char telopt);
 
-/* send IAC SE */
+/*!
+ * \brief Finish a sub-negotiation command.
+ *
+ * This must be called after a call to telnet_begin_sb() to finish a
+ * sub-negotiation command.
+ *
+ * \param telnet Telnet state tracker object.
+ */
 #define telnet_finish_sb(telnet) telnet_iac((telnet), TELNET_SE)
 
-/* shortcut for sending a complete subnegotiation buffer.
- * equivalent to:
+/*!
+ * \brief Shortcut for sending a complete subnegotiation buffer.
+ *
+ * Equivalent to:
  *   telnet_begin_sb(telnet, telopt);
  *   telnet_send(telnet, buffer, size);
  *   telnet_finish_sb(telnet);
+ *
+ * \param telnet Telnet state tracker format.
+ * \param telopt One of the TELNET_TELOPT_* values.
+ * \param buffer Byte buffer for sub-negotiation data.
+ * \param size   Number of bytes to use for sub-negotiation data.
  */
 extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size);
 
-/* begin sending compressed data (server only) */
+/*!
+ * \brief Begin sending compressed data.
+ *
+ * This function will begein sending data using the COMPRESS2 option,
+ * which enables the use of zlib to compress data sent to the client.
+ * The client must offer support for COMPRESS2 with option negotiation,
+ * and zlib support must be compiled into libtelnet.
+ *
+ * Only the server may call this command.
+ *
+ * \param telnet Telnet state tracker object.
+ */
 extern void telnet_begin_compress2(telnet_t *telnet);
 
 /* send formatted data with \r and \n translated, and IAC escaped */
@@ -381,10 +488,45 @@ extern void telnet_newenviron_value(telnet_t* telnet, unsigned char type,
 		const char *string);
 #define telnet_finish_newenviron(t) telnet_finish_sb((t))
 
-/* send TERMINAL-TYPE SEND command */
+/*!
+ * \brief Send the TERMINAL-TYPE SEND command.
+ *
+ * Sends the sequence IAC TERMINAL-TYPE SEND.
+ *
+ * \param telnet Telnet state tracker object.
+ */
 extern void telnet_ttype_send(telnet_t *telnet);
 
-/* send TERMINAL-TYPE IS command */
+/*!
+ * \brief Send the TERMINAL-TYPE IS command.
+ *
+ * Sends the sequence IAC TERMINAL-TYPE IS "string".
+ *
+ * According to the RFC, the recipient of a TERMINAL-TYPE SEND shall
+ * send the next possible terminal-type the client supports.  Upon sending
+ * the type, the client should switch modes to begin acting as the terminal
+ * type is just sent.
+ *
+ * The server may continue sending TERMINAL-TYPE IS until it receives a
+ * terminal type is understands.  To indicate to the server that it has
+ * reached the end of the available optoins, the client must send the last
+ * terminal type a second time.  When the server receives the same terminal
+ * type twice in a row, it knows it has seen all available terminal types.
+ *
+ * After the last terminal type is sent, if the client receives another
+ * TERMINAL-TYPE SEND command, it must begin enumerating the available
+ * terminal types from the very beginning.  This allows the server to
+ * scan the available types for a preferred terminal type and, if none
+ * is found, to then ask the client to switch to an acceptable
+ * alternative.
+ *
+ * Note that if the client only supports a single terminal type, then
+ * simply sending that one type in response to every SEND will satisfy
+ * the behavior requirements.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param ttype  Name of the terminal-type being sent.
+ */
 extern void telnet_ttype_is(telnet_t *telnet, const char* ttype);
 
 /* send ZMP commands */
@@ -393,7 +535,16 @@ extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
 
 extern void telnet_begin_zmp(telnet_t *telnet, const char *cmd);
 extern void telnet_zmp_arg(telnet_t *telnet, const char *arg);
-#define telnet_finish_zmp(t) telnet_finish_sb((t))
+
+/*!
+ * \brief Finish a ZMP command.
+ *
+ * This must be called after a call to telnet_begin_zmp() to finish a
+ * ZMP argument list.
+ *
+ * \param telnet Telnet state tracker object.
+ */
+#define telnet_finish_zmp(telnet) telnet_finish_sb((telnet))
 
 /* C++ support */
 #if defined(__cplusplus)
