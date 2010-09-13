@@ -257,7 +257,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	/* ENVIRON/NEW-ENVIRON commands */
 	case TELNET_EV_ENVIRON: {
 		size_t i;
-		printf("%s ENVIRON (%s) [%zi parts]", conn->name, ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO", ev->mssp.size);
+		printf("%s ENVIRON (%s) [%zi parts]", conn->name, ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO", ev->environ.size);
 		for (i = 0; i != ev->environ.size; ++i) {
 			printf(" %s \"", ev->environ.values[i].type == TELNET_ENVIRON_VAR ? "VAR" : "USERVAR");
 			if (ev->environ.values[i].var != 0) {
