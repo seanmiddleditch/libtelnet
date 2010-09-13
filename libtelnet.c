@@ -1088,7 +1088,7 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 #if defined(HAVE_ZLIB)
 	/* if we have an inflate (decompression) zlib stream, use it */
 	if (telnet->z != 0 && !(telnet->flags & TELNET_PFLAG_DEFLATE)) {
-		char inflate_buffer[4096];
+		char inflate_buffer[1024];
 		int rs;
 
 		/* initialize zlib state */
@@ -1319,40 +1319,55 @@ void telnet_begin_compress2(telnet_t *telnet) {
 int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
     static const char CRLF[] = { '\r', '\n' };
     static const char CRNUL[] = { '\r', '\0' };
-	char buffer[4096];
+	char buffer[1024];
+	char *output = buffer;
 	va_list va;
 	int rs, i, l;
 
 	/* format */
 	va_start(va, fmt);
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
+	if (rs >= sizeof(buffer)) {
+		output = (char*)malloc(rs + 1);
+		if (output == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"malloc() failed: %s", strerror(errno));
+			return -1;
+		}
+		rs = vsnprintf(output, rs + 1, fmt, va);
+	}
 	va_end(va);
 
 	/* send */
 	for (l = i = 0; i != rs; ++i) {
 		/* special characters */
-		if (buffer[i] == (char)TELNET_IAC || buffer[i] == '\r' ||
-				buffer[i] == '\n') {
+		if (output[i] == (char)TELNET_IAC || output[i] == '\r' ||
+				output[i] == '\n') {
 			/* dump prior portion of text */
 			if (i != l)
-				_send(telnet, buffer + l, i - l);
+				_send(telnet, output + l, i - l);
 			l = i + 1;
 
 			/* IAC -> IAC IAC */
-			if (buffer[i] == (char)TELNET_IAC)
+			if (output[i] == (char)TELNET_IAC)
 				telnet_iac(telnet, TELNET_IAC);
 			/* automatic translation of \r -> CRNUL */
-			else if (buffer[i] == '\r')
+			else if (output[i] == '\r')
 				_send(telnet, CRNUL, 2);
 			/* automatic translation of \n -> CRLF */
-			else if (buffer[i] == '\n')
+			else if (output[i] == '\n')
 				_send(telnet, CRLF, 2);
 		}
 	}
 
-	/* send whatever portion of buffer is left */
+	/* send whatever portion of output is left */
 	if (i != l) {
-		_send(telnet, buffer + l, i - l);
+		_send(telnet, output + l, i - l);
+	}
+
+	/* free allocated memory, if any */
+	if (output != buffer) {
+		free(output);
 	}
 
 	return rs;
@@ -1360,17 +1375,32 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 
 /* send formatted data through telnet_send */
 int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
-	char buffer[4096];
+	char buffer[1024];
+	char *output = buffer;
 	va_list va;
 	int rs;
 
-	/* format */
+	/* format; allocate more space if necessary */
 	va_start(va, fmt);
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
+	if (rs >= sizeof(buffer)) {
+		output = (char*)malloc(rs + 1);
+		if (output == 0) {
+			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
+					"malloc() failed: %s", strerror(errno));
+			return -1;
+		}
+		rs = vsnprintf(output, rs + 1, fmt, va);
+	}
 	va_end(va);
 
-	/* send */
-	telnet_send(telnet, buffer, rs);
+	/* send out the formatted data */
+	telnet_send(telnet, output, rs);
+
+	/* release allocated memory, if any */
+	if (output != buffer) {
+		free(output);
+	}
 
 	return rs;
 }
