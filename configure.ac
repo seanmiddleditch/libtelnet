@@ -13,6 +13,10 @@ AC_ARG_ENABLE(util,
 	[BUILD_UTIL=yes])
 AM_CONDITIONAL([BUILD_UTIL], [test "x$BUILD_UTIL" = "xyes"])
 
+# find Doxygen
+AC_PATH_PROG(PATH_DOXYGEN, doxygen)
+AM_CONDITIONAL([BUILD_DOCS], [test "x$PATH_DOXYGEN" != "x"])
+
 # zlib support
 AC_CHECK_LIB(z,deflate,ZLIB=yes,ZLIB=no)
 if test "x$ZLIB" = "xyes" ; then
@@ -20,5 +24,5 @@ if test "x$ZLIB" = "xyes" ; then
 	AC_DEFINE(HAVE_ZLIB, 1, [We have zlib])
 fi
 
-AC_CONFIG_FILES([Makefile util/Makefile man/Makefile test/Makefile libtelnet.pc])
+AC_CONFIG_FILES([Makefile util/Makefile test/Makefile libtelnet.pc doc/Makefile doc/man/Makefile doc/man/man3/Makefile doc/man/man1/Makefile])
 AC_OUTPUT

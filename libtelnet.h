@@ -1,14 +1,40 @@
-/*
- * libtelnet - TELNET protocol handling library
+/*!
+ * \brief libtelnet - TELNET protocol handling library
  *
- * Sean Middleditch
- * sean@sourcemud.org
+ * \author Sean Middleditch <sean@sourcemud.org>
+ *
+ * SUMMARY:
+ *
+ * libtelnet is a library for handling the TELNET protocol.  It includes
+ * routines for parsing incoming data from a remote peer as well as formatting
+ * data to send to the remote peer.
+ *
+ * libtelnet uses a callback-oriented API, allowing application-specific
+ * handling of various events.  The callback system is also used for buffering
+ * outgoing protocol data, allowing the application to maintain control over
+ * the actual socket connection.
+ *
+ * Features supported include the full TELNET protocol, Q-method option
+ * negotiation, ZMP, MCCP2, MSSP, and NEW-ENVIRON.
+ *
+ * CONFORMS TO:
+ *
+ * RFC854  - http://www.faqs.org/rfcs/rfc854.html
+ * RFC855  - http://www.faqs.org/rfcs/rfc855.html
+ * RFC1091 - http://www.faqs.org/rfcs/rfc1091.html
+ * RFC1143 - http://www.faqs.org/rfcs/rfc1143.html
+ * RFC1408 - http://www.faqs.org/rfcs/rfc1408.html
+ * RFC1572 - http://www.faqs.org/rfcs/rfc1572.html
+ *
+ * LICENSE:
  *
  * The author or authors of this code dedicate any and all copyright interest
  * in this code to the public domain. We make this dedication for the benefit
  * of the public at large and to the detriment of our heirs and successors. We
  * intend this dedication to be an overt act of relinquishment in perpetuity of
  * all present and future rights to this code under copyright law. 
+ * 
+ * \file libtelnet.h
  */
 
 #if !defined(LIBTELNET_INCLUDE)
@@ -123,57 +149,76 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 
 #define TELNET_PFLAG_DEFLATE (1<<7)
 
-/* error codes */
+/*! 
+ * error codes 
+ */
 enum telnet_error_t {
-	TELNET_EOK = 0,
-	TELNET_EBADVAL, /* invalid parameter, or API misuse */
-	TELNET_ENOMEM, /* memory allocation failure */
-	TELNET_EOVERFLOW, /* data exceeds buffer size */
-	TELNET_EPROTOCOL, /* invalid sequence of special bytes */
-	TELNET_ECOMPRESS /* error handling compressed streams */
+	TELNET_EOK = 0,   /*!< no error */
+	TELNET_EBADVAL,   /*!< invalid parameter, or API misuse */
+	TELNET_ENOMEM,    /*!< memory allocation failure */
+	TELNET_EOVERFLOW, /*!< data exceeds buffer size */
+	TELNET_EPROTOCOL, /*!< invalid sequence of special bytes */
+	TELNET_ECOMPRESS  /*!< error handling compressed streams */
 };
 typedef enum telnet_error_t telnet_error_t;
 
-/* event codes */
+/*! 
+ * event codes 
+ */
 enum telnet_event_type_t {
-	TELNET_EV_DATA = 0,
-	TELNET_EV_SEND,
-	TELNET_EV_IAC,
-	TELNET_EV_WILL,
-	TELNET_EV_WONT,
-	TELNET_EV_DO,
-	TELNET_EV_DONT,
-	TELNET_EV_SUBNEGOTIATION,
-	TELNET_EV_COMPRESS,
-	TELNET_EV_ZMP, /* specialization of SUBNEGOTIATION */
-	TELNET_EV_TTYPE, /* specialization of SUBNEGOTIATION */
-	TELNET_EV_ENVIRON, /* specializataion of SUBNEGOTIATION */
-	TELNET_EV_MSSP, /* specialization of SUBNEGOTIATION */
-	TELNET_EV_WARNING,
-	TELNET_EV_ERROR
+	TELNET_EV_DATA = 0,        /*!< raw text data has been received */
+	TELNET_EV_SEND,            /*!< data needs to be sent to the peer */
+	TELNET_EV_IAC,             /*!< generic IAC code received */
+	TELNET_EV_WILL,            /*!< WILL option negotiation received */
+	TELNET_EV_WONT,            /*!< WONT option neogitation received */
+	TELNET_EV_DO,              /*!< DO option negotiation received */
+	TELNET_EV_DONT,            /*!< DONT option negotiation received */
+	TELNET_EV_SUBNEGOTIATION,  /*!< sub-negotiation data received */
+	TELNET_EV_COMPRESS,        /*!< compression has been enabled */
+	TELNET_EV_ZMP,             /*!< ZMP command has been received */
+	TELNET_EV_TTYPE,           /*!< TTYPE command has been received */
+	TELNET_EV_ENVIRON,         /*!< ENVIRON command has been received */
+	TELNET_EV_MSSP,            /*!< MSSP command has been received */
+	TELNET_EV_WARNING,         /*!< recoverable error has occured */
+	TELNET_EV_ERROR            /*!< non-recoverable error has occured */
 };
 typedef enum telnet_event_type_t telnet_event_type_t;
 
-/* environ/MSSP command information */
+/*! 
+ * environ/MSSP command information 
+ */
 struct telnet_environ_t {
-	unsigned char type;
-	char *var;
-	char *value; /* empty string if no value */
+	unsigned char type; /*!< either TELNET_ENVIRON_VAR or TELNET_ENVIRON_USERVAR */
+	char *var;          /*!< name of the variable being set */
+	char *value;        /*!< value of variable being set; empty string if no value */
 };
 
-/* event information */
+/*! 
+ * event information 
+ */
 union telnet_event_t {
-	/* type of event */ 
+	/*! 
+	 * \brief Event type
+	 *
+	 * The type field will determine which of the other event structure fields
+	 * have been filled in.  For instance, if the event type is TELNET_EV_ZMP,
+	 * then the zmp event field (and ONLY the zmp event field) will be filled
+	 * in.
+	 */ 
 	enum telnet_event_type_t type;
 
-	/* data event: for DATA and SEND events */
+	/*! 
+	 * data event: for DATA and SEND events 
+	 */
 	struct data_t {
 		enum telnet_event_type_t _type;
 		const char *buffer;
 		size_t size;
 	} data;
 
-	/* WARNING and ERROR events */
+	/*! 
+	 * WARNING and ERROR events 
+	 */
 	struct error_t {
 		enum telnet_event_type_t _type;
 		const char *file;
@@ -183,19 +228,25 @@ union telnet_event_t {
 		telnet_error_t errcode;
 	} error;
 
-	/* command event: for IAC */
+	/*! 
+	 * command event: for IAC 
+	 */
 	struct iac_t {
 		enum telnet_event_type_t _type;
 		unsigned char cmd;
 	} iac;
 
-	/* negotiation event: WILL, WONT, DO, DONT */
+	/*! 
+	 * negotiation event: WILL, WONT, DO, DONT 
+	 */
 	struct negotiate_t {
 		enum telnet_event_type_t _type;
 		unsigned char telopt; /* option being negotiated */
 	} neg;
 
-	/* subnegotiation event */
+	/*! 
+	 * subnegotiation event 
+	 */
 	struct subnegotiate_t {
 		enum telnet_event_type_t _type;
 		const char *buffer;
@@ -203,27 +254,35 @@ union telnet_event_t {
 		unsigned char telopt; /* option code for negotiation */
 	} sub;
 
-	/* ZMP event */
+	/*! 
+	 * ZMP event 
+	 */
 	struct zmp_t {
 		enum telnet_event_type_t _type;
 		const char **argv;
 		size_t argc;
 	} zmp;
 
-	/* TTYPE event */
+	/*! 
+	 * TTYPE event 
+	 */
 	struct ttype_t {
 		enum telnet_event_type_t _type;
 		unsigned char cmd; /* TELNET_TTYPE_IS or TELNET_TTYPE_SEND */
 		const char* name; /* only set for IS, will be NULL for SEND */
 	} ttype;
 
-	/* COMPRESS event */
+	/*! 
+	 * COMPRESS event 
+	 */
 	struct compress_t {
 		enum telnet_event_type_t _type;
 		unsigned char state; /* 1 if compression is enabled, 0 if disabled */
 	} compress;
 
-	/* ENVIRON, NEW-ENVIRON, and MSSP events */
+	/*! 
+	 * ENVIRON, NEW-ENVIRON, and MSSP events 
+	 */
 	struct environ_t {
 		enum telnet_event_type_t _type;
 		const struct telnet_environ_t *values;
@@ -232,18 +291,33 @@ union telnet_event_t {
 	} environ, mssp;
 };
 
-/* event handler declaration */
+/*! 
+ * \brief event handler
+ *
+ * This is the type of function that must be passed to
+ * telnet_init() when creating a new telnet object.  The
+ * function will be invoked once for every event generated
+ * by the libtelnet protocol parser.
+ *
+ * \param telnet    The telnet object that generated the event
+ * \param event     Event structure with details about the event
+ * \param user_data User-supplied pointer
+ */
 typedef void (*telnet_event_handler_t)(telnet_t *telnet,
 		telnet_event_t *event, void *user_data);
 
-/* telopt support table element; use telopt of -1 for end marker */
+/*! 
+ * telopt support table element; use telopt of -1 for end marker 
+ */
 struct telnet_telopt_t {
-	short telopt; /* one of the TELOPT codes or -1 */
-	unsigned char us; /* TELNET_WILL or TELNET_WONT */
-	unsigned char him; /* TELNET_DO or TELNET_DONT */
+	short telopt;      /*!< one of the TELOPT codes or -1 */
+	unsigned char us;  /*!< TELNET_WILL or TELNET_WONT */
+	unsigned char him; /*!< TELNET_DO or TELNET_DONT */
 };
 
-/* state tracker -- private data structure */
+/*! 
+ * state tracker -- private data structure 
+ */
 struct telnet_t;
 
 /* initialize a telnet state tracker */
