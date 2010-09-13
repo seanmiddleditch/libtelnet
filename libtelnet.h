@@ -471,22 +471,97 @@ extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
  */
 extern void telnet_begin_compress2(telnet_t *telnet);
 
-/* send formatted data with \r and \n translated, and IAC escaped */
+/*!
+ * \brief Send formatted data.
+ *
+ * This function is a wrapper around telnet_send().  It allows using
+ * printf-style formatting.
+ *
+ * Additionally, this function will translate \\r to the CR NUL construct and
+ * \\n with CR LF, as well as automatically escaping IAC bytes like
+ * telnet_send().
+ *
+ * \param telnet Telnet state tracker object.
+ * \param fmt    Format string.
+ * \return Number of bytes sent.
+ */
 extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
-/* send formatted data with just IAC escaped */
+/*!
+ * \brief Send formatted data (no newline escaping).
+ *
+ * This behaves identically to telnet_printf(), except that the \\r and \\n
+ * characters are not translated.  The IAC byte is still escaped as normal
+ * with telnet_send().
+ *
+ * \param telnet Telnet state tracker object.
+ * \param fmt    Format string.
+ * \return Number of bytes sent.
+ */
 extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
-/* send NEW-ENVIRON SEND command */
+/*!
+ * \brief Send NEW-ENVIRON SEND command
+ *
+ * Sends NEW-ENVIRON command to the remote end.  The cmd parameter denotes
+ * the type of NEW-ENVIRON command being sent: either asking for values,
+ * responding to a request for variables, or notifying about changed
+ * variables.
+ *
+ * The count parameter is the number of variables which are being sent
+ * or requested.  The following parameters must be triples, consisting
+ * of the variable type (VAR or USERVAR), the variable name, and the
+ * variable value.  For requests, the value should always be the empty
+ * string or NULL.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param cmd    One of TELNET_ENVIRON_SEND, TELNET_ENVIRON_IS, or
+ *               TELNET_ENVIRON_INFO.
+ * \param count  Number of variables sent or requested.
+ */
 extern void telnet_newenviron_send(telnet_t *telnet, unsigned char cmd,
 		size_t count, ...);
 
+/*!
+ * \brief Begin a new set of NEW-ENVIRON values to request or send.
+ *
+ * This function will begin the sub-negotiation block for sending or
+ * requesting NEW-ENVIRON values.
+ *
+ * The telnet_finish_newenviron() macro must be called after this
+ * function to terminate the NEW-ENVIRON command.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param type   One of TELNET_ENVIRON_SEND, TELNET_ENVIRON_IS, or
+ *               TELNET_ENVIRON_INFO.
+ */
 extern void telnet_begin_newenviron(telnet_t *telnet, unsigned char type);
+
+/*!
+ * \brief Send a NEW-ENVIRON variable name or value.
+ *
+ * This can only be called between calls to telnet_begin_newenviron() and
+ * telnet_finish_newenviron().
+ *
+ * \param telnet Telnet state tracker object.
+ * \param type   One of TELNET_ENVIRON_VAR, TELNET_ENVIRON_USERVAR, or
+ *               TELNET_ENVIRON_VALUE.
+ * \param string Variable name or value.
+ */
 extern void telnet_newenviron_value(telnet_t* telnet, unsigned char type,
 		const char *string);
-#define telnet_finish_newenviron(t) telnet_finish_sb((t))
+
+/*!
+ * \brief Finish a NEW-ENVIRON command.
+ *
+ * This must be called after a call to telnet_begin_newenviron() to finish a
+ * NEW-ENVIRON variable list.
+ *
+ * \param telnet Telnet state tracker object.
+ */
+#define telnet_finish_newenviron(telnet) telnet_finish_sb((telnet))
 
 /*!
  * \brief Send the TERMINAL-TYPE SEND command.
@@ -529,11 +604,39 @@ extern void telnet_ttype_send(telnet_t *telnet);
  */
 extern void telnet_ttype_is(telnet_t *telnet, const char* ttype);
 
-/* send ZMP commands */
+/*!
+ * \brief Send a ZMP command.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param argc   Number of ZMP commands being sent.
+ * \param argv   Array of argument strings.
+ */
 extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
+
+/*!
+ * \brief Send a ZMP command.
+ *
+ * Arguments are listed out in var-args style.  After the last argument, a
+ * NULL pointer must be passed in as a sentinel value.
+ *
+ * \param telnet Telnet state tracker object.
+ */
 extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
 
+/*!
+ * \brief Begin sending a ZMP command
+ *
+ * \param telnet Telnet state tracker object.
+ * \param cmd    The first argument (command name) for the ZMP command.
+ */
 extern void telnet_begin_zmp(telnet_t *telnet, const char *cmd);
+
+/*!
+ * \brief Send a ZMP command argument.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param arg    Telnet argument string.
+ */
 extern void telnet_zmp_arg(telnet_t *telnet, const char *arg);
 
 /*!
