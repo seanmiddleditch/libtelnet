@@ -1,8 +1,6 @@
 /*!
  * \brief libtelnet - TELNET protocol handling library
  *
- * \author Sean Middleditch <sean@sourcemud.org>
- *
  * SUMMARY:
  *
  * libtelnet is a library for handling the TELNET protocol.  It includes
@@ -33,8 +31,10 @@
  * of the public at large and to the detriment of our heirs and successors. We
  * intend this dedication to be an overt act of relinquishment in perpetuity of
  * all present and future rights to this code under copyright law. 
- * 
- * \file libtelnet.h
+ *
+ * \version 0.13
+ *
+ * \author Sean Middleditch <sean@sourcemud.org>
  */
 
 #if !defined(LIBTELNET_INCLUDE)
