@@ -45,6 +45,10 @@ generate TELNET commands and ensure data is properly formatted before
 sending over the wire.  The final part is the event handler
 interface.
 
+This document covers only the most basic functions.  See the
+libtelnet manual pages or HTML documentation for a complete
+reference.
+
 IIa. Initialization
 
  Using libtelnet requires the initialization of a telnet_t structure
@@ -85,7 +89,7 @@ IIa. Initialization
   };
  
  If you need to dynamically alter supported options on a
- per-connection basis then you may use a different tables
+ per-connection basis then you may use a different table
  (dynamically allocated if necessary) per call to telnet_init() or
  you share a single constant table like the above example between
  all connections if you support a fixed set of options.  Most
@@ -216,53 +220,6 @@ IIc. Sending Data
 
   NOTE: due to an internal implementation detail, the maximum
   lenth of the formatted text is 4096 characters.
- 
- int telnet_printf2(telnet_t *telnet, const char *fmt, ...);
-  Identical to telnet_printf() except that \r and \n are not
-  translated.  This should be used if you are attempting to send
-  raw data inside a subnegotiation or if you have already manually
-  escaped newlines.
- 
- void telnet_format_sb(telnet_t *telnet, unsigned char telopt,
-    size_t count, ...);
-  This is a helper function for sending the specially formatted
-  data used in the TTYPE, ENVIRON/NEW-ENVIRON, and MSSP telopt
-  subnegotiations.
-
-  The variadic arguments must be given as a series of pairs of
-  markers and strings.  The markers are different for each telopt;
-  they are defined in libtelnet.h and include:
-
-   /* TTYPE markers */
-   #define TELNET_TTYPE_IS 0
-   #define TELNET_TTYPE_SEND 1
-
-   /* ENVIRON/NEW-ENVIRON markers */
-   #define TELNET_ENVIRON_IS 0
-   #define TELNET_ENVIRON_SEND 1
-   #define TELNET_ENVIRON_INFO 2
-   #define TELNET_ENVIRON_VAR 0
-   #define TELNET_ENVIRON_VALUE 1
-   #define TELNET_ENVIRON_ESC 2
-   #define TELNET_ENVIRON_USERVAR 3
-
-   /* MSSP markers */
-   #define TELNET_MSSP_VAR 1
-   #define TELNET_MSSP_VAL 2
-
-  So to send a TTYPE subnegotiation from the server (just an IS
-  command), you would use:
-
-   telnet_format_sb(&telnet, TELNET_TELOPT_TTYPE, 1,
-     TELNET_TTYPE_SEND);
-
-  The client response for an xterm-compatible terminal would be:
-
-   telnet_format_sb(&telnet, TELNET_TELOPT_TTYPE, 1,
-     TELNET_TTYPE_IS, "xterm");
-
-  For more information on the meaning of the markers and strings,
-  please refer to the specific RFC for the telopt in question.
 
 IId. Event Handling
 
@@ -279,13 +236,44 @@ IId. Event Handling
  The event structure is detailed below.  The user_data value is the
  pointer passed to telnet_init().
 
-  struct telnet_event_t {
-    const char *buffer;
-    unsigned int size;
-    telnet_event_type_t type;
-    unsigned char command;
-    unsigned char telopt;
-    unsigned char accept;
+ The following is a summary of the most important parts of the
+ telnet_event_t data type.  Please see the libtelnet manual pages or
+ HTML document for a complete reference.
+
+  union telnet_event_t {
+    enum telnet_event_type_t type;
+  
+    struct data_t {
+      enum telnet_event_type_t _type;
+      const char *buffer;
+      size_t size;
+    } data;
+
+    struct error_t {
+      enum telnet_event_type_t _type;
+      const char *file;
+      const char *func;
+      const char *msg;
+      int line;
+      telnet_error_t errcode;
+    } error;
+  
+    struct iac_t {
+      enum telnet_event_type_t _type;
+      unsigned char cmd;
+    } iac;
+  
+    struct negotiate_t {
+      enum telnet_event_type_t _type;
+      unsigned char telopt;
+    } neg;
+  
+    struct subnegotiate_t {
+      enum telnet_event_type_t _type;
+      const char *buffer;
+      size_t size;
+      unsigned char telopt;
+    } sub;
   };
  
  The enumeration values of telnet_event_type_t are described in
@@ -306,13 +294,13 @@ IId. Event Handling
 
     switch (ev->type) {
     case TELNET_EV_DATA:
-      process_user_input(user, event->data->buffer, event->data->size);
+      process_user_input(user, event->data.buffer, event->data.size);
       break;
     case TELNET_EV_SEND:
-      write_to_descriptor(user, event->data->buffer, event->data->size);
+      write_to_descriptor(user, event->data.buffer, event->data.size);
       break;
     case TELNET_EV_ERROR:
-      fatal_error("TELNET error: %s", event->error->msg);
+      fatal_error("TELNET error: %s", event->error.msg);
       break;
     }
   }
@@ -323,9 +311,9 @@ IId. Event Handling
    process output from the server.  For a server, this will be input
    typed by the user.
 
-   The event->data->buffer value will contain the bytes received and the
-   event->data->size value will contain the number of bytes received.
-   Note that event->data->buffer is not NUL terminated!
+   The event->data.buffer value will contain the bytes received and the
+   event->data.size value will contain the number of bytes received.
+   Note that event->data.buffer is not NUL terminated!
 
    NOTE: there is no guarantee that user input or server output
    will be received in whole lines.  If you wish to process data
@@ -338,10 +326,10 @@ IId. Event Handling
    calling send() or adding the data to your application's output
    buffer.
 
-   The event->data->buffer value will contain the bytes to send and the
-   event->data->size value will contain the number of bytes to send.
-   Note that event->data->buffer is not NUL terminated, and may include
-   NUL characters in its data, so always use event->data->size!
+   The event->data.buffer value will contain the bytes to send and the
+   event->data.size value will contain the number of bytes to send.
+   Note that event->data.buffer is not NUL terminated, and may include
+   NUL characters in its data, so always use event->data.size!
 
    NOTE: Your SEND event handler must send or buffer the data in
    its raw form as provided by libtelnet.  If you wish to perform
@@ -352,7 +340,7 @@ IId. Event Handling
    received, such as the IAC EOR (end of record, also called go ahead
    or GA) command.
 
-   The command received is in the event->iac->cmd value.
+   The command received is in the event->iac.cmd value.
 
    The necessary processing depends on the specific commands; see
    the TELNET RFC for more information.
@@ -371,7 +359,7 @@ IId. Event Handling
    sent a WILL command to them.
 
    In either case, the TELNET option under negotiation will be in
-   event->neg->telopt field.
+   event->neg.telopt field.
 
    libtelnet manages most of the pecularities of negotiation for you.
    For information on libtelnet's negotiation method, see:
@@ -401,7 +389,7 @@ IId. Event Handling
    allow your application to disable its own use of the features.
 
    In either case, the TELNET option under negotiation will be in
-   event->neg->telopt field.
+   event->neg.telopt field.
 
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
@@ -414,11 +402,11 @@ IId. Event Handling
    ZMP, MSSP, and MCCP2.
 
    The event->sub->telopt value is the option under sub-negotiation.
-   The remaining data (if any) is passed in event->sub->buffer and
-   event->sub->size.  Note that most subnegotiation commands can include
+   The remaining data (if any) is passed in event->sub.buffer and
+   event->sub.size.  Note that most subnegotiation commands can include
    embedded NUL bytes in the subnegotiation data, and the data
-   event->sub->buffer is not NUL terminated, so always use the
-   event->sub->size value!
+   event->sub.buffer is not NUL terminated, so always use the
+   event->sub.size value!
 
    The meaning and necessary processing for subnegotiations are
    defined in various TELNET RFCs and other informal specifications.
@@ -442,17 +430,17 @@ IId. Event Handling
    will be 0 if compression has ended.
 
  TELNET_EV_ZMP:
-   The event->zmp->argc field is the number of ZMP parameters, including
-   the command name, that have been received.  The event->zmp->argv
+   The event->zmp.argc field is the number of ZMP parameters, including
+   the command name, that have been received.  The event->zmp.argv
    field is an array of strings, one for each ZMP parameter.  The
-   command name will be in event->zmp->argv[0].
+   command name will be in event->zmp.argv[0].
 
  TELNET_EV_ENVIRON:
-   The event->environ->cmd field will be either TELNET_ENVIRON_IS,
+   The event->environ.cmd field will be either TELNET_ENVIRON_IS,
    TELNET_ENVIRON_SEND, or TELNET_ENVIRON_INFO.
 
    The actual environment variable sent or requested will be sent
-   in the event->environ->values field.  This is an array of
+   in the event->environ.values field.  This is an array of
    structures with the following format:
      
      struct telnet_environ_t {
@@ -461,23 +449,23 @@ IId. Event Handling
        const char *value;
      };
 
-   The number of entries in the event->environ->values array is
-   stored in event->environ->count.
+   The number of entries in the event->environ.values array is
+   stored in event->environ.count.
 
    Note that libtelnet does not support the ESC byte for ENVIRON/
    NEW-ENVIRON.  Data using escaped bytes will not be parsed
    correctly.
 
  TELNET_EV_MSSP:
-   The event->mssp->values field is an array of telnet_environ_t
+   The event->mssp.values field is an array of telnet_environ_t
    structures.  The cmd field in each entry will have an
    unspecified value, while the var and value fields will always
    be set to the MSSP variable and value being set.  For multi-value
    MSSP variables, there will be multiple entries in the values
    array for each value, each with the same variable name set.
 
-   The number of entries in the event->mssp->values array is
-   stored in event->mssp->count.
+   The number of entries in the event->mssp.values array is
+   stored in event->mssp.count.
  
  TELNET_EV_WARNING:
    The WARNING event is sent whenever something has gone wrong inside
@@ -486,7 +474,7 @@ IId. Event Handling
    continue using the connection, but some data may have been lost or
    incorrectly interpreted.
 
-   The event->error->msg field will contain a NUL terminated string
+   The event->error.msg field will contain a NUL terminated string
    explaining the error.
 
  TELNET_EV_ERROR:
@@ -497,7 +485,7 @@ IId. Event Handling
    in garbage from libtelnet.  This is most likely to happen when a
    COMPRESS2 stream fails, but other problems can occur.
 
-   The event->error->msg field will contain a NUL terminated string
+   The event->error.msg field will contain a NUL terminated string
    explaining the error.
 
 III. INTEGRATING LIBTELNET WITH COMMON MUDS
@@ -610,7 +598,18 @@ or telnet_send_zmpv().
   The argv array must have at least as many elements as the value
   argc.
 
-VII. TELNET PROXY UTILITY
+VII. MUD SERVER STATUS PROTOCOL (MSSP) SUPPORT
+=====================================================================
+
+MSSP allows for crawlers or other clients to query a MUD server's
+supported feature list.  This allows MUD listing states to
+automatically stay up to date with the MUD's features, and not
+require MUD administrators to manually update listing sites for
+their MUD.  For more information on MSSP:
+
+ http://tintin.sourceforge.net/mssp/
+
+VIII. TELNET PROXY UTILITY
 =====================================================================
 
 The telnet-proxy utility is a small application that serves both as a
