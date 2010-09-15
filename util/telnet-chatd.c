@@ -9,6 +9,10 @@
  * all present and future rights to this code under copyright law. 
  */
 
+#if !defined(_BSD_SOURCE)
+#	define _BSD_SOURCE
+#endif
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
