@@ -11,6 +11,7 @@ MANPAGES = \
 	telnet_event_t_subnegotiate_t.3 \
 	telnet_event_t_ttype_t.3 \
 	telnet_event_t_zmp_t.3 \
+	telnet_event_t_mssp_t.3 \
 	telnet_telopt_t.3
 
 $(MANPAGES): build-stamp

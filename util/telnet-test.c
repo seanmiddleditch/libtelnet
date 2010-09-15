@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
 	}
 
 	/* create telnet parser instance */
-	if ((telnet = telnet_init(NULL, event_print, 0,
+	if ((telnet = telnet_init(telopts, event_print, 0,
 			NULL)) == 0) {
 		fprintf(stderr, "Failed to initialize libtelnet: %s\n",
 				strerror(errno));

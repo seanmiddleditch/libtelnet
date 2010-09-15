@@ -4,3 +4,5 @@ MANPAGES = \
 	telnet-proxy.1
 
 man1_MANS = $(MANPAGES)
+
+EXTRA_DIST = $(MANPAGES)
