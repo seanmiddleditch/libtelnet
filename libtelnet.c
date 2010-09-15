@@ -31,6 +31,11 @@
 # define INLINE
 #endif
 
+/* helper for Q-method option tracking */
+#define Q_US(q) ((q).state & 0x0F)
+#define Q_HIM(q) (((q).state & 0xF0) >> 4)
+#define Q_MAKE(us,him) ((us) | ((him) << 4))
+
 /* helper for the negotiation routines */
 #define NEGOTIATE_EVENT(telnet,cmd,opt) \
 	ev.type = (cmd); \
@@ -84,7 +89,7 @@ struct telnet_t {
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
 	unsigned char telopt;
-	char us:4, him:4;
+	unsigned char state;
 } telnet_rfc1143_t;
 
 /* RFC1143 state names */
@@ -252,15 +257,19 @@ static INLINE int _check_telopt(telnet_t *telnet, unsigned char telopt,
 /* retrieve RFC1143 option state */
 static INLINE telnet_rfc1143_t _get_rfc1143(telnet_t *telnet,
 		unsigned char telopt) {
-	const telnet_rfc1143_t empty = { telopt, 0, 0};
+	telnet_rfc1143_t empty;
 	int i;
 
 	/* search for entry */
-	for (i = 0; i != telnet->q_size; ++i)
-		if (telnet->q[i].telopt == telopt)
+	for (i = 0; i != telnet->q_size; ++i) {
+		if (telnet->q[i].telopt == telopt) {
 			return telnet->q[i];
+		}
+	}
 
 	/* not found, return empty value */
+ 	empty.telopt = telopt;
+	empty.state = 0;
 	return empty;
 }
 
@@ -273,8 +282,7 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	/* search for entry */
 	for (i = 0; i != telnet->q_size; ++i) {
 		if (telnet->q[i].telopt == telopt) {
-			telnet->q[i].us = us;
-			telnet->q[i].him = him;
+			telnet->q[i].state = Q_MAKE(us,him);
 			return;
 		}
 	}
@@ -294,15 +302,17 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t) * 4);
 	telnet->q = qtmp;
 	telnet->q[telnet->q_size].telopt = telopt;
-	telnet->q[telnet->q_size].us = us;
-	telnet->q[telnet->q_size].him = him;
+	telnet->q[telnet->q_size].state = Q_MAKE(us, him);
 	telnet->q_size += 4;
 }
 
 /* send negotiation bytes */
 static INLINE void _send_negotiate(telnet_t *telnet, unsigned char cmd,
 		unsigned char telopt) {
-	const unsigned char bytes[3] = { TELNET_IAC, cmd, telopt };
+	unsigned char bytes[3];
+	bytes[0] = TELNET_IAC;
+	bytes[1] = cmd;
+	bytes[2] = telopt;
 	_sendu(telnet, bytes, 3);
 }
 
@@ -337,33 +347,33 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 	switch ((int)telnet->state) {
 	/* request to enable option on remote end or confirm DO */
 	case TELNET_STATE_WILL:
-		switch (q.him) {
+		switch (Q_HIM(q)) {
 		case Q_NO:
 			if (_check_telopt(telnet, telopt, 0)) {
-				_set_rfc1143(telnet, telopt, q.us, Q_YES);
+				_set_rfc1143(telnet, telopt, Q_US(q), Q_YES);
 				_send_negotiate(telnet, TELNET_DO, telopt);
 				NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
 			} else
 				_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, q.us, Q_NO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"DONT answered by WILL");
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_YES);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_YES);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"DONT answered by WILL");
 			break;
 		case Q_WANTYES:
-			_set_rfc1143(telnet, telopt, q.us, Q_YES);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_YES);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
 			break;
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTNO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTNO);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
 			break;
@@ -372,56 +382,56 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 
 	/* request to disable option on remote end, confirm DONT, reject DO */
 	case TELNET_STATE_WONT:
-		switch (q.him) {
+		switch (Q_HIM(q)) {
 		case Q_YES:
-			_set_rfc1143(telnet, telopt, q.us, Q_NO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, q.us, Q_NO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTYES);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTYES);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
 			break;
 		case Q_WANTYES:
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_NO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
 			break;
 		}
 		break;
 
 	/* request to enable option on local end or confirm WILL */
 	case TELNET_STATE_DO:
-		switch (q.us) {
+		switch (Q_US(q)) {
 		case Q_NO:
 			if (_check_telopt(telnet, telopt, 1)) {
-				_set_rfc1143(telnet, telopt, Q_YES, q.him);
+				_set_rfc1143(telnet, telopt, Q_YES, Q_HIM(q));
 				_send_negotiate(telnet, TELNET_WILL, telopt);
 				NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
 			} else
 				_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, Q_NO, q.him);
+			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DONT, telopt);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"WONT answered by DO");
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, Q_YES, q.him);
+			_set_rfc1143(telnet, telopt, Q_YES, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
 			_error(telnet, __LINE__, __func__, TELNET_EPROTOCOL, 0,
 					"WONT answered by DO");
 			break;
 		case Q_WANTYES:
-			_set_rfc1143(telnet, telopt, Q_YES, q.him);
+			_set_rfc1143(telnet, telopt, Q_YES, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
 			break;
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, Q_WANTNO, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTNO, Q_HIM(q));
 			_send_negotiate(telnet, TELNET_WONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
 			break;
@@ -430,23 +440,23 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 
 	/* request to disable option on local end, confirm WONT, reject WILL */
 	case TELNET_STATE_DONT:
-		switch (q.us) {
+		switch (Q_US(q)) {
 		case Q_YES:
-			_set_rfc1143(telnet, telopt, Q_NO, q.him);
+			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
 			_send_negotiate(telnet, TELNET_WONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DONT, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, Q_NO, q.him);
+			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, Q_WANTYES, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTYES, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
 			break;
 		case Q_WANTYES:
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, Q_NO, q.him);
+			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
 			break;
 		}
 		break;
@@ -471,7 +481,6 @@ static int _environ(telnet_t *telnet, unsigned char type,
 	struct telnet_environ_t *values = 0;
 	char *c, *last, *out;
 	size_t index, count;
-	unsigned char vartype, next_vartype;
 
 	/* if we have no data, just pass it through */
 	if (size == 0) {
@@ -612,7 +621,6 @@ static int _mssp(telnet_t *telnet, char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
 	char *var = 0;
-	char *tmp;
 	char *c, *last, *out;
 	size_t i, count;
 	unsigned char next_type;
@@ -821,6 +829,8 @@ static int _subnegotiate(telnet_t *telnet) {
 				telnet->buffer_pos);
 	case TELNET_TELOPT_MSSP:
 		return _mssp(telnet, telnet->buffer, telnet->buffer_pos);
+	default:
+		return 0;
 	}
 }
 
@@ -959,7 +969,7 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 			case TELNET_IAC:
 				/* event */
 				ev.type = TELNET_EV_DATA;
-				ev.data.buffer = &byte;
+				ev.data.buffer = (char*)&byte;
 				ev.data.size = 1;
 				telnet->eh(telnet, &ev, telnet->ud);
 
@@ -1118,13 +1128,14 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 
 			/* on error (or on end of stream) disable further inflation */
 			if (rs != Z_OK) {
+				telnet_event_t ev;
+
 				/* disable compression */
 				inflateEnd(telnet->z);
 				free(telnet->z);
 				telnet->z = 0;
 
 				/* send event */
-				telnet_event_t ev;
 				ev.type = TELNET_EV_COMPRESS;
 				ev.compress.state = 0;
 				telnet->eh(telnet, &ev, telnet->ud);
@@ -1141,7 +1152,9 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 
 /* send an iac command */
 void telnet_iac(telnet_t *telnet, unsigned char cmd) {
-	const unsigned char bytes[2] = { TELNET_IAC, cmd };
+	unsigned char bytes[2];
+	bytes[0] = TELNET_IAC;
+	bytes[1] = cmd;
 	_sendu(telnet, bytes, 2);
 }
 
@@ -1152,7 +1165,10 @@ void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 
 	/* if we're in proxy mode, just send it now */
 	if (telnet->flags & TELNET_FLAG_PROXY) {
-		const unsigned char bytes[3] = { TELNET_IAC, cmd, telopt };
+		unsigned char bytes[3];
+		bytes[0] = TELNET_IAC;
+		bytes[1] = cmd;
+		bytes[2] = telopt;
 		_sendu(telnet, bytes, 3);
 		return;
 	}
@@ -1163,64 +1179,64 @@ void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 	switch (cmd) {
 	/* advertise willingess to support an option */
 	case TELNET_WILL:
-		switch (q.us) {
+		switch (Q_US(q)) {
 		case Q_NO:
-			_set_rfc1143(telnet, telopt, Q_WANTYES, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTYES, Q_HIM(q));
 			_send_negotiate(telnet, TELNET_WILL, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, Q_WANTNO_OP, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTNO_OP, Q_HIM(q));
 			break;
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, Q_WANTYES, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTYES, Q_HIM(q));
 			break;
 		}
 		break;
 
 	/* force turn-off of locally enabled option */
 	case TELNET_WONT:
-		switch (q.us) {
+		switch (Q_US(q)) {
 		case Q_YES:
-			_set_rfc1143(telnet, telopt, Q_WANTNO, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTNO, Q_HIM(q));
 			_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
 		case Q_WANTYES:
-			_set_rfc1143(telnet, telopt, Q_WANTYES_OP, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTYES_OP, Q_HIM(q));
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, Q_WANTNO, q.him);
+			_set_rfc1143(telnet, telopt, Q_WANTNO, Q_HIM(q));
 			break;
 		}
 		break;
 
 	/* ask remote end to enable an option */
 	case TELNET_DO:
-		switch (q.him) {
+		switch (Q_HIM(q)) {
 		case Q_NO:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTYES);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTYES);
 			_send_negotiate(telnet, TELNET_DO, telopt);
 			break;
 		case Q_WANTNO:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTNO_OP);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTNO_OP);
 			break;
 		case Q_WANTYES_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTYES);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTYES);
 			break;
 		}
 		break;
 
 	/* demand remote end disable an option */
 	case TELNET_DONT:
-		switch (q.him) {
+		switch (Q_HIM(q)) {
 		case Q_YES:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTNO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTNO);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
 		case Q_WANTYES:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTYES_OP);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTYES_OP);
 			break;
 		case Q_WANTNO_OP:
-			_set_rfc1143(telnet, telopt, q.us, Q_WANTNO);
+			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTNO);
 			break;
 		}
 		break;
@@ -1254,7 +1270,10 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 
 /* send subnegotiation header */
 void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
-	const unsigned char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
+	unsigned char sb[3];
+	sb[0] = TELNET_IAC;
+	sb[1] = TELNET_SB;
+	sb[2] = telopt;
 	_sendu(telnet, sb, 3);
 }
 
@@ -1262,12 +1281,16 @@ void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
 /* send complete subnegotiation */
 void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
 		const char *buffer, size_t size) {
-	const unsigned char sb[3] = { TELNET_IAC, TELNET_SB, telopt };
-	const unsigned char se[2] = { TELNET_IAC, TELNET_SE };
+	unsigned char bytes[5];
+	bytes[0] = TELNET_IAC;
+	bytes[1] = TELNET_SB;
+	bytes[2] = telopt;
+	bytes[3] = TELNET_IAC;
+	bytes[4] = TELNET_SE;
 
-	_sendu(telnet, sb, 3);
+	_sendu(telnet, bytes, 3);
 	telnet_send(telnet, buffer, size);
-	_sendu(telnet, se, 2);
+	_sendu(telnet, bytes + 3, 2);
 
 #if defined(HAVE_ZLIB)
 	/* if we're a proxy and we just sent the COMPRESS2 marker, we must
@@ -1422,16 +1445,16 @@ void telnet_newenviron_value(telnet_t *telnet, unsigned char type,
 
 /* send TERMINAL-TYPE SEND command */
 void telnet_ttype_send(telnet_t *telnet) {
-    static const char SEND[] = { TELNET_IAC, TELNET_SB, TELNET_TELOPT_TTYPE,
-			TELNET_TTYPE_SEND, TELNET_IAC, TELNET_SE };
-	_send(telnet, SEND, sizeof(SEND));
+    static const unsigned char SEND[] = { TELNET_IAC, TELNET_SB,
+			TELNET_TELOPT_TTYPE, TELNET_TTYPE_SEND, TELNET_IAC, TELNET_SE };
+	_sendu(telnet, SEND, sizeof(SEND));
 }
 
 /* send TERMINAL-TYPE IS command */
 void telnet_ttype_is(telnet_t *telnet, const char* ttype) {
-	static const char IS[] = { TELNET_IAC, TELNET_SB, TELNET_TELOPT_TTYPE,
-			TELNET_TTYPE_IS };
-	_send(telnet, IS, sizeof(IS));
+	static const unsigned char IS[] = { TELNET_IAC, TELNET_SB,
+			TELNET_TELOPT_TTYPE, TELNET_TTYPE_IS };
+	_sendu(telnet, IS, sizeof(IS));
 	_send(telnet, ttype, strlen(ttype));
 	telnet_finish_sb(telnet);
 }
