@@ -1,5 +1,4 @@
-AM_CFLAGS = -I..
-AM_LDFLAGS = -L..
+AM_CFLAGS = -I$(top_srcdir)
 
 telnet_client_SOURCES = telnet-client.c ../libtelnet.h
 telnet_client_LDADD = ../libtelnet.la
