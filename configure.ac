@@ -1,28 +1,38 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.61])
 AC_INIT([libtelnet], [0.20], [http://github.com/elanthis/libtelnet/tree/master])
+AC_CONFIG_AUX_DIR([auxfiles])
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([libtelnet.c])
+AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror subdir-objects])
+AM_SILENT_RULES([yes])
+LT_INIT([win32-dll])
 
-AM_INIT_AUTOMAKE
+AC_ARG_ENABLE([util],
+  [AS_HELP_STRING([--disable-util],
+                  [disable the building of programs in util/ directory])],
+  [],
+  [enable_util=yes])
+AM_CONDITIONAL([BUILD_UTIL], [test "$enable_util" = yes])
 
+# Checks for programs.
 AC_PROG_CC
-AC_PROG_LIBTOOL
+AC_PATH_PROG([DOXYGEN], [doxygen], [no])
+AM_CONDITIONAL([BUILD_DOCS], [test "$DOXYGEN" != no])
 
-# disable building of tools
-AC_ARG_ENABLE(util,
-	[AC_HELP_STRING([--disable-util],
-		[disable the building of programs in util/ directory])],
-	[BUILD_UTIL=$enableval],
-	[BUILD_UTIL=yes])
-AM_CONDITIONAL([BUILD_UTIL], [test "x$BUILD_UTIL" = "xyes"])
+# Checks for libraries.
+PKG_CHECK_MODULES([zlib],
+  [zlib],
+  [AC_DEFINE([HAVE_ZLIB], [1], [Define to 1 if you have zlib.])],
+  [AC_DEFINE([HAVE_ZLIB], [0], [Define to 1 if you have zlib.])])
 
-# find Doxygen
-AC_PATH_PROG(PATH_DOXYGEN, doxygen)
-AM_CONDITIONAL([BUILD_DOCS], [test "x$PATH_DOXYGEN" != "x"])
+# Checks for header files.
 
-# zlib support
-AC_CHECK_LIB(z,deflate,ZLIB=yes,ZLIB=no)
-if test "x$ZLIB" = "xyes" ; then
-	LIBS="$LIBS -lz"
-	AC_DEFINE(HAVE_ZLIB, 1, [We have zlib])
-fi
+# Checks for typedefs, structures and compiler characteristics.
+AC_C_INLINE
 
 AC_CONFIG_FILES([Makefile util/Makefile test/Makefile libtelnet.pc doc/Makefile doc/man/Makefile doc/man/man3/Makefile doc/man/man1/Makefile])
 AC_OUTPUT

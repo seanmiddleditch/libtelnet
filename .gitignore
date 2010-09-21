@@ -18,3 +18,5 @@ autom4te.cache
 .libs
 libtelnet.pc
 INSTALL
+m4/*.m4
+stamp-h1
