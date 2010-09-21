@@ -17,6 +17,7 @@ autom4te.cache
 .deps
 .libs
 libtelnet.pc
+libtelnet-uninstalled.pc
 INSTALL
 m4/*.m4
 stamp-h1
