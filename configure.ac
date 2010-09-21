@@ -34,5 +34,16 @@ PKG_CHECK_MODULES([zlib],
 # Checks for typedefs, structures and compiler characteristics.
 AC_C_INLINE
 
-AC_CONFIG_FILES([Makefile util/Makefile test/Makefile libtelnet.pc doc/Makefile doc/man/Makefile doc/man/man3/Makefile doc/man/man1/Makefile])
+AC_CONFIG_FILES([
+  Makefile
+  doc/Makefile
+  doc/man/Makefile
+  doc/man/man1/Makefile
+  doc/man/man3/Makefile
+  test/Makefile
+  util/Makefile
+
+  libtelnet-uninstalled.pc
+  libtelnet.pc
+])
 AC_OUTPUT

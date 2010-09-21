@@ -1,7 +1,7 @@
 ## Process this file with automake to generate Makefile.in
 ACLOCAL_AMFLAGS = -I m4 --install
 AM_CFLAGS = $(zlib_CFLAGS)
-EXTRA_DIST = Doxyfile
+EXTRA_DIST = Doxyfile libtelnet.pc.in libtelnet-uninstalled.pc.in
 SUBDIRS = . doc util test
 
 include_HEADERS = libtelnet.h
