@@ -4,19 +4,23 @@ RS=0
 while [ "x$1" != "x" ] ; do
 	echo -ne "TEST $1\t\t\t"
 
-	"$DIR/../util/telnet-test" "$1" > "$1.run.tmp"
-	sed -n '/%%/,$p' < "$1" | tail -n+2 > "$1.out.tmp"
-	if cmp -s "$1.out.tmp" "$1.run.tmp" ; then
+	RUNTMP=`basename $1`.run.tmp
+	OUTTMP=`basename $1`.out.tmp
+	echo $RUNTMP $OUTTMP
+
+	"../util/telnet-test" "$1" > "$RUNTMP"
+	sed -n '/%%/,$p' < "$1" | tail -n+2 > "$OUTTMP"
+	if cmp -s "$OUTTMP" "$RUNTMP" ; then
 		echo "OK"
 	else
 		echo "FAIL"
 		echo "EXPECTED:"
-		sed 's/^/\t/' < "$1.out.tmp"
+		sed 's/^/\t/' < "$OUTTMP"
 		echo "GOT:"
-		sed 's/^/\t/' < "$1.run.tmp"
+		sed 's/^/\t/' < "$RUNTMP"
 		RS=1
 	fi
-	rm -f "$1.run.tmp" "$1.out.tmp"
+	rm -f "$RUNTMP" "$OUTTMP"
 
 	shift
 done

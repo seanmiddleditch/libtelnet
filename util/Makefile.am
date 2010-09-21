@@ -15,5 +15,5 @@ telnet_test_LDADD = ../libtelnet.la
 
 if BUILD_UTIL
 bin_PROGRAMS = telnet-client telnet-chatd telnet-proxy
-noinst_PROGRAMS = telnet-test
+check_PROGRAMS = telnet-test
 endif
