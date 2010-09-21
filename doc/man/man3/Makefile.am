@@ -19,7 +19,7 @@ $(MANPAGES): build-stamp
 CLEANFILES = $(MANPAGES) build-stamp
 
 build-stamp: ../../../libtelnet.h ../../../Doxyfile
-	( cd "$(top_builddir)" ; $(PATH_DOXYGEN) )
+	( cd "$(top_builddir)" ; $(DOXYGEN) )
 	touch "$@"
 
 if BUILD_DOCS
