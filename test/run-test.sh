@@ -4,9 +4,8 @@ RS=0
 while [ "x$1" != "x" ] ; do
 	echo -ne "TEST $1\t\t\t"
 
-	RUNTMP=`basename $1`.run.tmp
-	OUTTMP=`basename $1`.out.tmp
-	echo $RUNTMP $OUTTMP
+	RUNTMP="$(basename "$1").run.tmp"
+	OUTTMP="$(basename "$1").out.tmp"
 
 	"../util/telnet-test" "$1" > "$RUNTMP"
 	sed -n '/%%/,$p' < "$1" | tail -n+2 > "$OUTTMP"
