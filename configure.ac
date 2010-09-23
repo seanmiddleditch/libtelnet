@@ -1,15 +1,15 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
+AC_PREREQ([2.58])
 AC_INIT([libtelnet], [0.20], [http://github.com/elanthis/libtelnet/tree/master])
-AC_CONFIG_AUX_DIR([auxfiles])
+#AC_CONFIG_AUX_DIR([auxfiles])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([libtelnet.c])
-AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror subdir-objects])
-AM_SILENT_RULES([yes])
-LT_INIT([win32-dll])
+AM_INIT_AUTOMAKE([1.9 foreign -Wall -Werror subdir-objects])
+#LT_INIT([win32-dll])
+AC_LIBTOOL_WIN32_DLL
 
 AC_ARG_ENABLE([util],
   [AS_HELP_STRING([--disable-util],
@@ -20,6 +20,8 @@ AM_CONDITIONAL([BUILD_UTIL], [test "$enable_util" = yes])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_LIBTOOL
+AM_PROG_CC_C_O
 AC_PATH_PROG([DOXYGEN], [doxygen], [no])
 AM_CONDITIONAL([BUILD_DOCS], [test "$DOXYGEN" != no])
 
