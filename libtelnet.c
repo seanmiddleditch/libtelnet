@@ -735,7 +735,7 @@ static int _zmp_telnet(telnet_t *telnet, const char* buffer, size_t size) {
 
 	/* invoke event with our arguments */
 	ev.type = TELNET_EV_ZMP;
-	ev.zmp.argv = argv;
+	ev.zmp.argv = (const char**)argv;
 	ev.zmp.argc = argc;
 	telnet->eh(telnet, &ev, telnet->ud);
 
