@@ -221,6 +221,12 @@ int main(int argc, char **argv) {
 	socklen_t addrlen;
 	struct pollfd pfd[MAX_USERS + 1];
 
+	/* initialize Winsock */
+#if defined(_WIN32)
+	WSADATA wsd;
+	WSAStartup(MAKEWORD(2, 2), &wsd);
+#endif
+
 	/* check usage */
 	if (argc != 2) {
 		fprintf(stderr, "Usage:\n ./telnet-chatd <port>\n");

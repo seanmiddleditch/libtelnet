@@ -337,6 +337,12 @@ int main(int argc, char **argv) {
 	struct addrinfo *ai;
 	struct addrinfo hints;
 
+	/* initialize Winsock */
+#if defined(_WIN32)
+	WSADATA wsd;
+	WSAStartup(MAKEWORD(2, 2), &wsd);
+#endif
+
 	/* check usage */
 	if (argc != 4) {
 		fprintf(stderr, "Usage:\n ./telnet-proxy <remote ip> <remote port> "
