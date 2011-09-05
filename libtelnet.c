@@ -24,6 +24,12 @@
 
 #include "libtelnet.h"
 
+/* Win32 compatibility */
+#if defined(_WIN32)
+# define vsnprintf _vsnprintf
+# define __func__ __FUNCTION__
+#endif
+
 /* inlinable functions */
 #if defined(__GNUC__) || __STDC_VERSION__ >= 199901L
 # define INLINE __inline__
@@ -475,7 +481,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
  * value strings are NUL-terminated, all while fitting inside
  * of the original buffer.
  */
-static int _environ(telnet_t *telnet, unsigned char type,
+static int _environ_telnet(telnet_t *telnet, unsigned char type,
 		char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values = 0;
@@ -617,7 +623,7 @@ static int _environ(telnet_t *telnet, unsigned char type,
 }
 
 /* process an MSSP subnegotiation buffer */
-static int _mssp(telnet_t *telnet, char* buffer, size_t size) {
+static int _mssp_telnet(telnet_t *telnet, char* buffer, size_t size) {
 	telnet_event_t ev;
 	struct telnet_environ_t *values;
 	char *var = 0;
@@ -696,9 +702,9 @@ static int _mssp(telnet_t *telnet, char* buffer, size_t size) {
 }
 
 /* parse ZMP command subnegotiation buffers */
-static int _zmp(telnet_t *telnet, const char* buffer, size_t size) {
+static int _zmp_telnet(telnet_t *telnet, const char* buffer, size_t size) {
 	telnet_event_t ev;
-	const char **argv;
+	char **argv;
 	const char *c;
 	size_t i, argc;
 
@@ -714,7 +720,7 @@ static int _zmp(telnet_t *telnet, const char* buffer, size_t size) {
 		c += strlen(c) + 1;
 
 	/* allocate argument array, bail on error */
-	if ((argv = (const char **)calloc(argc, sizeof(char *))) == 0) {
+	if ((argv = (char **)calloc(argc, sizeof(char *))) == 0) {
 		_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 				"calloc() failed: %s", strerror(errno));
 		return 0;
@@ -722,7 +728,7 @@ static int _zmp(telnet_t *telnet, const char* buffer, size_t size) {
 
 	/* populate argument array */
 	for (i = 0, c = buffer; i != argc; ++i) {
-		argv[i] = c;
+		argv[i] = (char *)c;
 		c += strlen(c) + 1;
 	}
 
@@ -738,7 +744,7 @@ static int _zmp(telnet_t *telnet, const char* buffer, size_t size) {
 }
 
 /* parse TERMINAL-TYPE command subnegotiation buffers */
-static int _ttype(telnet_t *telnet, const char* buffer, size_t size) {
+static int _ttype_telnet(telnet_t *telnet, const char* buffer, size_t size) {
 	telnet_event_t ev;
 
 	/* make sure request is not empty */
@@ -820,15 +826,15 @@ static int _subnegotiate(telnet_t *telnet) {
 
 	/* specially handled subnegotiation telopt types */
 	case TELNET_TELOPT_ZMP:
-		return _zmp(telnet, telnet->buffer, telnet->buffer_pos);
+		return _zmp_telnet(telnet, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_TTYPE:
-		return _ttype(telnet, telnet->buffer, telnet->buffer_pos);
+		return _ttype_telnet(telnet, telnet->buffer, telnet->buffer_pos);
 	case TELNET_TELOPT_ENVIRON:
 	case TELNET_TELOPT_NEW_ENVIRON:
-		return _environ(telnet, telnet->sb_telopt, telnet->buffer,
+		return _environ_telnet(telnet, telnet->sb_telopt, telnet->buffer,
 				telnet->buffer_pos);
 	case TELNET_TELOPT_MSSP:
-		return _mssp(telnet, telnet->buffer, telnet->buffer_pos);
+		return _mssp_telnet(telnet, telnet->buffer, telnet->buffer_pos);
 	default:
 		return 0;
 	}
