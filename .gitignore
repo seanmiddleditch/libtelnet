@@ -22,6 +22,10 @@ m4/*.m4
 missing
 stamp-h1
 
+telnet-client
+telnet-proxy
+telnet-chatd
+
 msvc2008/Debug/
 msvc2008/Release/
 *.ncb
