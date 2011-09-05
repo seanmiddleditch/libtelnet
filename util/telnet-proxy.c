@@ -9,24 +9,36 @@
  * all present and future rights to this code under copyright law. 
  */
 
-#if !defined(_POSIX_SOURCE)
-#	define _POSIX_SOURCE
-#endif
-#if !defined(_BSD_SOURCE)
-#	define _BSD_SOURCE
+#if !defined(_WIN32)
+#	if !defined(_POSIX_SOURCE)
+#		define _POSIX_SOURCE
+#	endif
+#	if !defined(_BSD_SOURCE)
+#		define _BSD_SOURCE
+#	endif
+
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#	include <arpa/inet.h>
+#	include <netdb.h>
+#	include <poll.h>
+#	include <unistd.h>
+#else
+#	include <winsock2.h>
+#	include <ws2tcpip.h>
+
+#	define snprintf _snprintf
+#	define poll WSAPoll
+#	define close closesocket
+#	define ECONNRESET WSAECONNRESET
 #endif
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <poll.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <unistd.h>
+
 
 #ifdef HAVE_ZLIB
 #include "zlib.h"
@@ -333,7 +345,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* parse listening port */
-	listen_port = strtol(argv[3], 0, 10);
+	listen_port = (short)strtol(argv[3], 0, 10);
 
 	/* loop forever, until user kills process */
 	for (;;) {
@@ -345,7 +357,7 @@ int main(int argc, char **argv) {
 
 		/* reuse address option */
 		rs = 1;
-		setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &rs, sizeof(rs));
+		setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&rs, sizeof(rs));
 
 		/* bind to listening addr/port */
 		memset(&addr, 0, sizeof(addr));
