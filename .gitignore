@@ -21,3 +21,9 @@ ltmain.sh
 m4/*.m4
 missing
 stamp-h1
+
+msvc2008/Debug/
+msvc2008/Release/
+*.ncb
+*.suo
+*.vcproj.*.user
