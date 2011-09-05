@@ -18,17 +18,18 @@
 #include <string.h>
 #include <stdarg.h>
 
+/* Win32 compatibility */
+#if defined(_WIN32)
+# define vsnprintf _vsnprintf
+# define __func__ __FUNCTION__
+# define ZLIB_WINAPI 1
+#endif
+
 #if defined(HAVE_ZLIB)
 # include <zlib.h>
 #endif
 
 #include "libtelnet.h"
-
-/* Win32 compatibility */
-#if defined(_WIN32)
-# define vsnprintf _vsnprintf
-# define __func__ __FUNCTION__
-#endif
 
 /* inlinable functions */
 #if defined(__GNUC__) || __STDC_VERSION__ >= 199901L

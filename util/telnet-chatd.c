@@ -30,6 +30,7 @@
 #	define snprintf _snprintf
 #	define poll WSAPoll
 #	define close closesocket
+#	define strdup _strdup
 #	define ECONNRESET WSAECONNRESET
 #endif
 
@@ -38,10 +39,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#ifdef HAVE_ZLIB
-#include "zlib.h"
-#endif
 
 #include "libtelnet.h"
 
