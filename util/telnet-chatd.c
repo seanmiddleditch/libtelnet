@@ -184,6 +184,8 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	/* data received */
 	case TELNET_EV_DATA:
 		_input(user, ev->data.buffer, ev->data.size);
+					telnet_negotiate(telnet, TELNET_WONT, TELNET_TELOPT_ECHO);
+			telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_ECHO);
 		break;
 	/* data must be sent */
 	case TELNET_EV_SEND:
@@ -323,6 +325,8 @@ int main(int argc, char **argv) {
 			telnet_negotiate(users[i].telnet, TELNET_WILL,
 					TELNET_TELOPT_COMPRESS2);
 			telnet_printf(users[i].telnet, "Enter name: ");
+
+			telnet_negotiate(users[i].telnet, TELNET_WILL, TELNET_TELOPT_ECHO);
 		}
 
 		/* read from client */
