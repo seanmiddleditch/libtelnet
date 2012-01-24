@@ -515,28 +515,6 @@ extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
 /*!
- * \brief Send NEW-ENVIRON SEND command
- *
- * Sends NEW-ENVIRON command to the remote end.  The cmd parameter denotes
- * the type of NEW-ENVIRON command being sent: either asking for values,
- * responding to a request for variables, or notifying about changed
- * variables.
- *
- * The count parameter is the number of variables which are being sent
- * or requested.  The following parameters must be triples, consisting
- * of the variable type (VAR or USERVAR), the variable name, and the
- * variable value.  For requests, the value should always be the empty
- * string or NULL.
- *
- * \param telnet Telnet state tracker object.
- * \param cmd    One of TELNET_ENVIRON_SEND, TELNET_ENVIRON_IS, or
- *               TELNET_ENVIRON_INFO.
- * \param count  Number of variables sent or requested.
- */
-extern void telnet_newenviron_send(telnet_t *telnet, unsigned char cmd,
-		size_t count, ...);
-
-/*!
  * \brief Begin a new set of NEW-ENVIRON values to request or send.
  *
  * This function will begin the sub-negotiation block for sending or
