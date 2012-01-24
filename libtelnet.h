@@ -501,6 +501,13 @@ extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
 
 /*!
+ * \brief Send formatted data.
+ *
+ * See telnet_printf().
+ */
+extern int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va);
+
+/*!
  * \brief Send formatted data (no newline escaping).
  *
  * This behaves identically to telnet_printf(), except that the \\r and \\n
@@ -513,6 +520,13 @@ extern int telnet_printf(telnet_t *telnet, const char *fmt, ...)
  */
 extern int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...)
 		TELNET_GNU_PRINTF(2, 3);
+
+/*!
+ * \brief Send formatted data (no newline escaping).
+ *
+ * See telnet_raw_printf().
+ */
+extern int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va);
 
 /*!
  * \brief Begin a new set of NEW-ENVIRON values to request or send.
@@ -612,6 +626,13 @@ extern void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv);
  * \param telnet Telnet state tracker object.
  */
 extern void telnet_send_zmpv(telnet_t *telnet, ...) TELNET_GNU_SENTINEL;
+
+/*!
+ * \brief Send a ZMP command.
+ *
+ * See telnet_send_zmpv().
+ */
+extern void telnet_send_vzmpv(telnet_t *telnet, va_list va);
 
 /*!
  * \brief Begin sending a ZMP command
