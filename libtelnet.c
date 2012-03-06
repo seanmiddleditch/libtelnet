@@ -1346,16 +1346,14 @@ void telnet_begin_compress2(telnet_t *telnet) {
 }
 
 /* send formatted data with \r and \n translation in addition to IAC IAC */
-int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
+int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
     static const char CRLF[] = { '\r', '\n' };
     static const char CRNUL[] = { '\r', '\0' };
 	char buffer[1024];
 	char *output = buffer;
-	va_list va;
 	int rs, i, l;
 
 	/* format */
-	va_start(va, fmt);
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
@@ -1366,7 +1364,6 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 		}
 		rs = vsnprintf(output, rs + 1, fmt, va);
 	}
-	va_end(va);
 
 	/* send */
 	for (l = i = 0; i != rs; ++i) {
@@ -1403,15 +1400,25 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 	return rs;
 }
 
-/* send formatted data through telnet_send */
-int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
-	char buffer[1024];
-	char *output = buffer;
+/* see telnet_vprintf */
+int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 	va_list va;
 	int rs;
 
-	/* format; allocate more space if necessary */
 	va_start(va, fmt);
+	rs = telnet_vprintf(telnet, fmt, va);
+	va_end(va);
+
+	return rs;
+}
+
+/* send formatted data through telnet_send */
+int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
+	char buffer[1024];
+	char *output = buffer;
+	int rs;
+
+	/* format; allocate more space if necessary */
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
@@ -1422,7 +1429,6 @@ int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
 		}
 		rs = vsnprintf(output, rs + 1, fmt, va);
 	}
-	va_end(va);
 
 	/* send out the formatted data */
 	telnet_send(telnet, output, rs);
@@ -1431,6 +1437,18 @@ int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
 	if (output != buffer) {
 		free(output);
 	}
+
+	return rs;
+}
+
+/* see telnet_raw_vprintf */
+int telnet_raw_printf(telnet_t *telnet, const char *fmt, ...) {
+	va_list va;
+	int rs;
+
+	va_start(va, fmt);
+	rs = telnet_raw_vprintf(telnet, fmt, va);
+	va_end(va);
 
 	return rs;
 }
@@ -1482,21 +1500,27 @@ void telnet_send_zmp(telnet_t *telnet, size_t argc, const char **argv) {
 }
 
 /* send ZMP data using varargs  */
-void telnet_send_zmpv(telnet_t *telnet, ...) {
-	va_list va;
+void telnet_send_vzmpv(telnet_t *telnet, va_list va) {
 	const char* arg;
 
 	/* ZMP header */
 	telnet_begin_sb(telnet, TELNET_TELOPT_ZMP);
 
 	/* send out each argument, including trailing NUL byte */
-	va_start(va, telnet);
 	while ((arg = va_arg(va, const char *)) != 0)
 		telnet_zmp_arg(telnet, arg);
-	va_end(va);
 
 	/* ZMP footer */
 	telnet_finish_zmp(telnet);
+}
+
+/* see telnet_send_vzmpv */
+void telnet_send_zmpv(telnet_t *telnet, ...) {
+	va_list va;
+
+	va_start(va, telnet);
+	telnet_send_vzmpv(telnet, va);
+	va_end(va);
 }
 
 /* begin a ZMP command */
