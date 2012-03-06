@@ -25,6 +25,9 @@ AM_PROG_CC_C_O
 AC_PATH_PROG([DOXYGEN], [doxygen], [no])
 AM_CONDITIONAL([BUILD_DOCS], [test "$DOXYGEN" != no])
 
+# Checks for standard headers.
+AC_HEADER_STDC
+
 # Checks for libraries.
 PKG_CHECK_MODULES([zlib],
   [zlib],

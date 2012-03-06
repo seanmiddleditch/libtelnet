@@ -42,6 +42,9 @@
 #if !defined(LIBTELNET_INCLUDE)
 #define LIBTELNET_INCLUDE 1
 
+/* standard C headers necessary for the libtelnet API */
+#include <stdarg.h>
+
 /* C++ support */
 #if defined(__cplusplus)
 extern "C" {
