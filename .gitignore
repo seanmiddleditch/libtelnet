@@ -21,6 +21,7 @@ ltmain.sh
 m4/*.m4
 missing
 stamp-h1
+compile
 
 telnet-client
 telnet-proxy
