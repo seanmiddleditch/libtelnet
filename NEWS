@@ -1,3 +1,11 @@
+Version 0.21
+============
+
+* Visual C++ 2008/2010 compatibility, with solution files
+* va_list versions of the printf helper functions
+* fixes for ECHO, TTYPE IS, and flushing
+* improved autotools build
+
 Version 0.20
 ============
 
