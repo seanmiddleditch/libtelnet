@@ -769,7 +769,7 @@ static int _ttype_telnet(telnet_t *telnet, const char* buffer, size_t size) {
 		char *name;
 
 		/* allocate space for name */
-		if ((name = (char *)malloc(size - 1)) == 0) {
+		if ((name = (char *)malloc(size)) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"malloc() failed: %s", strerror(errno));
 			return 0;
