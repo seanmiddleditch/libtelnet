@@ -30,11 +30,11 @@
  * in this code to the public domain. We make this dedication for the benefit
  * of the public at large and to the detriment of our heirs and successors. We
  * intend this dedication to be an overt act of relinquishment in perpetuity of
- * all present and future rights to this code under copyright law. 
+ * all present and future rights to this code under copyright law.
  *
  * \file libtelnet.h
  *
- * \version 0.20
+ * \version 0.21
  *
  * \author Sean Middleditch <sean@sourcemud.org>
  */
