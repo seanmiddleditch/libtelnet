@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
 
 	/* connect */
 	if (connect(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
-		fprintf(stderr, "server() failed: %s\n", strerror(errno));
+		fprintf(stderr, "connect() failed: %s\n", strerror(errno));
 		return 1;
 	}
 
