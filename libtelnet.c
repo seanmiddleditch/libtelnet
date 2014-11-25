@@ -195,7 +195,7 @@ static void _send(telnet_t *telnet, const char *buffer,
 
 		/* initialize z state */
 		telnet->z->next_in = (unsigned char *)buffer;
-		telnet->z->avail_in = size;
+		telnet->z->avail_in = (unsigned int)size;
 		telnet->z->next_out = (unsigned char *)deflate_buffer;
 		telnet->z->avail_out = sizeof(deflate_buffer);
 
@@ -1114,7 +1114,7 @@ void telnet_recv(telnet_t *telnet, const char *buffer,
 
 		/* initialize zlib state */
 		telnet->z->next_in = (unsigned char*)buffer;
-		telnet->z->avail_in = size;
+		telnet->z->avail_in = (unsigned int)size;
 		telnet->z->next_out = (unsigned char *)inflate_buffer;
 		telnet->z->avail_out = sizeof(inflate_buffer);
 
