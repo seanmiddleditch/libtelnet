@@ -637,7 +637,7 @@ on mud.example.com port 7800 and to listen on port 5000, run:
  $ ./telnet-proxy mud.example.com 7800 5000
 
 You can then connect to the host telnet-proxy is running on (e.g.
-127.0.0.1) on port 500 and you will automatically be proxied into
+127.0.0.1) on port 5000 and you will automatically be proxied into
 mud.example.com.
 
 telnet-proxy will display status information about the data passing
