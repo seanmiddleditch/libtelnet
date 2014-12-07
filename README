@@ -67,7 +67,7 @@ IIa. Initialization
     unsigned char him;
   };
 
- The us field denotes whether your application supporst the telopt
+ The us field denotes whether your application supports the telopt
  locally.  It should be set to TELNET_WILL if you support it and to
  TELNET_WONT if you don't.  The him field denotes whether the telopt
  is supported on the remote end, and should be TELNET_DO if yes and
