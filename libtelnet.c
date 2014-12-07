@@ -1020,8 +1020,16 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 
 		/* subnegotiation -- buffer bytes until end request */
 		case TELNET_STATE_SB_DATA:
-			/* IAC command in subnegotiation -- either IAC SE or IAC IAC */
-			if (byte == TELNET_IAC) {
+			
+            if (byte == TELNET_WILL) {
+                // Special handling for MCCP v1 (85)
+                /*
+                 In 1998 MCCP used TELOPT 85 and the protocol defined an invalid subnogation sequence (IAC SB 85 WILL SE) to start compression. Subsequently MCCP version 2 was created in 2000 using TELOPT 86 and a valid subnogation (IAC SB 86 IAC SE).
+                 */
+                start = i + 2;
+                telnet->state = TELNET_STATE_DATA;
+            /* IAC command in subnegotiation -- either IAC SE or IAC IAC */
+            } else if (byte == TELNET_IAC) {
 				telnet->state = TELNET_STATE_SB_DATA_IAC;
 			/* buffer the byte, or bail if we can't */
 			} else if (_buffer_byte(telnet, byte) != TELNET_EOK) {
