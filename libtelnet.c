@@ -1446,7 +1446,7 @@ int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 					"malloc() failed: %s", strerror(errno));
 			return -1;
 		}
-		rs = vsnprintf(output, rs + 1, fmt, va);
+		rs = vsnprintf(output, rs + 1, fmt, va2);
 	}
 	va_end(va2);
 	va_end(va);
