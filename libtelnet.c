@@ -1367,6 +1367,8 @@ int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 	int rs, i, l;
 
 	/* format */
+	va_list va2;
+	va_copy(va2, va);
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
@@ -1375,8 +1377,10 @@ int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 					"malloc() failed: %s", strerror(errno));
 			return -1;
 		}
-		rs = vsnprintf(output, rs + 1, fmt, va);
+		rs = vsnprintf(output, rs + 1, fmt, va2);
 	}
+	va_end(va2);
+	va_end(va);
 
 	/* send */
 	for (l = i = 0; i != rs; ++i) {
@@ -1432,6 +1436,8 @@ int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 	int rs;
 
 	/* format; allocate more space if necessary */
+	va_list va2;
+	va_copy(va2, va);
 	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
@@ -1440,8 +1446,10 @@ int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 					"malloc() failed: %s", strerror(errno));
 			return -1;
 		}
-		rs = vsnprintf(output, rs + 1, fmt, va);
+		rs = vsnprintf(output, rs + 1, fmt, va2);
 	}
+	va_end(va2);
+	va_end(va);
 
 	/* send out the formatted data */
 	telnet_send(telnet, output, rs);
