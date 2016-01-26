@@ -6,6 +6,8 @@ os:
   - linux
   - osx
 before_install:
+  - libtoolize
   - aclocal
+  - autoheader
   - automake --add-missing
   - autoconf
