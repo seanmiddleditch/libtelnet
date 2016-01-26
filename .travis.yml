@@ -5,3 +5,7 @@ compiler:
 os:
   - linux
   - osx
+before_install:
+  - aclocal
+  - automake --add-missing
+  - autoconf
