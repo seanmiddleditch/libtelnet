@@ -27,11 +27,17 @@
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
 
+#if !defined(_MSC_VER) || _MSC_VER < 1800
 #	define snprintf _snprintf
+#endif
+
 #	define poll WSAPoll
 #	define close closesocket
 #	define strdup _strdup
+
+#if !defined(_MSC_VER) || _MSC_VER < 1600 // VC 9 and prior do not define this macro
 #	define ECONNRESET WSAECONNRESET
+#endif
 #endif
 
 #include <errno.h>
