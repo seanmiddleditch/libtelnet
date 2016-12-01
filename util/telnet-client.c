@@ -100,7 +100,9 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	switch (ev->type) {
 	/* data received */
 	case TELNET_EV_DATA:
-		printf("%.*s", (int)ev->data.size, ev->data.buffer);
+		if (ev->data.size && fwrite(ev->data.buffer, 1, ev->data.size, stdout) != ev->data.size) {
+              		fprintf(stderr, "ERROR: Could not write complete buffer to stdout");
+		}
 		fflush(stdout);
 		break;
 	/* data must be sent */
