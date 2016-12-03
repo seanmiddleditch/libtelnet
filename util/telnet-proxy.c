@@ -33,6 +33,8 @@
 
 #	define poll WSAPoll
 #	define close closesocket
+#	undef gai_strerror
+#	define gai_strerror gai_strerrorA
 
 #if !defined(_MSC_VER) || _MSC_VER < 1600 // VC 9 and prior do not define this macro
 #	define ECONNRESET WSAECONNRESET
