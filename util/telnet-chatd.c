@@ -34,10 +34,7 @@
 #	define poll WSAPoll
 #	define close closesocket
 #	define strdup _strdup
-
-#if !defined(_MSC_VER) || _MSC_VER < 1600 // VC 9 and prior do not define this macro
 #	define ECONNRESET WSAECONNRESET
-#endif
 #endif
 
 #include <errno.h>
