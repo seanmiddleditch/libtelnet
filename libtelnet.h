@@ -44,6 +44,7 @@
 
 /* standard C headers necessary for the libtelnet API */
 #include <stdarg.h>
+#include <sys/types.h>
 
 /* C++ support */
 #if defined(__cplusplus)
