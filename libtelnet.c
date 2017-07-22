@@ -105,6 +105,10 @@ struct telnet_t {
 	unsigned char q_size;
 };
 
+/* Internal-only bits in option flags */
+#define TELNET_FLAG_TRANSMIT_BINARY (1<<1)
+#define TELNET_FLAG_RECEIVE_BINARY (1<<2)
+
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
 	unsigned char telopt;
@@ -118,6 +122,10 @@ typedef struct telnet_rfc1143_t {
 #define Q_WANTYES 3
 #define Q_WANTNO_OP 4
 #define Q_WANTYES_OP 5
+
+/* telnet NVT EOL sequences */
+static const char CRLF[] = { '\r', '\n' };
+static const char CRNUL[] = { '\r', '\0' };
 
 /* buffer sizes */
 static const size_t _buffer_sizes[] = { 0, 512, 2048, 8192, 16384, };
@@ -302,6 +310,14 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	for (i = 0; i != telnet->q_size; ++i) {
 		if (telnet->q[i].telopt == telopt) {
 			telnet->q[i].state = Q_MAKE(us,him);
+			if (telopt != TELNET_TELOPT_BINARY)
+				return;
+			telnet->flags &= ~(TELNET_FLAG_TRANSMIT_BINARY |
+					   TELNET_FLAG_RECEIVE_BINARY);
+			if (us == Q_YES)
+				telnet->flags |= TELNET_FLAG_TRANSMIT_BINARY;
+			if (him == Q_YES)
+				telnet->flags |= TELNET_FLAG_RECEIVE_BINARY;
 			return;
 		}
 	}
@@ -1121,6 +1137,47 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 	}
 }
 
+/* perform NVT end-of-line translation for received text */
+size_t telnet_translate_eol(telnet_t *telnet, char *buffer, size_t size,
+		int *split) {
+	size_t i = 0, l = 0;
+
+	/* no translation if in BINARY mode */
+	if (telnet->flags & TELNET_FLAG_RECEIVE_BINARY)
+		return size;
+
+	/* fix up translation if split across buffer boundary */
+	if (*split && size > 0) {
+		/* CR-NUL translates to \r which was skipped at end of previous */
+		/* buffer, while CR-LF translates to \n, so just leave it */
+		if (buffer[i] == '\0') {
+			buffer[i] = '\r';
+		}
+		++i;
+	}
+
+	for ( ; i < size-1; ++i, ++l) {
+		buffer[l] = buffer[i];
+		if (buffer[i] == '\r') {
+			if (buffer[i+1] == '\n') {
+				/* CR-LF translates to \n */
+				buffer[i++] = '\n';
+			} else if (buffer[i+1] == '\0') {
+				/* CR-NUL translates to \r */
+				++i;
+			}
+		}
+	}
+	if (size > 0) {
+		if (buffer[i] == '\r') {
+			--l;
+			*split = 1;
+		} else
+			*split = 0;
+	}
+	return size - (i - l);
+}
+
 /* push a bytes into the state tracker */
 void telnet_recv(telnet_t *telnet, const char *buffer,
 		size_t size) {
@@ -1297,6 +1354,45 @@ void telnet_send(telnet_t *telnet, const char *buffer,
 	}
 }
 
+/* send non-command text (escapes IAC bytes and does NVT translation) */
+void telnet_send_text(telnet_t *telnet, const char *buffer,
+		size_t size) {
+	size_t i, l;
+
+	for (l = i = 0; i != size; ++i) {
+		/* dump prior portion of text, send escaped bytes */
+		if (buffer[i] == (char)TELNET_IAC) {
+			/* dump prior text if any */
+			if (i != l) {
+				_send(telnet, buffer + l, i - l);
+			}
+			l = i + 1;
+
+			/* send escape */
+			telnet_iac(telnet, TELNET_IAC);
+		}
+		/* special characters if not in BINARY mode */
+		else if (!(telnet->flags & TELNET_FLAG_TRANSMIT_BINARY) &&
+				 (buffer[i] == '\r' || buffer[i] == '\n')) {
+			/* dump prior portion of text */
+			if (i != l)
+				_send(telnet, buffer + l, i - l);
+			l = i + 1;
+
+			/* automatic translation of \r -> CRNUL */
+			if (buffer[i] == '\r')
+				_send(telnet, CRNUL, 2);
+			/* automatic translation of \n -> CRLF */
+			else _send(telnet, CRLF, 2);
+		}
+	}
+
+	/* send whatever portion of buffer is left */
+	if (i != l) {
+		_send(telnet, buffer + l, i - l);
+	}
+}
+
 /* send subnegotiation header */
 void telnet_begin_sb(telnet_t *telnet, unsigned char telopt) {
 	unsigned char sb[3];
@@ -1369,8 +1465,6 @@ void telnet_begin_compress2(telnet_t *telnet) {
 
 /* send formatted data with \r and \n translation in addition to IAC IAC */
 int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
-    static const char CRLF[] = { '\r', '\n' };
-    static const char CRNUL[] = { '\r', '\0' };
 	char buffer[1024];
 	char *output = buffer;
 	int rs, i, l;
