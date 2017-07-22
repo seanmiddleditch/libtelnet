@@ -371,7 +371,7 @@ struct telnet_t;
  * \param eh        Event handler function called for every event.
  * \param flags     0 or TELNET_FLAG_PROXY.
  * \param user_data Optional data pointer that will be passsed to eh.
- * \return Telent state tracker object.
+ * \return Telnet state tracker object.
  */
 extern telnet_t* telnet_init(const telnet_telopt_t *telopts,
 		telnet_event_handler_t eh, unsigned char flags, void *user_data);

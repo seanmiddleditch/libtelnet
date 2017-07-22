@@ -189,7 +189,7 @@ IIc. Sending Data
    CR LF and C carriage returns (\r) into CR NUL, as required by
    RFC854, unless transmission in BINARY mode has been negotiated.
 
-   For sending regular text is may be more convenient to use
+   For sending regular text it may be more convenient to use
    telnet_printf().
  
  void telnet_begin_sb(telnet_t *telnet, unsigned char telopt);
@@ -228,14 +228,14 @@ IIc. Sending Data
    detect the COMPRESS2 marker and enable zlib compression.
 
  int telnet_printf(telnet_t *telnet, const char *fmt, ...);
-  This functions very similarly to fprintf, except that output is
-  sent through libtelnet for processing.  IAC bytes are properly
-  escaped, C newlines (\n) are translated into CR LF, and C carriage
-  returns (\r) are translated into CR NUL, all as required by
-  RFC854.  The return code is the length of the formatted text.
+   This functions very similarly to fprintf, except that output is
+   sent through libtelnet for processing.  IAC bytes are properly
+   escaped, C newlines (\n) are translated into CR LF, and C carriage
+   returns (\r) are translated into CR NUL, all as required by
+   RFC854.  The return code is the length of the formatted text.
 
-  NOTE: due to an internal implementation detail, the maximum
-  lenth of the formatted text is 4096 characters.
+   NOTE: due to an internal implementation detail, the maximum
+   length of the formatted text is 4096 characters.
 
 IId. Event Handling
 
