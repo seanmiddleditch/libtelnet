@@ -146,13 +146,13 @@ IIb. Receiving Data
    process output.
 
  size_t telnet_translate_eol(telnet_t *telnet,
-     char *buffer, size_t size, int *split);
+     char *buffer, size_t size, int *eol_was_split);
    Scans a buffer received in a TELNET_EV_DATA event to translate the
    TELNET NVT CR NUL and CR LF sequences specified in RFC854 to C
    carriage return (\r) and C newline (\n), respectively.  Sequences
-   split across a buffer boundary are handled using the split flag
-   that should be initialized to 0.  The return code is the possibly
-   shorter length of the text after translation.
+   split across a buffer boundary are handled using the eol_was_split
+   flag that should be initialized to 0 before the first call.  The
+   possibly shorter length of the text after translation is returned.
 
 IIc. Sending Data
 
