@@ -1139,15 +1139,17 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 
 /* perform NVT end-of-line translation for received text */
 size_t telnet_translate_eol(telnet_t *telnet, char *buffer, size_t size,
-		int *split) {
+		int *eol_was_split) {
 	size_t i = 0, l = 0;
-
+	if (size == 0)
+		return size;
+	
 	/* no translation if in BINARY mode */
 	if (telnet->flags & TELNET_FLAG_RECEIVE_BINARY)
 		return size;
 
 	/* fix up translation if split across buffer boundary */
-	if (*split && size > 0) {
+	if (*eol_was_split) {
 		/* CR-NUL translates to \r which was skipped at end of previous */
 		/* buffer, while CR-LF translates to \n, so just leave it */
 		if (buffer[i] == '\0') {
@@ -1161,21 +1163,21 @@ size_t telnet_translate_eol(telnet_t *telnet, char *buffer, size_t size,
 		if (buffer[i] == '\r') {
 			if (buffer[i+1] == '\n') {
 				/* CR-LF translates to \n */
-				buffer[i++] = '\n';
+				buffer[l] = '\n';
+				++i;
 			} else if (buffer[i+1] == '\0') {
 				/* CR-NUL translates to \r */
 				++i;
 			}
 		}
 	}
-	if (size > 0) {
-		if (buffer[i] == '\r') {
-			--l;
-			*split = 1;
-		} else
-			*split = 0;
+	if (buffer[i] == '\r') {
+		--l;
+		*eol_was_split = 1;
+	} else {
+		*eol_was_split = 0;
 	}
-	return size - (i - l);
+	return l + 1;
 }
 
 /* push a bytes into the state tracker */
@@ -1375,15 +1377,19 @@ void telnet_send_text(telnet_t *telnet, const char *buffer,
 		else if (!(telnet->flags & TELNET_FLAG_TRANSMIT_BINARY) &&
 				 (buffer[i] == '\r' || buffer[i] == '\n')) {
 			/* dump prior portion of text */
-			if (i != l)
+			if (i != l) {
 				_send(telnet, buffer + l, i - l);
+			}
 			l = i + 1;
 
 			/* automatic translation of \r -> CRNUL */
-			if (buffer[i] == '\r')
+			if (buffer[i] == '\r') {
 				_send(telnet, CRNUL, 2);
+			}
 			/* automatic translation of \n -> CRLF */
-			else _send(telnet, CRLF, 2);
+			else {
+				_send(telnet, CRLF, 2);
+			}
 		}
 	}
 
