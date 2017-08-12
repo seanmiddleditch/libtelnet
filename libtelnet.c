@@ -64,6 +64,7 @@
 /* telnet state codes */
 enum telnet_state_t {
 	TELNET_STATE_DATA = 0,
+	TELNET_STATE_EOL,
 	TELNET_STATE_IAC,
 	TELNET_STATE_WILL,
 	TELNET_STATE_WONT,
@@ -104,10 +105,6 @@ struct telnet_t {
 	/* length of RFC1143 queue */
 	unsigned char q_size;
 };
-
-/* Internal-only bits in option flags */
-#define TELNET_FLAG_TRANSMIT_BINARY (1<<1)
-#define TELNET_FLAG_RECEIVE_BINARY (1<<2)
 
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
@@ -978,7 +975,36 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 					telnet->eh(telnet, &ev, telnet->ud);
 				}
 				telnet->state = TELNET_STATE_IAC;
+			} else if (byte == '\r' &&
+					   (telnet->flags & TELNET_FLAG_NVT_EOL) &&
+					   !(telnet->flags & TELNET_FLAG_RECEIVE_BINARY)) {
+				if (i != start) {
+					ev.type = TELNET_EV_DATA;
+					ev.data.buffer = buffer + start;
+					ev.data.size = i - start;
+					telnet->eh(telnet, &ev, telnet->ud);
+				}
+				telnet->state = TELNET_STATE_EOL;
 			}
+			break;
+
+		/* NVT EOL to be translated */
+		case TELNET_STATE_EOL:
+			if (byte != '\n') {
+				byte = '\r';
+				ev.type = TELNET_EV_DATA;
+				ev.data.buffer = (char*)&byte;
+				ev.data.size = 1;
+				telnet->eh(telnet, &ev, telnet->ud);
+				byte = buffer[i];
+			}
+			// any byte following '\r' other than '\n' or '\0' is invalid,
+			// so pass both \r and the byte
+			start = i;
+			if (byte == '\0')
+				++start;
+			/* state update */
+			telnet->state = TELNET_STATE_DATA;
 			break;
 
 		/* IAC command */
@@ -1135,49 +1161,6 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 		ev.data.size = i - start;
 		telnet->eh(telnet, &ev, telnet->ud);
 	}
-}
-
-/* perform NVT end-of-line translation for received text */
-size_t telnet_translate_eol(telnet_t *telnet, char *buffer, size_t size,
-		int *eol_was_split) {
-	size_t i = 0, l = 0;
-	if (size == 0)
-		return size;
-	
-	/* no translation if in BINARY mode */
-	if (telnet->flags & TELNET_FLAG_RECEIVE_BINARY)
-		return size;
-
-	/* fix up translation if split across buffer boundary */
-	if (*eol_was_split) {
-		/* CR-NUL translates to \r which was skipped at end of previous */
-		/* buffer, while CR-LF translates to \n, so just leave it */
-		if (buffer[i] == '\0') {
-			buffer[i] = '\r';
-		}
-		++i;
-	}
-
-	for ( ; i < size-1; ++i, ++l) {
-		buffer[l] = buffer[i];
-		if (buffer[i] == '\r') {
-			if (buffer[i+1] == '\n') {
-				/* CR-LF translates to \n */
-				buffer[l] = '\n';
-				++i;
-			} else if (buffer[i+1] == '\0') {
-				/* CR-NUL translates to \r */
-				++i;
-			}
-		}
-	}
-	if (buffer[i] == '\r') {
-		--l;
-		*eol_was_split = 1;
-	} else {
-		*eol_was_split = 0;
-	}
-	return l + 1;
 }
 
 /* push a bytes into the state tracker */
