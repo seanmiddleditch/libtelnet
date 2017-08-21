@@ -60,6 +60,9 @@ extern "C" {
 # define TELNET_GNU_SENTINEL /*!< internal helper */
 #endif
 
+/* Disable environ macro for Visual C++ 2015. */
+#undef environ
+
 /*! Telnet state tracker object type. */
 typedef struct telnet_t telnet_t;
 

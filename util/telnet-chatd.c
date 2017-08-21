@@ -27,7 +27,10 @@
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
 
+#ifndef _UCRT
 #	define snprintf _snprintf
+#endif
+
 #	define poll WSAPoll
 #	define close closesocket
 #	define strdup _strdup
