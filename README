@@ -145,6 +145,15 @@ IIb. Receiving Data
    triggered for any regular data such as user input or server
    process output.
 
+ size_t telnet_translate_eol(telnet_t *telnet,
+     char *buffer, size_t size, int *eol_was_split);
+   Scans a buffer received in a TELNET_EV_DATA event to translate the
+   TELNET NVT CR NUL and CR LF sequences specified in RFC854 to C
+   carriage return (\r) and C newline (\n), respectively.  Sequences
+   split across a buffer boundary are handled using the eol_was_split
+   flag that should be initialized to 0 before the first call.  The
+   possibly shorter length of the text after translation is returned.
+
 IIc. Sending Data
 
  All of the output functions will invoke the TELNET_EV_SEND event.
@@ -174,7 +183,13 @@ IIc. Sending Data
    Sends raw data, which would be either the process output from a
    server or the user input from a client.
 
-   For sending regular text is may be more convenient to use
+ void telnet_send_text(telnet_t *telnet, const char *buffer,
+     size_t size);
+   Sends text characters with translation of C newlines (\n) into
+   CR LF and C carriage returns (\r) into CR NUL, as required by
+   RFC854, unless transmission in BINARY mode has been negotiated.
+
+   For sending regular text it may be more convenient to use
    telnet_printf().
  
  void telnet_begin_sb(telnet_t *telnet, unsigned char telopt);
@@ -213,14 +228,14 @@ IIc. Sending Data
    detect the COMPRESS2 marker and enable zlib compression.
 
  int telnet_printf(telnet_t *telnet, const char *fmt, ...);
-  This functions very similarly to fprintf, except that output is
-  sent through libtelnet for processing.  IAC bytes are properly
-  escaped, C newlines (\n) are translated into CR LF, and C carriage
-  returns (\r) are translated into CR NUL, all as required by
-  RFC854.  The return code is the length of the formatted text.
+   This functions very similarly to fprintf, except that output is
+   sent through libtelnet for processing.  IAC bytes are properly
+   escaped, C newlines (\n) are translated into CR LF, and C carriage
+   returns (\r) are translated into CR NUL, all as required by
+   RFC854.  The return code is the length of the formatted text.
 
-  NOTE: due to an internal implementation detail, the maximum
-  lenth of the formatted text is 4096 characters.
+   NOTE: due to an internal implementation detail, the maximum
+   length of the formatted text is 4096 characters.
 
 IId. Event Handling
 
