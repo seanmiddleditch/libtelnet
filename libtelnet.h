@@ -179,7 +179,11 @@ typedef struct telnet_telopt_t telnet_telopt_t;
 /*@{*/
 /*! Control behavior of telnet state tracker. */
 #define TELNET_FLAG_PROXY (1<<0)
+#define TELNET_FLAG_NVT_EOL (1<<1)
 
+/* Internal-only bits in option flags */
+#define TELNET_FLAG_TRANSMIT_BINARY (1<<5)
+#define TELNET_FLAG_RECEIVE_BINARY (1<<6)
 #define TELNET_PFLAG_DEFLATE (1<<7)
 /*@}*/
 
@@ -375,7 +379,7 @@ struct telnet_t;
  * \param eh        Event handler function called for every event.
  * \param flags     0 or TELNET_FLAG_PROXY.
  * \param user_data Optional data pointer that will be passsed to eh.
- * \return Telent state tracker object.
+ * \return Telnet state tracker object.
  */
 extern telnet_t* telnet_init(const telnet_telopt_t *telopts,
 		telnet_event_handler_t eh, unsigned char flags, void *user_data);
@@ -436,6 +440,17 @@ extern void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
  * \param size   Number of bytes to send.
  */
 extern void telnet_send(telnet_t *telnet,
+		const char *buffer, size_t size);
+
+/*!
+ * Send non-command text (escapes IAC bytes and translates
+ * \\r -> CR-NUL and \\n -> CR-LF unless in BINARY mode.
+ *
+ * \param telnet Telnet state tracker object.
+ * \param buffer Buffer of bytes to send.
+ * \param size   Number of bytes to send.
+ */
+extern void telnet_send_text(telnet_t *telnet,
 		const char *buffer, size_t size);
 
 /*!
