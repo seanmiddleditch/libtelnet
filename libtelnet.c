@@ -131,6 +131,9 @@ static const size_t _buffer_sizes[] = { 0, 512, 2048, 8192, 16384, };
 static const size_t _buffer_sizes_count = sizeof(_buffer_sizes) /
 		sizeof(_buffer_sizes[0]);
 
+/* RFC1143 option negotiation state table allocation quantum */
+#define Q_BUFFER_GROWTH_QUANTUM 4
+
 /* error generation function */
 static telnet_error_t _error(telnet_t *telnet, unsigned line,
 		const char* func, telnet_error_t err, int fatal, const char *fmt,
@@ -328,24 +331,25 @@ static INLINE void _set_rfc1143(telnet_t *telnet, unsigned char telopt,
 	 * allows for an acceptable number of reallocations for complex code.
 	 */
 
-#define QUANTUM 4
     /* Did we reach the end of the table? */
-	if (i >= telnet->q_size) {
+	if (telnet->q_cnt >= telnet->q_size) {
 		/* Expand the size */
 		if ((qtmp = (telnet_rfc1143_t *)realloc(telnet->q,
-			sizeof(telnet_rfc1143_t) * (telnet->q_size + QUANTUM))) == 0) {
+			sizeof(telnet_rfc1143_t) *
+            	(telnet->q_size + Q_BUFFER_GROWTH_QUANTUM))) == 0) {
 			_error(telnet, __LINE__, __func__, TELNET_ENOMEM, 0,
 					"realloc() failed: %s", strerror(errno));
 			return;
 		}
-		memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t) * QUANTUM);
+		memset(&qtmp[telnet->q_size], 0, sizeof(telnet_rfc1143_t) *
+			Q_BUFFER_GROWTH_QUANTUM);
 		telnet->q = qtmp;
-		telnet->q_size += QUANTUM;
+		telnet->q_size += Q_BUFFER_GROWTH_QUANTUM;
 	}
 	/* Add entry to end of table */
 	telnet->q[telnet->q_cnt].telopt = telopt;
 	telnet->q[telnet->q_cnt].state = Q_MAKE(us, him);
-	telnet->q_cnt ++;
+	++telnet->q_cnt;
 }
 
 /* send negotiation bytes */
