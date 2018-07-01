@@ -159,13 +159,13 @@ int main(int argc, char **argv) {
 	const char *hostname;
 
 	/* check usage */
-	if (argc != 3) {
-		fprintf(stderr, "Usage:\n ./telnet-client <host> <port>\n");
+	if (argc < 2) {
+		fprintf(stderr, "Usage:\n ./telnet-client <host> [port]\n");
 		return 1;
 	}
 
 	/* process arguments */
-	servname = argv[2];
+	servname = (argc < 3) ? "23" : argv[2];
 	hostname = argv[1];
 
 	/* look up server host */
