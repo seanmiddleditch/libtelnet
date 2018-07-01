@@ -155,6 +155,8 @@ int main(int argc, char **argv) {
 	struct addrinfo *ai;
 	struct addrinfo hints;
 	struct termios tios;
+	const char *servname;
+	const char *hostname;
 
 	/* check usage */
 	if (argc != 3) {
@@ -162,12 +164,16 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	/* process arguments */
+	servname = argv[2];
+	hostname = argv[1];
+
 	/* look up server host */
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	if ((rs = getaddrinfo(argv[1], argv[2], &hints, &ai)) != 0) {
-		fprintf(stderr, "getaddrinfo() failed for %s: %s\n", argv[1],
+	if ((rs = getaddrinfo(hostname, servname, &hints, &ai)) != 0) {
+		fprintf(stderr, "getaddrinfo() failed for %s: %s\n", hostname,
 				gai_strerror(rs));
 		return 1;
 	}
