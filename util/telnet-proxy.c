@@ -10,9 +10,6 @@
  */
 
 #if !defined(_WIN32)
-#	if !defined(_POSIX_SOURCE)
-#		define _POSIX_SOURCE
-#	endif
 #	if !defined(_BSD_SOURCE)
 #		define _BSD_SOURCE
 #	endif
@@ -27,13 +24,15 @@
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
 
+#ifndef _UCRT
 #	define snprintf _snprintf
+#endif
+
 #	define poll WSAPoll
 #	define close closesocket
-
-#if !defined(_MSC_VER) || _MSC_VER < 1600 // VC 9 and prior do not define this macro
+#	undef gai_strerror
+#	define gai_strerror gai_strerrorA
 #	define ECONNRESET WSAECONNRESET
-#endif
 #endif
 
 #include <errno.h>
@@ -152,16 +151,15 @@ static const char *get_opt(unsigned char opt) {
 }
 
 static void print_buffer(const char *buffer, size_t size) {
+	printf("%.*s", (int)size, buffer);
+
 	size_t i;
+	printf(" [");
 	for (i = 0; i != size; ++i) {
-		if (buffer[i] == ' ' || (isprint(buffer[i]) && !isspace(buffer[i])))
-			printf("%c", (char)buffer[i]);
-		else if (buffer[i] == '\n')
-			printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">\n",
-					(int)buffer[i]);
-		else
-			printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">", (int)buffer[i]);
+		printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">", (unsigned char)buffer[i]);
+		if(buffer[i] == '\n') printf("%c", '\n');
 	}
+	printf("]");
 }
 
 static void _send(int sock, const char *buffer, size_t size) {
