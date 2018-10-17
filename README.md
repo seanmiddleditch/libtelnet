@@ -1,25 +1,24 @@
 [![Build Status](https://travis-ci.org/seanmiddleditch/libtelnet.svg?branch=master)](https://travis-ci.org/seanmiddleditch/libtelnet)
 
-=====================================================================
-  libtelnet - TELNET protocol handling library
-=====================================================================
+libtelnet - TELNET protocol handling library
+============================================
 
  http://github.com/seanmiddleditch/libtelnet
 
  Sean Middleditch
  sean@sourcemud.org
 
----------------------------------------------------------------------
+
 The author or authors of this code dedicate any and all copyright
 interest in this code to the public domain. We make this dedication
 for the benefit of the public at large and to the detriment of our
 heirs and successors. We intend this dedication to be an overt act of
 relinquishment in perpetuity of all present and future rights to this
-code under copyright law. 
----------------------------------------------------------------------
+code under copyright law.
 
-I. INTRODUCTION
-=====================================================================
+
+I. Introduction
+---------------
 
 libtelnet provides safe and correct handling of the core TELNET
 protocol.  In addition to the base TELNET protocol, libtelnet also
@@ -29,15 +28,15 @@ be used for writing servers, clients, or proxies.
 For more information on the TELNET standards supported by libtelnet,
 visit the following websites:
 
- http://www.faqs.org/rfcs/rfc854.html
- http://www.faqs.org/rfcs/rfc855.html
- http://www.faqs.org/rfcs/rfc1091.html
- http://www.faqs.org/rfcs/rfc1143.html
- http://www.faqs.org/rfcs/rfc1408.html
- http://www.faqs.org/rfcs/rfc1572.html
+* http://www.faqs.org/rfcs/rfc854.html
+* http://www.faqs.org/rfcs/rfc855.html
+* http://www.faqs.org/rfcs/rfc1091.html
+* http://www.faqs.org/rfcs/rfc1143.html
+* http://www.faqs.org/rfcs/rfc1408.html
+* http://www.faqs.org/rfcs/rfc1572.html
 
-II. LIBTELNET API
-=====================================================================
+II. API
+-------
 
 The libtelnet API contains several distinct parts.  The first part is
 the basic initialization and deinitialization routines.  The second
@@ -51,7 +50,7 @@ This document covers only the most basic functions.  See the
 libtelnet manual pages or HTML documentation for a complete
 reference.
 
-IIa. Initialization
+#### IIa. Initialization
 
  Using libtelnet requires the initialization of a telnet_t structure
  which stores all current state for a single TELNET connection.
@@ -63,11 +62,13 @@ IIa. Initialization
  supported option.  Each entry specifies the option supported,
  whether the option is supported locally or remotely.
 
-  struct telnet_telopt_t {
+```
+struct telnet_telopt_t {
     short telopt;
     unsigned char us;
     unsigned char him;
-  };
+};
+```
 
  The us field denotes whether your application supports the telopt
  locally.  It should be set to TELNET_WILL if you support it and to
@@ -79,7 +80,8 @@ IIa. Initialization
  entry, which is simply an entry with telopt set to -1.  For
  example:
 
-  static const telnet_telopt_t my_telopts[] = {
+```
+static const telnet_telopt_t my_telopts[] = {
     { TELNET_TELOPT_ECHO,      TELNET_WILL, TELNET_DONT },
     { TELNET_TELOPT_TTYPE,     TELNET_WILL, TELNET_DONT },
     { TELNET_TELOPT_COMPRESS2, TELNET_WONT, TELNET_DO   },
@@ -88,8 +90,9 @@ IIa. Initialization
     { TELNET_TELOPT_BINARY,    TELNET_WILL, TELNET_DO   },
     { TELNET_TELOPT_NAWS,      TELNET_WILL, TELNET_DONT },
     { -1, 0, 0 }
-  };
- 
+};
+```
+
  If you need to dynamically alter supported options on a
  per-connection basis then you may use a different table
  (dynamically allocated if necessary) per call to telnet_init() or
@@ -97,9 +100,10 @@ IIa. Initialization
  all connections if you support a fixed set of options.  Most
  applications will support only a fixed set of options.
 
- telnet_t *telnet_init(const telnet_telopts_t *telopts,
+* `telnet_t *telnet_init(const telnet_telopts_t *telopts,
      telnet_event_handler_t handler, unsigned char flags,
-     void *user_data);
+     void *user_data);`
+
    The telnet_init() function is responsible for allocating memory
    and initializing the data in a telnet_t structure.  It must be
    called immediately after establishing a connection and before any
@@ -130,17 +134,19 @@ IIa. Initialization
 
    If telnet_init() fails to allocate the required memory, the
    returned pointer will be zero.
- 
- void telnet_free(telnet_t *telnet);
+
+* `void telnet_free(telnet_t *telnet);`
+
    Releases any internal memory allocated by libtelnet for the given
    telnet pointer.  This must be called whenever a connection is
    closed, or you will incur memory leaks.  The pointer passed in may
    no longer be used afterwards.
 
-IIb. Receiving Data
+#### IIb. Receiving Data
 
- void telnet_recv(telnet_t *telnet,
-     const char *buffer, unsigned int size, void *user_data);
+* `void telnet_recv(telnet_t *telnet,
+     const char *buffer, unsigned int size, void *user_data);`
+
    When your application receives data over the socket from the
    remote end, it must pass the received bytes into this function.
 
@@ -150,7 +156,7 @@ IIb. Receiving Data
    triggered for any regular data such as user input or server
    process output.
 
-IIc. Sending Data
+#### IIc. Sending Data
 
  All of the output functions will invoke the TELNET_EV_SEND event.
 
@@ -160,12 +166,14 @@ IIc. Sending Data
  to one of the following functions.  Do NOT send or buffer
  unprocessed output data directly!
 
- void telnet_iac(telnet_t *telnet, unsigned char cmd);
+* `void telnet_iac(telnet_t *telnet, unsigned char cmd);`
+
    Sends a single "simple" TELNET command, such as the GO-AHEAD
    commands (255 249).
 
- void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
-     unsigned char opt);
+* `void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
+     unsigned char opt);`
+
    Sends a TELNET negotiation command.  The cmd parameter must be one
    of TELNET_WILL, TELNET_WONT, TELNET_DO, or TELNET_DONT.  The opt
    parameter is the option to negotiate.
@@ -175,20 +183,26 @@ IIc. Sending Data
    invocations, such as asking for WILL NAWS when NAWS is already on
    or is currently awaiting response from the remote end.
 
- void telnet_send(telnet_t *telnet, const char *buffer, size_t size);
+* `void telnet_send(telnet_t *telnet, const char *buffer, size_t size);`
+
    Sends raw data, which would be either the process output from a
    server or the user input from a client.
 
- void telnet_send_text(telnet_t *telnet, const char *buffer,
-     size_t size);
+   For sending regular text it may be more convenient to use
+   telnet_printf().
+
+* `void telnet_send_text(telnet_t *telnet, const char *buffer,
+     size_t size);`
+
    Sends text characters with translation of C newlines (\n) into
    CR LF and C carriage returns (\r) into CR NUL, as required by
    RFC854, unless transmission in BINARY mode has been negotiated.
 
    For sending regular text it may be more convenient to use
    telnet_printf().
- 
- void telnet_begin_sb(telnet_t *telnet, unsigned char telopt);
+
+* `void telnet_begin_sb(telnet_t *telnet, unsigned char telopt);`
+
    Sends the header for a TELNET sub-negotiation command for the
    specified option.  All send data following this command will be
    part of the sub-negotiation data until a call is made to
@@ -198,42 +212,48 @@ IIc. Sending Data
    data as it will perform newline translations that usually do not
    need to be done for subnegotiation data, and may cause problems.
 
- void telnet_finish_sb(telnet_t *telnet);
+* `void telnet_finish_sb(telnet_t *telnet);`
+
    Sends the end marker for a TELNET sub-negotiation command.  This
    must be called after (and only after) a call has been made to
    telnet_begin_subnegotiation() and any negotiation data has been
    sent.
 
- void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
-     const char *buffer, unsigned int size);
+* `void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
+     const char *buffer, unsigned int size);`
+
    Sends a TELNET sub-negotiation command.  The telopt parameter is
    the sub-negotiation option.
 
    Note that this function is just a shorthand for:
+   ```
     telnet_begin_sb(telnet, telopt);
     telnet_send(telnet, buffer, size);
     telnet_end_sb(telnet);
+   ```
 
    For some subnegotiations that involve a lot of complex formatted
    data to be sent, it may be easier to make calls to both
    telnet_begin_sb() and telnet_finish_sb() and using telnet_send()
-   or telnet_printf2() to format the data.  
+   or telnet_printf2() to format the data.
 
    NOTE: telnet_subnegotiation() does have special behavior in
    PROXY mode, as in that mode this function will automatically
    detect the COMPRESS2 marker and enable zlib compression.
 
- int telnet_printf(telnet_t *telnet, const char *fmt, ...);
-   This functions very similarly to fprintf, except that output is
-   sent through libtelnet for processing.  IAC bytes are properly
-   escaped, C newlines (\n) are translated into CR LF, and C carriage
-   returns (\r) are translated into CR NUL, all as required by
-   RFC854.  The return code is the length of the formatted text.
+* `int telnet_printf(telnet_t *telnet, const char *fmt, ...);`
 
-   NOTE: due to an internal implementation detail, the maximum
-   length of the formatted text is 4096 characters.
+  This functions very similarly to fprintf, except that output is
+  sent through libtelnet for processing.  IAC bytes are properly
+  escaped, C newlines (\n) are translated into CR LF, and C carriage
+  returns (\r) are translated into CR NUL, all as required by
+  RFC854.  The return code is the length of the formatted text.
 
-IId. Event Handling
+  NOTE: due to an internal implementation detail, the maximum
+  lenth of the formatted text is 4096 characters.
+
+
+#### IId. Event Handling
 
  libtelnet relies on an event-handling mechanism for processing the
  parsed TELNET protocol stream as well as for buffering and sending
@@ -243,8 +263,8 @@ IId. Event Handling
  to pass in an event handler function.  This function must meet the
  following prototype:
 
-  void (telnet_t *telnet, telnet_event_t *event, void *user_data);
- 
+  `void (telnet_t *telnet, telnet_event_t *event, void *user_data);`
+
  The event structure is detailed below.  The user_data value is the
  pointer passed to telnet_init().
 
@@ -252,42 +272,44 @@ IId. Event Handling
  telnet_event_t data type.  Please see the libtelnet manual pages or
  HTML document for a complete reference.
 
-  union telnet_event_t {
-    enum telnet_event_type_t type;
-  
-    struct data_t {
-      enum telnet_event_type_t _type;
-      const char *buffer;
-      size_t size;
-    } data;
+```
+union telnet_event_t {
+  enum telnet_event_type_t type;
 
-    struct error_t {
-      enum telnet_event_type_t _type;
-      const char *file;
-      const char *func;
-      const char *msg;
-      int line;
-      telnet_error_t errcode;
-    } error;
-  
-    struct iac_t {
-      enum telnet_event_type_t _type;
-      unsigned char cmd;
-    } iac;
-  
-    struct negotiate_t {
-      enum telnet_event_type_t _type;
-      unsigned char telopt;
-    } neg;
-  
-    struct subnegotiate_t {
-      enum telnet_event_type_t _type;
-      const char *buffer;
-      size_t size;
-      unsigned char telopt;
-    } sub;
-  };
- 
+  struct data_t {
+    enum telnet_event_type_t _type;
+    const char *buffer;
+    size_t size;
+  } data;
+
+  struct error_t {
+    enum telnet_event_type_t _type;
+    const char *file;
+    const char *func;
+    const char *msg;
+    int line;
+    telnet_error_t errcode;
+  } error;
+
+  struct iac_t {
+    enum telnet_event_type_t _type;
+    unsigned char cmd;
+  } iac;
+
+  struct negotiate_t {
+    enum telnet_event_type_t _type;
+    unsigned char telopt;
+  } neg;
+
+  struct subnegotiate_t {
+    enum telnet_event_type_t _type;
+    const char *buffer;
+    size_t size;
+    unsigned char telopt;
+  } sub;
+};
+```
+
  The enumeration values of telnet_event_type_t are described in
  detail below.  Whenever the the event handler is invoked, the
  application must look at the event->type value and do any necessary
@@ -300,24 +322,27 @@ IId. Event Handling
  Here is an example event handler implementation which includes
  handlers for several important events.
 
-  void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
-      void *user_data) {
-    struct user_info *user = (struct user_info *)user_data;
+```
+void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
+    void *user_data) {
+  struct user_info *user = (struct user_info *)user_data;
 
-    switch (ev->type) {
-    case TELNET_EV_DATA:
-      process_user_input(user, event->data.buffer, event->data.size);
-      break;
-    case TELNET_EV_SEND:
-      write_to_descriptor(user, event->data.buffer, event->data.size);
-      break;
-    case TELNET_EV_ERROR:
-      fatal_error("TELNET error: %s", event->error.msg);
-      break;
-    }
+  switch (ev->type) {
+  case TELNET_EV_DATA:
+    process_user_input(user, event->data.buffer, event->data.size);
+    break;
+  case TELNET_EV_SEND:
+    write_to_descriptor(user, event->data.buffer, event->data.size);
+    break;
+  case TELNET_EV_ERROR:
+    fatal_error("TELNET error: %s", event->error.msg);
+    break;
   }
+}
+```
 
- TELNET_EV_DATA:
+* TELNET_EV_DATA
+
    The DATA event is triggered whenever regular data (not part of any
    special TELNET command) is received.  For a client, this will be
    process output from the server.  For a server, this will be input
@@ -331,8 +356,9 @@ IId. Event Handling
    will be received in whole lines.  If you wish to process data
    a line at a time, you are responsible for buffering the data and
    checking for line terminators yourself!
- 
- TELNET_EV_SEND:
+
+* TELNET_EV_SEND
+
    This event is sent whenever libtelnet has generated data that must
    be sent over the wire to the remove end.  Generally that means
    calling send() or adding the data to your application's output
@@ -346,8 +372,9 @@ IId. Event Handling
    NOTE: Your SEND event handler must send or buffer the data in
    its raw form as provided by libtelnet.  If you wish to perform
    any kind of preprocessing on data you want to send to the other
- 
- TELNET_EV_IAC:
+
+* TELNET_EV_IAC
+
    The IAC event is triggered whenever a simple IAC command is
    received, such as the IAC EOR (end of record, also called go ahead
    or GA) command.
@@ -356,9 +383,9 @@ IId. Event Handling
 
    The necessary processing depends on the specific commands; see
    the TELNET RFC for more information.
- 
- TELNET_EV_WILL:
- TELNET_EV_DO:
+
+* TELNET_EV_WILL / TELNET_EV_DO
+
    The WILL and DO events are sent when a TELNET negotiation command
    of the same name is received.
 
@@ -381,8 +408,8 @@ IId. Event Handling
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
 
- TELNET_EV_WONT:
- TELNET_EV_DONT:
+* TELNET_EV_WONT / TELNET_EV_DONT
+
    The WONT and DONT events are sent when the remote end of the
    connection wishes to disable an option, when they are refusing to
    a support an option that you have asked for, or in confirmation of
@@ -406,7 +433,8 @@ IId. Event Handling
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
 
- TELNET_EV_SUBNEGOTIATION:
+* TELNET_EV_SUBNEGOTIATION
+
    Triggered whenever a TELNET sub-negotiation has been received.
    Sub-negotiations include the NAWS option for communicating
    terminal size to a server, the NEW-ENVIRON and TTYPE options for
@@ -433,7 +461,8 @@ IId. Event Handling
    should be ignored for these options and the special events should
    be handled explicitly.
 
- TELNET_EV_COMPRESS:
+* TELNET_EV_COMPRESS
+
    The COMPRESS event notifies the app that COMPRESS2/MCCP2
    compression has begun or ended.  Only servers can send compressed
    data, and hence only clients will receive compressed data.
@@ -441,31 +470,36 @@ IId. Event Handling
    The event->command value will be 1 if compression has started and
    will be 0 if compression has ended.
 
- TELNET_EV_ZMP:
+* TELNET_EV_ZMP
+
    The event->zmp.argc field is the number of ZMP parameters, including
    the command name, that have been received.  The event->zmp.argv
    field is an array of strings, one for each ZMP parameter.  The
    command name will be in event->zmp.argv[0].
 
- TELNET_EV_TTYPE:
+* TELNET_EV_TTYPE
+
    The event->ttype.cmd field will be either TELNET_TTYPE_SEND,
    TELNET_TTYPE_IS, TELNET_TTYPE_INFO.
 
    The actual terminal type will be in event->ttype.name.
 
- TELNET_EV_ENVIRON:
+* TELNET_EV_ENVIRON
+
    The event->environ.cmd field will be either TELNET_ENVIRON_IS,
    TELNET_ENVIRON_SEND, or TELNET_ENVIRON_INFO.
 
    The actual environment variable sent or requested will be sent
    in the event->environ.values field.  This is an array of
    structures with the following format:
-     
+
+   ```
      struct telnet_environ_t {
        unsigned char type;
        const char *var;
        const char *value;
      };
+   ```
 
    The number of entries in the event->environ.values array is
    stored in event->environ.count.
@@ -474,7 +508,8 @@ IId. Event Handling
    NEW-ENVIRON.  Data using escaped bytes will not be parsed
    correctly.
 
- TELNET_EV_MSSP:
+* TELNET_EV_MSSP
+
    The event->mssp.values field is an array of telnet_environ_t
    structures.  The cmd field in each entry will have an
    unspecified value, while the var and value fields will always
@@ -484,8 +519,9 @@ IId. Event Handling
 
    The number of entries in the event->mssp.values array is
    stored in event->mssp.count.
- 
- TELNET_EV_WARNING:
+
+* TELNET_EV_WARNING
+
    The WARNING event is sent whenever something has gone wrong inside
    of libtelnet (possibly due to malformed data sent by the other
    end) but which recovery is (likely) possible.  It may be safe to
@@ -495,7 +531,8 @@ IId. Event Handling
    The event->error.msg field will contain a NUL terminated string
    explaining the error.
 
- TELNET_EV_ERROR:
+* TELNET_EV_ERROR
+
    Similar to the WARNING event, the ERROR event is sent whenever
    something has gone wrong.  ERROR events are non-recoverable,
    however, and the application should immediately close the
@@ -506,14 +543,14 @@ IId. Event Handling
    The event->error.msg field will contain a NUL terminated string
    explaining the error.
 
-III. INTEGRATING LIBTELNET WITH COMMON MUDS
-=====================================================================
+III. Integrating libtelnet with common muds
+-------------------------------------------
 
 FIXME: fill in some notes about how to splice in libtelnet with
 common Diku/Merc/Circle/etc. MUD codebases.
 
-IV. SAFETY AND CORRECTNESS CONSIDERATIONS
-=====================================================================
+IV. Safety and correctness considerations
+-----------------------------------------
 
 Your existing application may make heavy use of its own output
 buffering and transmission commands, including hand-made routines for
@@ -540,8 +577,8 @@ following: telnet_iac, telnet_negotiate, or telnet_subnegotiation().
 If you are attempting to enable COMPRESS2/MCCP2, you must use the
 telnet_begin_compress2() function.
 
-V. MCCP2 COMPRESSION
-=====================================================================
+V. MCCP2 compression
+--------------------
 
 The MCCP2 (COMPRESS2) TELNET extension allows for the compression of
 all traffic sent from server to client.  For more information:
@@ -557,8 +594,8 @@ libtelnet transparently supports MCCP2.  For a server to support
 MCCP2, the application must begin negotiation of the COMPRESS2 option
 using telnet_negotiate(), for example:
 
- telnet_negotiate(&telnet, TELNET_WILL,
-     TELNET_OPTION_COMPRESS2, user_data);
+ `telnet_negotiate(&telnet, TELNET_WILL,
+     TELNET_OPTION_COMPRESS2, user_data);`
 
 If a favorable DO COMPRESS2 is sent back from the client then the
 server application can begin compression at any time by calling
@@ -568,8 +605,8 @@ If a connection is in PROXY mode and COMPRESS2 support is enabled
 then libtelnet will automatically detect the start of a COMPRESS2
 stream, in either the sending or receiving direction.
 
-VI. ZENITH MUD PROTOCOL (ZMP) SUPPORT
-=====================================================================
+VI. Zenith MUD Protocol (ZMP) support
+-------------------------------------
 
 The Zenith MUD Protocol allows applications to send messages across
 the TELNET connection outside of the normal user input/output data
@@ -581,12 +618,12 @@ For more information on ZMP:
 
 For a server to enable ZMP, it must send the WILL ZMP negotitaion:
 
- telnet_negotiate(&telnet, TELNET_WILL, TELNET_TELOPT_ZMP);
+ `telnet_negotiate(&telnet, TELNET_WILL, TELNET_TELOPT_ZMP);`
 
 For a client to support ZMP it must include ZMP in the telopt table
 passed to telnet_init(), with the him field set to TELNET_DO:
 
- { TELNET_TELOPT_ZMP,       TELNET_WONT, TELNET_DO   },
+ `{ TELNET_TELOPT_ZMP,       TELNET_WONT, TELNET_DO   },`
 
 Note that while ZMP is a bi-directional protocol, it is only ever
 enabled on the server end of the connection.  This automatically
@@ -607,8 +644,9 @@ before attempting to access the parameter array.
 To send ZMP commands to the remote end, use either telnet_send_zmp()
 or telnet_send_zmpv().
 
- int telnet_send_zmp(telnet_t *telnet, size_t argv,
-    const char **argv);
+* `int telnet_send_zmp(telnet_t *telnet, size_t argv,
+    const char **argv);`
+
   Sends a ZMP command to the remote end.  The argc parameter is the
   number of ZMP parameters (including the command name!) to be sent.
   The argv parameter is an array of strings containing the
@@ -616,8 +654,8 @@ or telnet_send_zmpv().
   The argv array must have at least as many elements as the value
   argc.
 
-VII. MUD SERVER STATUS PROTOCOL (MSSP) SUPPORT
-=====================================================================
+VII. MUD Server Status Protocol (MSSP) support
+----------------------------------------------
 
 MSSP allows for crawlers or other clients to query a MUD server's
 supported feature list.  This allows MUD listing states to
@@ -627,8 +665,8 @@ their MUD.  For more information on MSSP:
 
  http://tintin.sourceforge.net/mssp/
 
-VIII. TELNET PROXY UTILITY
-=====================================================================
+VIII. Telnet proxy utility
+--------------------------
 
 The telnet-proxy utility is a small application that serves both as a
 testbed for libtelnet and as a powerful debugging tool for TELNET
@@ -636,7 +674,9 @@ servers and clients.
 
 To use telnet-proxy, you must first compile it using:
 
+```
  $ make
+```
 
 If you do not have zlib installed and wish to disable MCCP2 support
 then you must first edit the Makefile and remove the -DHAVE_ZLIB and
@@ -647,7 +687,9 @@ address, the server's port number, and the port number that
 telnet-proxy should listen on.  For example, to connect to the server
 on mud.example.com port 7800 and to listen on port 5000, run:
 
+```
  $ ./telnet-proxy mud.example.com 7800 5000
+```
 
 You can then connect to the host telnet-proxy is running on (e.g.
 127.0.0.1) on port 5000 and you will automatically be proxied into
