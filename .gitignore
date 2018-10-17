@@ -22,6 +22,8 @@ m4/*.m4
 missing
 stamp-h1
 compile
+ar-lib
+test-driver
 
 telnet-client
 telnet-proxy
