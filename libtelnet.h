@@ -34,7 +34,7 @@
  *
  * \file libtelnet.h
  *
- * \version 0.22
+ * \version 0.23
  *
  * \author Sean Middleditch <sean@sourcemud.org>
  */
