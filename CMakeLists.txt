@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(libtelnet
     VERSION 0.30.0
-    DESCRIPTION "TELNET protocol handling library"
-    HOMEPAGE_URL https://github.com/seanmiddleditch/libtelnet
     LANGUAGES C
 )
+set(PROJECT_DESCRIPTION "TELNET protocol handling library")
+set(PROJECT_HOMEPAGE_URL https://github.com/seanmiddleditch/libtelne)
 
 add_library(libtelnet libtelnet.c)
 
