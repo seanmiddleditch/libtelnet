@@ -5,6 +5,3 @@
 %00FO%02%02O
 %03B%02%01AR
 %FF%F0
-
-%%
-ENVIRON [2 parts] ==> SEND VAR "FO%02O" USERVAR "B%01AR"

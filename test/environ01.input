@@ -11,7 +11,3 @@
 %FF%FA%24
 %01
 %FF%F0
-
-%%
-ENVIRON [2 parts] ==> SEND VAR "FOO" USERVAR "BAR"
-ENVIRON [0 parts] ==> SEND

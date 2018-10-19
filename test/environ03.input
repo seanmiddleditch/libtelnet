@@ -5,6 +5,3 @@
 %01
 %03
 %FF%F0
-
-%%
-ENVIRON [1 parts] ==> SEND USERVAR ""

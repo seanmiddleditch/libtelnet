@@ -1,13 +1,7 @@
 enable_testing()
 
-add_test(NAME environ01 COMMAND telnet-test environ01.test)
-add_test(NAME environ02 COMMAND telnet-test environ02.test)
-add_test(NAME environ03 COMMAND telnet-test environ03.test)
-add_test(NAME mssp01 COMMAND telnet-test mssp01.test)
-add_test(NAME rfc1143 COMMAND telnet-test rfc1143.test)
-add_test(NAME simple01 COMMAND telnet-test simple01.test)
-add_test(NAME simple02 COMMAND telnet-test simple02.test)
-add_test(NAME ttype01 COMMAND telnet-test ttype01.test)
-add_test(NAME zmp01 COMMAND telnet-test zmp01.test)
-add_test(NAME zmp02 COMMAND telnet-test zmp02.test)
-add_test(NAME zmp03 COMMAND telnet-test zmp03.test)
+foreach (test_name environ01 environ02 environ03 mssp01 rfc1143 simple01 simple02 ttype01 zmp01 zmp02 zmp03)
+    add_test(
+        NAME ${test_name}
+        COMMAND telnet-test ${CMAKE_CURRENT_SOURCE_DIR}/${test_name}.input ${CMAKE_CURRENT_SOURCE_DIR}/${test_name}.txt)
+endforeach ()

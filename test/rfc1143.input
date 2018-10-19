@@ -14,7 +14,3 @@
 
 # disable ZMP again (expect nothing)
 %FF%FE%5D
-
-%%
-DO 93 (ZMP)
-DONT 93 (ZMP)

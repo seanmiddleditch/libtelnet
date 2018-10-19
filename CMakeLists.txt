@@ -9,7 +9,7 @@ project(libtelnet
 add_library(libtelnet libtelnet.c)
 
 add_compile_definitions(
-    $<$<CXX_COMPILER_ID:MSVC>:_SCL_SECURE_NO_WARNINGS>
+    $<$<CXX_COMPILER_ID:MSVC>:-D_SCL_SECURE_NO_WARNINGS>
 )
 
 target_include_directories(libtelnet
