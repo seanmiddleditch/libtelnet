@@ -21,6 +21,7 @@ target_include_directories(libtelnet
 )
 
 add_subdirectory(util)
+add_subdirectory(doc)
 add_subdirectory(test)
 
 include(GNUInstallDirs)
