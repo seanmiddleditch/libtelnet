@@ -4,7 +4,6 @@ compiler:
   - gcc
 os:
   - linux
-  - osx
 install:
   - sudo apt-get install -y cmake3
   - sudo apt-get install -y doxygen
