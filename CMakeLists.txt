@@ -8,9 +8,9 @@ set(PROJECT_HOMEPAGE_URL https://github.com/seanmiddleditch/libtelne)
 
 add_library(libtelnet libtelnet.c)
 
-add_compile_definitions(
-    $<$<CXX_COMPILER_ID:MSVC>:-D_SCL_SECURE_NO_WARNINGS>
-)
+if (MSVC)
+    add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
+endif ()
 
 target_include_directories(libtelnet
     PUBLIC
