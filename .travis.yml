@@ -5,6 +5,8 @@ compiler:
 os:
   - linux
   - osx
-before_install:
+install:
   - sudo apt-get install -y cmake
   - sudo apt-get install -y doxygen
+script:
+  - mkdir build && cd build && cmake .. && cmake --build
