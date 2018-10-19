@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
-project(libtelnet VERSION 0.30.0 LANGUAGES C)
+project(libtelnet
+    VERSION 0.30.0
+    DESCRIPTION "TELNET protocol handling library"
+    HOMEPAGE_URL https://github.com/seanmiddleditch/libtelnet
+    LANGUAGES C
+)
 
 add_library(libtelnet libtelnet.c)
 
@@ -19,10 +24,16 @@ add_subdirectory(util)
 add_subdirectory(test)
 
 include(GNUInstallDirs)
+
+configure_file(libtelnet.pc.in libtelnet.pc)
+
 install(TARGETS libtelnet
     EXPORT libtelnet-export
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+install(FILES libtelnet.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(EXPORT libtelnet-export
     FILE libtelnet.cmake
