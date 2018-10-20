@@ -6,7 +6,7 @@ os:
   - linux
   - osx
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; sudo apt-get install -y doxygen cmake3 ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install doxygen; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; sudo apt-get install -y doxygen cmake3 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install doxygen ; fi
 script:
   - mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX:PATH=~/.local .. && cmake --build . && cpack -G TGZ
