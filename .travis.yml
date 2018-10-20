@@ -8,4 +8,4 @@ install:
   - sudo apt-get install -y cmake3
   - sudo apt-get install -y doxygen
 script:
-  - mkdir build && cd build && cmake .. && cmake --build .
+  - mkdir build && cd build && cmake .. && cmake --build . && cpack
