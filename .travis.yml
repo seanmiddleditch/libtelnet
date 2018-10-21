@@ -1,12 +1,12 @@
-language: cpp
+language: c
 compiler:
   - clang
   - gcc
 os:
   - linux
-before_install:
-  - libtoolize
-  - aclocal
-  - autoheader
-  - automake --add-missing
-  - autoconf
+  - osx
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then sudo apt-get install -y doxygen cmake3 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install doxygen ; fi
+script:
+  - mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX:PATH=~/.local .. && cmake --build . && cpack -G TGZ
