@@ -1469,14 +1469,16 @@ void telnet_begin_compress2(telnet_t *telnet) {
 
 /* send formatted data with \r and \n translation in addition to IAC IAC */
 int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
+	va_list va_temp;
 	char buffer[1024];
 	char *output = buffer;
 	int rs, i, l;
 
 	/* format */
-	va_list va2;
-	va_copy(va2, va);
-	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
+	va_copy(va_temp, va);
+	rs = vsnprintf(buffer, sizeof(buffer), fmt, va_temp);
+	va_end(va_temp);
+
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
 		if (output == 0) {
@@ -1484,10 +1486,11 @@ int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 					"malloc() failed: %s", strerror(errno));
 			return -1;
 		}
-		rs = vsnprintf(output, rs + 1, fmt, va2);
+
+		va_copy(va_temp, va);
+		rs = vsnprintf(output, rs + 1, fmt, va_temp);
+		va_end(va_temp);
 	}
-	va_end(va2);
-	va_end(va);
 
 	/* send */
 	for (l = i = 0; i != rs; ++i) {
