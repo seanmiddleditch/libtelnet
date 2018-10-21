@@ -1,0 +1,19 @@
+skip_tags: true
+shallow_clone: true
+image:
+  - Visual Studio 2017
+platform:
+  - x86
+  - x64
+configuration:
+  - Release
+matrix:
+  fast_finish: true
+install:
+  - choco install doxygen.portable
+build_script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build .
+  - cpack -G ZIP
