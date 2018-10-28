@@ -7,10 +7,11 @@ env:
   - CONFIG=Debug
   - CONFIG=Release
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then sudo apt-get install -y doxygen cmake3 ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install doxygen ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]] ; then choco install doxygen.portable ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then sudo apt-get install -y doxygen cmake3 cppcheck ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install doxygen cppcheck ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]] ; then choco install doxygen.portable cppcheck ; fi
 script:
+  - cppcheck --quit --error-exitcode 1 . 
   - mkdir build
   - cd build
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DCMAKE_BUILD_TYPE:STRING=$CONFIG ..
