@@ -11,7 +11,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]] ; then brew install doxygen cppcheck ; fi
   - if [[ "$TRAVIS_OS_NAME" == "windows" ]] ; then choco install doxygen.portable cppcheck ; fi
 script:
-  - cppcheck --quit --error-exitcode 1 . 
+  - cppcheck --quiet --error-exitcode 1 . 
   - mkdir build
   - cd build
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DCMAKE_BUILD_TYPE:STRING=$CONFIG ..
