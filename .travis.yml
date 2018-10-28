@@ -16,7 +16,6 @@ script:
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DCMAKE_BUILD_TYPE:STRING=$CONFIG ..
   - cmake --build . --config $CONFIG
   - cd test
-  - ctest .
+  - ctest -C Release .
   - cd ..
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]] ; then cpack -G TGZ ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]] ; then cpack -G ZIP ; fi
