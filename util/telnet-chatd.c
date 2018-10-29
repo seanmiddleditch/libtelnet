@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 
 	/* reuse address option */
 	rs = 1;
-	setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&rs, sizeof(rs));
+	setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&rs, sizeof(rs));
 
 	/* bind to listening addr/port */
 	memset(&addr, 0, sizeof(addr));
