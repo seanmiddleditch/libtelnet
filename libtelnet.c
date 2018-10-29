@@ -11,9 +11,6 @@
  * all present and future rights to this code under copyright law.
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -1541,14 +1538,16 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 
 /* send formatted data through telnet_send */
 int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
+	va_list va_temp;
 	char buffer[1024];
 	char *output = buffer;
 	int rs;
 
 	/* format; allocate more space if necessary */
-	va_list va2;
-	va_copy(va2, va);
-	rs = vsnprintf(buffer, sizeof(buffer), fmt, va);
+	va_copy(va_temp, va);
+	rs = vsnprintf(buffer, sizeof(buffer), fmt, va_temp);
+	va_end(va_temp);
+
 	if (rs >= sizeof(buffer)) {
 		output = (char*)malloc(rs + 1);
 		if (output == 0) {
@@ -1556,10 +1555,11 @@ int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 					"malloc() failed: %s", strerror(errno));
 			return -1;
 		}
-		rs = vsnprintf(output, rs + 1, fmt, va2);
+
+		va_copy(va_temp, va);
+		rs = vsnprintf(output, rs + 1, fmt, va_temp);
+		va_end(va_temp);
 	}
-	va_end(va2);
-	va_end(va);
 
 	/* send out the formatted data */
 	telnet_send(telnet, output, rs);
