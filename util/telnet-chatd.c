@@ -83,7 +83,7 @@ static void linebuffer_push(char *buffer, size_t size, int *linepos,
 	 * anything besides LF or NUL -- just buffer if we have room
 	 * \r
 	 */
-	} else if (*linepos != size) {
+	} else if (*linepos != (int)size) {
 		buffer[(*linepos)++] = ch;
 
 	/* buffer overflow */
@@ -135,6 +135,8 @@ static void _send(SOCKET sock, const char *buffer, size_t size) {
 static void _online(const char *line, size_t overflow, void *ud) {
 	struct user_t *user = (struct user_t*)ud;
 	int i;
+
+	(void)overflow;
 
 	/* if the user has no name, this is his "login" */
 	if (user->name == 0) {
