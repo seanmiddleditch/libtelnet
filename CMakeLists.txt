@@ -10,6 +10,13 @@ add_library(libtelnet libtelnet.c)
 
 if (MSVC)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
+    if (LIBTELNET_STRICT)
+        add_compile_options(/WX)
+    endif ()
+else ()
+    if (LIBTELNET_STRICT)
+        add_compile_options(-Wall -Wextra -pedantic -Werror)
+    endif ()
 endif ()
 
 target_include_directories(libtelnet
