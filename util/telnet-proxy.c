@@ -155,10 +155,9 @@ static const char *get_opt(unsigned char opt) {
 }
 
 static void print_buffer(const char *buffer, size_t size) {
-	printf("%.*s", (int)size, buffer);
-
 	size_t i;
-	printf(" [");
+
+	printf("%.*s [", (int)size, buffer);
 	for (i = 0; i != size; ++i) {
 		printf("<" COLOR_BOLD "0x%02X" COLOR_UNBOLD ">", (unsigned char)buffer[i]);
 		if(buffer[i] == '\n') printf("%c", '\n');
@@ -253,7 +252,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 		printf("%s SUB %d (%s)", conn->name, (int)ev->sub.telopt,
 				get_opt(ev->sub.telopt));
 		if (ev->sub.size > 0) {
-			printf(" [%zi bytes]: ", ev->sub.size);
+			printf(" [%ld bytes]: ", (long)ev->sub.size);
 			print_buffer(ev->sub.buffer, ev->sub.size);
 		}
 		printf(COLOR_NORMAL "\n");
@@ -266,7 +265,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	case TELNET_EV_ZMP:
 		if (ev->zmp.argc != 0) {
 			size_t i;
-			printf("%s ZMP [%zi params]", conn->name, ev->zmp.argc);
+			printf("%s ZMP [%ld params]", conn->name, (long)ev->zmp.argc);
 			for (i = 0; i != ev->zmp.argc; ++i) {
 				printf(" \"");
 				print_buffer(ev->zmp.argv[i], strlen(ev->zmp.argv[i]));
@@ -283,7 +282,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	/* ENVIRON/NEW-ENVIRON commands */
 	case TELNET_EV_ENVIRON: {
 		size_t i;
-		printf("%s ENVIRON (%s) [%zi parts]", conn->name, ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO", ev->environ.size);
+		printf("%s ENVIRON (%s) [%ld parts]", conn->name, ev->environ.cmd == TELNET_ENVIRON_IS ? "IS" : ev->environ.cmd == TELNET_ENVIRON_SEND ? "SEND" : "INFO", (long)ev->environ.size);
 		for (i = 0; i != ev->environ.size; ++i) {
 			printf(" %s \"", ev->environ.values[i].type == TELNET_ENVIRON_VAR ? "VAR" : "USERVAR");
 			if (ev->environ.values[i].var != 0) {
@@ -302,7 +301,7 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 	}
 	case TELNET_EV_MSSP: {
 		size_t i;
-		printf("%s MSSP [%zi parts]", conn->name, ev->mssp.size);
+		printf("%s MSSP [%ld parts]", conn->name, (long)ev->mssp.size);
 		for (i = 0; i != ev->mssp.size; ++i) {
 			printf(" \"");
 			print_buffer(ev->mssp.values[i].var, strlen(ev->mssp.values[i].var));
