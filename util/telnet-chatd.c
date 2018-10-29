@@ -20,6 +20,8 @@
 #	include <netdb.h>
 #	include <poll.h>
 #	include <unistd.h>
+
+#	define SOCKET int
 #else
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
@@ -31,7 +33,9 @@
 #	define poll WSAPoll
 #	define close closesocket
 #	define strdup _strdup
-#	define ECONNRESET WSAECONNRESET
+#	if !defined(ECONNRESET)
+#		define ECONNRESET WSAECONNRESET
+#	endif
 #endif
 
 #include <errno.h>
@@ -52,7 +56,7 @@ static const telnet_telopt_t telopts[] = {
 
 struct user_t {
 	char *name;
-	int sock;
+	SOCKET sock;
 	telnet_t *telnet;
 	char linebuf[256];
 	int linepos;
@@ -61,7 +65,7 @@ struct user_t {
 static struct user_t users[MAX_USERS];
 
 static void linebuffer_push(char *buffer, size_t size, int *linepos,
-		char ch, void (*cb)(const char *line, int overflow, void *ud),
+		char ch, void (*cb)(const char *line, size_t overflow, void *ud),
 		void *ud) {
 
 	/* CRLF -- line terminator */
@@ -100,7 +104,7 @@ static void _message(const char *from, const char *msg) {
 	}
 }
 
-static void _send(int sock, const char *buffer, unsigned int size) {
+static void _send(SOCKET sock, const char *buffer, size_t size) {
 	int rs;
 
 	/* ignore on invalid socket */
@@ -109,7 +113,7 @@ static void _send(int sock, const char *buffer, unsigned int size) {
 
 	/* send data */
 	while (size > 0) {
-		if ((rs = send(sock, buffer, size, 0)) == -1) {
+		if ((rs = send(sock, buffer, (int)size, 0)) == -1) {
 			if (errno != EINTR && errno != ECONNRESET) {
 				fprintf(stderr, "send() failed: %s\n", strerror(errno));
 				exit(1);
@@ -128,7 +132,7 @@ static void _send(int sock, const char *buffer, unsigned int size) {
 }
 
 /* process input line */
-static void _online(const char *line, int overflow, void *ud) {
+static void _online(const char *line, size_t overflow, void *ud) {
 	struct user_t *user = (struct user_t*)ud;
 	int i;
 
@@ -169,7 +173,7 @@ static void _online(const char *line, int overflow, void *ud) {
 }
 
 static void _input(struct user_t *user, const char *buffer,
-		unsigned int size) {
+		size_t size) {
 	unsigned int i;
 	for (i = 0; i != size; ++i)
 		linebuffer_push(user->linebuf, sizeof(user->linebuf), &user->linepos,
@@ -216,7 +220,8 @@ static void _event_handler(telnet_t *telnet, telnet_event_t *ev,
 int main(int argc, char **argv) {
 	char buffer[512];
 	short listen_port;
-	int listen_sock;
+	SOCKET listen_sock;
+	SOCKET client_sock;
 	int rs;
 	int i;
 	struct sockaddr_in addr;
@@ -261,12 +266,14 @@ int main(int argc, char **argv) {
 	addr.sin_port = htons(listen_port);
 	if (bind(listen_sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
+		close(listen_sock);
 		return 1;
 	}
 
 	/* listen for clients */
 	if (listen(listen_sock, 5) == -1) {
 		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
+		close(listen_sock);
 		return 1;
 	}
 
@@ -293,6 +300,7 @@ int main(int argc, char **argv) {
 		rs = poll(pfd, MAX_USERS + 1, -1);
 		if (rs == -1 && errno != EINTR) {
 			fprintf(stderr, "poll() failed: %s\n", strerror(errno));
+			close(listen_sock);
 			return 1;
 		}
 
@@ -300,7 +308,7 @@ int main(int argc, char **argv) {
 		if (pfd[MAX_USERS].revents & POLLIN) {
 			/* acept the sock */
 			addrlen = sizeof(addr);
-			if ((rs = accept(listen_sock, (struct sockaddr *)&addr,
+			if ((client_sock = accept(listen_sock, (struct sockaddr *)&addr,
 					&addrlen)) == -1) {
 				fprintf(stderr, "accept() failed: %s\n", strerror(errno));
 				return 1;
@@ -314,12 +322,12 @@ int main(int argc, char **argv) {
 					break;
 			if (i == MAX_USERS) {
 				printf("  rejected (too many users)\n");
-				_send(rs, "Too many users.\r\n", 14);
-				close(rs);
+				_send(client_sock, "Too many users.\r\n", 14);
+				close(client_sock);
 			}
 
 			/* init, welcome */
-			users[i].sock = rs;
+			users[i].sock = client_sock;
 			users[i].telnet = telnet_init(telopts, _event_handler, 0,
 					&users[i]);
 			telnet_negotiate(users[i].telnet, TELNET_WILL,

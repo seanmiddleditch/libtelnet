@@ -171,7 +171,7 @@ static void decode(char *buffer, size_t *size) {
 				} else {
 					c += *in - 'A' + 10;
 				}
-				*out = c;
+				*out = (char)c;
 			}
 			++out;
 		} else if (isprint(*in)) {
@@ -204,6 +204,8 @@ static void print_encode(state_t *state, const char *buffer, size_t size) {
 static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 	size_t i;
 	state_t *state;
+
+	(void)telnet;
 
 	state = (state_t *)ud;
 
@@ -334,6 +336,7 @@ int main(int argc, char** argv) {
 			&state)) == 0) {
 		fprintf(stderr, "Failed to initialize libtelnet: %s\n",
 				strerror(errno));
+		fclose(fh);
 		return 4;
 	}
 
@@ -346,6 +349,8 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	fclose(fh);
+
 	/* compare expected and actual output */
 	if (strcmp(state.actual, state.expected) != 0) {
 		fprintf(stderr, "Expected:\n%s\n\nActual:\n%s\n", state.expected, state.actual);
@@ -354,7 +359,6 @@ int main(int argc, char** argv) {
 
 	/* clean up */
 	telnet_free(telnet);
-	fclose(fh);
 	free(state.expected);
 	free(state.actual);
 
