@@ -1,4 +1,4 @@
-[![Travis Build Status](https://travis-ci.com/seanmiddleditch/libtelnet.svg?branch=master)](https://travis-ci.org/seanmiddleditch/libtelnet)
+[![Travis Build Status](https://travis-ci.com/seanmiddleditch/libtelnet.svg?branch=master)](https://travis-ci.com/seanmiddleditch/libtelnet)
 
 libtelnet - TELNET protocol handling library
 ============================================
