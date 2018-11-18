@@ -1461,6 +1461,8 @@ void telnet_begin_compress2(telnet_t *telnet) {
 	ev.type = TELNET_EV_COMPRESS;
 	ev.compress.state = 1;
 	telnet->eh(telnet, &ev, telnet->ud);
+#else
+	(void)telnet;
 #endif /* defined(HAVE_ZLIB) */
 }
 
