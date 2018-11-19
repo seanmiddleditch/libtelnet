@@ -1010,8 +1010,8 @@ static void _process(telnet_t *telnet, const char *buffer, size_t size) {
 				telnet->eh(telnet, &ev, telnet->ud);
 				byte = buffer[i];
 			}
-			// any byte following '\r' other than '\n' or '\0' is invalid,
-			// so pass both \r and the byte
+			/* any byte following '\r' other than '\n' or '\0' is invalid,
+			 * so pass both \r and the byte */
 			start = i;
 			if (byte == '\0')
 				++start;
