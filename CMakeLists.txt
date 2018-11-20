@@ -6,8 +6,6 @@ project(libtelnet
 set(PROJECT_DESCRIPTION "TELNET protocol handling library")
 set(PROJECT_HOMEPAGE_URL https://github.com/seanmiddleditch/libtelne)
 
-add_library(libtelnet libtelnet.c)
-
 if (MSVC)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
     if (LIBTELNET_STRICT)
@@ -18,6 +16,8 @@ else ()
         add_compile_options(-Wall -Wextra -pedantic -Werror)
     endif ()
 endif ()
+
+add_library(libtelnet libtelnet.c)
 
 target_include_directories(libtelnet
     PUBLIC
