@@ -30,6 +30,7 @@ visit the following websites:
 
 * http://www.faqs.org/rfcs/rfc854.html
 * http://www.faqs.org/rfcs/rfc855.html
+* http://www.faqs.org/rfcs/rfc861.html
 * http://www.faqs.org/rfcs/rfc1091.html
 * http://www.faqs.org/rfcs/rfc1143.html
 * http://www.faqs.org/rfcs/rfc1408.html
@@ -172,11 +173,12 @@ static const telnet_telopt_t my_telopts[] = {
    commands (255 249).
 
 * `void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
-     unsigned char opt);`
+     short opt);`
 
    Sends a TELNET negotiation command.  The cmd parameter must be one
    of TELNET_WILL, TELNET_WONT, TELNET_DO, or TELNET_DONT.  The opt
-   parameter is the option to negotiate.
+   parameter is the option to negotiate. If greater than 255, it is
+   interpreted as an "Extended Options List" option, per RFC861.
 
    Unless in PROXY mode, the RFC1143 support may delay or ellide the
    request entirely, as appropriate.  It will ignore duplicate
@@ -201,12 +203,14 @@ static const telnet_telopt_t my_telopts[] = {
    For sending regular text it may be more convenient to use
    telnet_printf().
 
-* `void telnet_begin_sb(telnet_t *telnet, unsigned char telopt);`
+* `void telnet_begin_sb(telnet_t *telnet, short telopt);`
 
    Sends the header for a TELNET sub-negotiation command for the
    specified option.  All send data following this command will be
    part of the sub-negotiation data until a call is made to
-   telnet_finish_subnegotiation().
+   telnet_finish_subnegotiation(). If telopt is greater than 255,
+   it is interpreted as an "Extended Options List" option, per
+   RFC861.
 
    You should not use telnet_printf() for sending subnegotiation
    data as it will perform newline translations that usually do not
@@ -219,11 +223,12 @@ static const telnet_telopt_t my_telopts[] = {
    telnet_begin_subnegotiation() and any negotiation data has been
    sent.
 
-* `void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
+* `void telnet_subnegotiation(telnet_t *telnet, short telopt,
      const char *buffer, unsigned int size);`
 
    Sends a TELNET sub-negotiation command.  The telopt parameter is
-   the sub-negotiation option.
+   the sub-negotiation option. If greater than 255, it is
+   interpreted as an "Extended Options List" option, per RFC861.
 
    Note that this function is just a shorthand for:
    ```
@@ -298,6 +303,7 @@ union telnet_event_t {
 
   struct negotiate_t {
     enum telnet_event_type_t _type;
+    short telopt_extended;
     unsigned char telopt;
   } neg;
 
@@ -305,6 +311,7 @@ union telnet_event_t {
     enum telnet_event_type_t _type;
     const char *buffer;
     size_t size;
+    short telopt_extended;
     unsigned char telopt;
   } sub;
 };
@@ -398,7 +405,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    sent a WILL command to them.
 
    In either case, the TELNET option under negotiation will be in
-   event->neg.telopt field.
+   event->neg.telopt_extended field.
 
    libtelnet manages most of the pecularities of negotiation for you.
    For information on libtelnet's negotiation method, see:
@@ -407,6 +414,20 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
 
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
+
+   Also note the presence of both event->neg.telopt and
+   event->neg.telopt_extended fields. The former is an unsigned char,
+   and hence only supports the "regular" TELNET options 0-255. The
+   latter is a short, and supports TELNET options on the Extended
+   Options List (256-511) as described in RFC861, as well as the
+   regular options 0-255. When an negotiation command regarding an
+   EXOPL option is received, the event->neg.telopt field will be set
+   to 255, and the event->neg.telopt_extended field
+   will be set to the true number of the option.
+   
+   The event->neg.telopt_extended field should
+   be suitable for all applications - event->neg.telopt is retained
+   for legacy reasons only.
 
 * TELNET_EV_WONT / TELNET_EV_DONT
 
@@ -428,25 +449,40 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    allow your application to disable its own use of the features.
 
    In either case, the TELNET option under negotiation will be in
-   event->neg.telopt field.
+   event->neg.telopt_extended field.
 
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
+
+   Also note the presence of both event->neg.telopt and
+   event->neg.telopt_extended fields. The former is an unsigned char,
+   and hence only supports the "regular" TELNET options 0-255. The
+   latter is a short, and supports TELNET options on the Extended
+   Options List (256-511) as described in RFC861, as well as the
+   regular options 0-255. When an negotiation command regarding an
+   EXOPL option is received, the event->neg.telopt field will be set
+   to 255, and the event->neg.telopt_extended field
+   will be set to the true number of the option.
+   
+   The event->neg.telopt_extended field should
+   be suitable for all applications - event->neg.telopt is retained
+   for legacy reasons only.
 
 * TELNET_EV_SUBNEGOTIATION
 
    Triggered whenever a TELNET sub-negotiation has been received.
    Sub-negotiations include the NAWS option for communicating
-   terminal size to a server, the NEW-ENVIRON and TTYPE options for
-   negotiating terminal features, and MUD-centric protocols such as
-   ZMP, MSSP, and MCCP2.
+   terminal size to a server; the NEW-ENVIRON and TTYPE options for
+   negotiating terminal features; MUD-centric protocols such as
+   ZMP, MSSP, and MCCP2; and the EXOPL option for extending the
+   maximum option number from 255 to 511.
 
-   The event->sub->telopt value is the option under sub-negotiation.
-   The remaining data (if any) is passed in event->sub.buffer and
-   event->sub.size.  Note that most subnegotiation commands can include
-   embedded NUL bytes in the subnegotiation data, and the data
-   event->sub.buffer is not NUL terminated, so always use the
-   event->sub.size value!
+   The event->sub->telopt_extended value is the option under
+   sub-negotiation. The remaining data (if any) is passed in
+   event->sub.buffer and event->sub.size.  Note that most
+   subnegotiation commands can include embedded NUL bytes in the
+   subnegotiation data, and the data event->sub.buffer is not NUL
+   terminated, so always use the event->sub.size value!
 
    The meaning and necessary processing for subnegotiations are
    defined in various TELNET RFCs and other informal specifications.
@@ -454,12 +490,26 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    has been enabled through the use of the telnet negotiation
    feature.
 
-   TTYPE/ENVIRON/NEW-ENVIRON/MSSP/ZMP SUPPORT:
+   TTYPE/ENVIRON/NEW-ENVIRON/MSSP/ZMP/EXOPL SUPPORT:
    libtelnet parses these subnegotiation commands.  A special
    event will be sent for each, after the SUBNEGOTIATION event is
    sent.  Except in special circumstances, the SUBNEGOTIATION event
    should be ignored for these options and the special events should
    be handled explicitly.
+
+   Note the presence of both event->sub.telopt and
+   event->sub.telopt_extended fields. The former is an unsigned char,
+   and hence only supports the "regular" TELNET options 0-255. The
+   latter is a short, and supports TELNET options on the Extended
+   Options List (256-511) as described in RFC861, as well as the
+   regular options 0-255. When a subnegotiation command regarding an
+   EXOPL option is received, the event->sub.telopt field will be set
+   to 255, and the event->sub.telopt_extended field
+   will be set to the true number of the option.
+   
+   The event->sub.telopt_extended field should
+   be suitable for all applications - event->sub.telopt is retained
+   for legacy reasons only.
 
 * TELNET_EV_COMPRESS
 
