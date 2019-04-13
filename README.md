@@ -173,7 +173,7 @@ static const telnet_telopt_t my_telopts[] = {
    commands (255 249).
 
 * `void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
-     short opt);`
+     int opt);`
 
    Sends a TELNET negotiation command.  The cmd parameter must be one
    of TELNET_WILL, TELNET_WONT, TELNET_DO, or TELNET_DONT.  The opt
@@ -203,7 +203,7 @@ static const telnet_telopt_t my_telopts[] = {
    For sending regular text it may be more convenient to use
    telnet_printf().
 
-* `void telnet_begin_sb(telnet_t *telnet, short telopt);`
+* `void telnet_begin_sb(telnet_t *telnet, int telopt);`
 
    Sends the header for a TELNET sub-negotiation command for the
    specified option.  All send data following this command will be
@@ -223,7 +223,7 @@ static const telnet_telopt_t my_telopts[] = {
    telnet_begin_subnegotiation() and any negotiation data has been
    sent.
 
-* `void telnet_subnegotiation(telnet_t *telnet, short telopt,
+* `void telnet_subnegotiation(telnet_t *telnet, int telopt,
      const char *buffer, unsigned int size);`
 
    Sends a TELNET sub-negotiation command.  The telopt parameter is
@@ -303,7 +303,7 @@ union telnet_event_t {
 
   struct negotiate_t {
     enum telnet_event_type_t _type;
-    short telopt_extended;
+    int telopt_extended;
     unsigned char telopt;
   } neg;
 
@@ -311,7 +311,7 @@ union telnet_event_t {
     enum telnet_event_type_t _type;
     const char *buffer;
     size_t size;
-    short telopt_extended;
+    int telopt_extended;
     unsigned char telopt;
   } sub;
 };
@@ -418,7 +418,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    Also note the presence of both event->neg.telopt and
    event->neg.telopt_extended fields. The former is an unsigned char,
    and hence only supports the "regular" TELNET options 0-255. The
-   latter is a short, and supports TELNET options on the Extended
+   latter is a int, and supports TELNET options on the Extended
    Options List (256-511) as described in RFC861, as well as the
    regular options 0-255. When an negotiation command regarding an
    EXOPL option is received, the event->neg.telopt field will be set
@@ -457,7 +457,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    Also note the presence of both event->neg.telopt and
    event->neg.telopt_extended fields. The former is an unsigned char,
    and hence only supports the "regular" TELNET options 0-255. The
-   latter is a short, and supports TELNET options on the Extended
+   latter is a int, and supports TELNET options on the Extended
    Options List (256-511) as described in RFC861, as well as the
    regular options 0-255. When an negotiation command regarding an
    EXOPL option is received, the event->neg.telopt field will be set
@@ -500,7 +500,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    Note the presence of both event->sub.telopt and
    event->sub.telopt_extended fields. The former is an unsigned char,
    and hence only supports the "regular" TELNET options 0-255. The
-   latter is a short, and supports TELNET options on the Extended
+   latter is a int, and supports TELNET options on the Extended
    Options List (256-511) as described in RFC861, as well as the
    regular options 0-255. When a subnegotiation command regarding an
    EXOPL option is received, the event->sub.telopt field will be set

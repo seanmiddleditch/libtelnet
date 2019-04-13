@@ -63,7 +63,7 @@ static const char *get_cmd(unsigned char cmd) {
 	}
 }
 
-static const char *get_opt(short opt) {
+static const char *get_opt(int opt) {
 	switch (opt) {
 	case 0: return "BINARY";
 	case 1: return "ECHO";

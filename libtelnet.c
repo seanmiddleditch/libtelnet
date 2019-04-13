@@ -120,7 +120,7 @@ struct telnet_t {
 
 /* RFC1143 option negotiation state */
 typedef struct telnet_rfc1143_t {
-	short telopt;
+	int telopt;
 	unsigned char state;
 } telnet_rfc1143_t;
 
@@ -269,7 +269,7 @@ static void _send(telnet_t *telnet, const char *buffer,
  * check if we (local) supports it, otherwise we check if he (remote)
  * supports it.  return non-zero if supported, zero if not supported.
  */
-static INLINE int _check_telopt(telnet_t *telnet, short telopt,
+static INLINE int _check_telopt(telnet_t *telnet, int telopt,
 		int us) {
 	int i;
 
@@ -295,7 +295,7 @@ static INLINE int _check_telopt(telnet_t *telnet, short telopt,
 
 /* retrieve RFC1143 option state */
 static INLINE telnet_rfc1143_t _get_rfc1143(telnet_t *telnet,
-		short telopt) {
+		int telopt) {
 	telnet_rfc1143_t empty;
 	unsigned int i;
 
@@ -313,7 +313,7 @@ static INLINE telnet_rfc1143_t _get_rfc1143(telnet_t *telnet,
 }
 
 /* save RFC1143 option state */
-static INLINE void _set_rfc1143(telnet_t *telnet, short telopt,
+static INLINE void _set_rfc1143(telnet_t *telnet, int telopt,
 		char us, char him) {
 	telnet_rfc1143_t *qtmp;
 	unsigned int i;
@@ -374,7 +374,7 @@ static INLINE void _send_negotiate(telnet_t *telnet, unsigned char cmd,
 
 /* send EXOPL negotiation SB message */
 static INLINE void _exopl_send_negotiate(telnet_t *telnet, unsigned char cmd,
-										 short exopl_telopt)
+										 int exopl_telopt)
 {
 	unsigned char bytes[7];
 	bytes[0] = TELNET_IAC;
@@ -389,7 +389,7 @@ static INLINE void _exopl_send_negotiate(telnet_t *telnet, unsigned char cmd,
 }
 
 /* negotiation handling magic for RFC1143 */
-static void _negotiate(telnet_t *telnet, short telopt)
+static void _negotiate(telnet_t *telnet, int telopt)
 {
 	telnet_event_t ev;
 	telnet_rfc1143_t q;
@@ -864,7 +864,7 @@ static int _ttype_telnet(telnet_t *telnet, const char* buffer, size_t size) {
 static int _exopl_telnet(telnet_t *telnet, const char *buffer, size_t size) {
 	telnet_event_t ev;
 	unsigned char cmd;
-	short exopl_telopt;
+	int exopl_telopt;
 
 	/* make sure request is not empty */
 	if (size == 0) {
@@ -902,7 +902,7 @@ static int _exopl_telnet(telnet_t *telnet, const char *buffer, size_t size) {
 			return 0;
 		}
 
-		exopl_telopt = 256 + (short)buffer[1];
+		exopl_telopt = 256 + (int)buffer[1];
 
 		switch (cmd) {
 		case TELNET_WILL:
@@ -1347,7 +1347,7 @@ void telnet_iac(telnet_t *telnet, unsigned char cmd) {
 
 /* send negotiation */
 void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
-		short telopt) {
+		int telopt) {
 	telnet_rfc1143_t q;
 
 	/* if we're in proxy mode, just send it now */
@@ -1499,7 +1499,7 @@ void telnet_send_text(telnet_t *telnet, const char *buffer,
 }
 
 /* send subnegotiation header */
-void telnet_begin_sb(telnet_t *telnet, short telopt) {
+void telnet_begin_sb(telnet_t *telnet, int telopt) {
 	unsigned char sb[5];
 	
 	if (telopt > 255) {
@@ -1524,7 +1524,7 @@ void telnet_begin_sb(telnet_t *telnet, short telopt) {
 
 
 /* send complete subnegotiation */
-void telnet_subnegotiation(telnet_t *telnet, short telopt,
+void telnet_subnegotiation(telnet_t *telnet, int telopt,
 		const char *buffer, size_t size) {
 	unsigned char bytes[8];
 
