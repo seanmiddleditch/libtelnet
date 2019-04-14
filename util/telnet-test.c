@@ -30,6 +30,7 @@ static const telnet_telopt_t telopts[] = {
  { TELNET_TELOPT_TTYPE,		TELNET_WILL, TELNET_DONT },
  { TELNET_TELOPT_EXOPL,		TELNET_WILL, TELNET_DONT },
  { 300,						TELNET_WILL, TELNET_DONT }, /* a dummy EXOPL telopt */
+ { 511,						TELNET_WILL, TELNET_DONT }, /* another dummy EXOPL telopt */
  { -1, 0, 0 }
 };
 
@@ -110,7 +111,8 @@ static const char *get_opt(int opt) {
 	case 86: return "COMPRESS2";
 	case 93: return "ZMP";
 	case 255: return "EXOPL";
-	case 300: return "LIBTELNET-TEST-EXOPL-TELOPT"; /* our custom dummy EXOPL option */
+	case 300: return "LIBTELNET-TEST-EXOPL-TELOPT-1"; /* our custom dummy EXOPL option */
+	case 511: return "LIBTELNET-TEST-EXOPL-TELOPT-2"; /* our other custom dummy EXOPL option */
 	default: return "unknown";
 	}
 }

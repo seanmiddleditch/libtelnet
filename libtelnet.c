@@ -881,7 +881,7 @@ static int _exopl_telnet(telnet_t *telnet, const char *buffer, size_t size) {
 
 		ev.type = TELNET_EV_SUBNEGOTIATION;
 		ev.sub.telopt = TELNET_TELOPT_EXOPL;
-		ev.sub.telopt_extended = 256 + buffer[1];
+		ev.sub.telopt_extended = 256 + (unsigned char)buffer[1];
 		ev.sub.size = size - 3;
 
 		/* allocate space for "subbuffer" */
@@ -902,7 +902,7 @@ static int _exopl_telnet(telnet_t *telnet, const char *buffer, size_t size) {
 			return 0;
 		}
 
-		exopl_telopt = 256 + (int)buffer[1];
+		exopl_telopt = 256 + (unsigned char)buffer[1];
 
 		switch (cmd) {
 		case TELNET_WILL:
