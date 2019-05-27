@@ -442,6 +442,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 		case Q_WANTYES:
 		case Q_WANTYES_OP:
 			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
+			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
 			break;
 		}
 		break;
@@ -501,6 +502,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 		case Q_WANTYES:
 		case Q_WANTYES_OP:
 			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
+			NEGOTIATE_EVENT(telnet, TELNET_EV_DONT, telopt);
 			break;
 		}
 		break;
