@@ -1350,6 +1350,12 @@ void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
 		int telopt) {
 	telnet_rfc1143_t q;
 
+	if (telopt > 511) {
+		_error(telnet, __LINE__, __func__, TELNET_EBADVAL, 0,
+				"supplied telopt %d for negotiation is greater than 511", telopt);
+		return;
+	}
+
 	/* if we're in proxy mode, just send it now */
 	if (telnet->flags & TELNET_FLAG_PROXY) {
 		unsigned char bytes[3];
@@ -1501,7 +1507,13 @@ void telnet_send_text(telnet_t *telnet, const char *buffer,
 /* send subnegotiation header */
 void telnet_begin_sb(telnet_t *telnet, int telopt) {
 	unsigned char sb[5];
-	
+
+	if (telopt > 511) {
+		_error(telnet, __LINE__, __func__, TELNET_EBADVAL, 0,
+				"supplied telopt %d for subnegotiation is greater than 511", telopt);
+		return;
+	}
+
 	if (telopt > 255) {
 		/* an EXOPL telopt */
 		
@@ -1527,6 +1539,12 @@ void telnet_begin_sb(telnet_t *telnet, int telopt) {
 void telnet_subnegotiation(telnet_t *telnet, int telopt,
 		const char *buffer, size_t size) {
 	unsigned char bytes[8];
+
+	if (telopt > 511) {
+		_error(telnet, __LINE__, __func__, TELNET_EBADVAL, 0,
+				"supplied telopt %d for subnegotiation is greater than 511", telopt);
+		return;
+	}
 
 	if (telopt > 255) {
 		/* an EXOPL telopt */
