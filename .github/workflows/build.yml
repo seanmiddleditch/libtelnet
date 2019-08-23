@@ -21,9 +21,10 @@ jobs:
       run: sudo apt-get install -y doxygen
       if: job.container.image == 'ubuntu-latest'
     - name: configure
-      run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local DCMAKE_BUILD_TYPE:STRING=$INPUT_CONFIG -DLIBTELNET_STRICT:BOOL=NO
-      with:
-        config: ${{ matrix.config }}
+      run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local DCMAKE_BUILD_TYPE:STRING=${CONFIG} -DLIBTELNET_STRICT:BOOL=${STRICT}
+      env:
+        CONFIG: ${{ matrix.config }}
+        STRICT: NO
     - name: make
       run: cd build && cmake --build .
     - name: test
