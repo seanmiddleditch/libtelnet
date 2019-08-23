@@ -1,0 +1,23 @@
+name: Build
+
+on:
+  push:
+    branches:
+    - master
+    - develop
+  pull_request:
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: configure
+      run: mkdir build && cd build && cmake ..
+    - name: make
+      run: cd build && cmake --build
+    - name: test
+      run: ctest build/test
+    - name: dist
+      run: cpack -G TGZ 
