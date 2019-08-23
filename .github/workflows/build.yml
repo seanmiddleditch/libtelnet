@@ -9,12 +9,20 @@ on:
 
 jobs:
   ubuntu:
+    strategy:
+      matrix:
+        include:
+          - config: Debug
+          - config: Release
+  
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v1
     - name: configure
-      run: mkdir build && cd build && cmake ..
+      with:
+        config: ${{ matrix.config }}
+      run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DCMAKE_BUILD_TYPE:STRING=$INPUT_CONFIG -DLIBTELNET_STRICT:BOOL=YES
     - name: make
       run: cd build && cmake --build .
     - name: test
