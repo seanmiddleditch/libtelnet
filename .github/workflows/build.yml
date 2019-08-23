@@ -18,6 +18,6 @@ jobs:
     - name: make
       run: cd build && cmake --build .
     - name: test
-      run: ctest build/test
+      run: cd build/test && ctest .
     - name: dist
-      run: cpack -G TGZ 
+      run: cd build && cpack -G TGZ 
