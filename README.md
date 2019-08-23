@@ -5,8 +5,7 @@ libtelnet - TELNET protocol handling library
 
  http://github.com/seanmiddleditch/libtelnet
 
- Sean Middleditch
- sean@sourcemud.org
+ Sean Middleditch and contributors
 
 
 The author or authors of this code dedicate any and all copyright
