@@ -1,4 +1,4 @@
-name: Build
+name: CI
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  CI:
+  Build:
     strategy:
       matrix:
         os: [ubuntu, windows, macOS]
