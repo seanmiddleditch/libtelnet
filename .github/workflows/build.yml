@@ -20,9 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: configure
-      with:
-        config: ${{ matrix.config }}
-      run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DCMAKE_BUILD_TYPE:STRING=$INPUT_CONFIG -DLIBTELNET_STRICT:BOOL=YES
+      run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DLIBTELNET_STRICT:BOOL=YES
     - name: make
       run: cd build && cmake --build .
     - name: test
