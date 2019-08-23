@@ -11,9 +11,10 @@ jobs:
   ubuntu:
     strategy:
       matrix:
+        os: [ubuntu, windows, macOS]
         config: [Debug, Release]
   
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}-latest
     
     steps:
     - uses: actions/checkout@v1
