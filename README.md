@@ -1,5 +1,7 @@
 [![Travis Build Status](https://travis-ci.com/seanmiddleditch/libtelnet.svg?branch=master)](https://travis-ci.com/seanmiddleditch/libtelnet)
 
+[![Actions Status](https://github.com/seanmiddleditch/libtelnet/workflows/ci/badge.svg)](https://github.com/seanmiddleditch/libtelnet/actions)
+
 libtelnet - TELNET protocol handling library
 ============================================
 
