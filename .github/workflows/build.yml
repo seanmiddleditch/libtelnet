@@ -17,6 +17,9 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    - name: install dependencies
+      run: sudo apt-get install -y doxygen
+      if: job.container.image == ubuntu-latest
     - name: configure
       run: mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~/.local -DLIBTELNET_STRICT:BOOL=NO
     - name: make
