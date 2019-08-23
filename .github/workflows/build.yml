@@ -11,9 +11,7 @@ jobs:
   ubuntu:
     strategy:
       matrix:
-        include:
-          - config: Debug
-          - config: Release
+        config: [Debug, Release]
   
     runs-on: ubuntu-latest
     
