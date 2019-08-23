@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  ubuntu:
+  CI:
     strategy:
       matrix:
         os: [ubuntu, windows, macOS]
@@ -29,7 +29,9 @@ jobs:
     - name: make
       run: cd build && cmake --build .
     - name: test
-      run: cd build/test && ctest .
+      run: cd build/test && ctest -C ${CONFIG} .
+      env:
+        CONFIG: ${{ matrix.config }}
     - name: dist
       run: cd build && cpack -G TGZ
       if: false
