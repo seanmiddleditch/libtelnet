@@ -27,4 +27,5 @@ jobs:
     - name: test
       run: cd build/test && ctest .
     - name: dist
-      run: cd build && cpack -G TGZ 
+      run: cd build && cpack -G TGZ
+      if: false
