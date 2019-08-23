@@ -16,7 +16,7 @@ jobs:
     - name: configure
       run: mkdir build && cd build && cmake ..
     - name: make
-      run: cd build && cmake --build
+      run: cd build && cmake --build .
     - name: test
       run: ctest build/test
     - name: dist
