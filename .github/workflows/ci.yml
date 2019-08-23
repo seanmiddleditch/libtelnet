@@ -33,13 +33,13 @@ jobs:
         
     - name: make
       shell: bash
-      run: cd build && cmake --build --config ${CONFIG} .
+      run: cd build && cmake --build . --config ${CONFIG}
       env:
         CONFIG: ${{ matrix.config }}
         
     - name: test
       shell: bash
-      run: cd build/test && ctest -C ${CONFIG} .
+      run: cd build/test && ctest . -C ${CONFIG}
       env:
         CONFIG: ${{ matrix.config }}
         
