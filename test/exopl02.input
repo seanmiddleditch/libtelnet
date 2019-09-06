@@ -1,0 +1,12 @@
+# Test EXOPL option 511 (the max possible EXOPL options number; an edge case)
+
+# enable EXOPL (expect DO to be output)
+%FF%FD%FF
+
+# enable our dummy EXOPL option 511
+# expect DO 511
+%FF%FA%FF%FD%FF%FF%FF%F0
+
+# send EXOPL subnegotiation for dummy option 511
+# expect SUB 511 [6]
+%FF%FA%FF%FA%FF%FFFOOBAR%F0%FF%F0

@@ -279,7 +279,8 @@ union telnet_event_t {
 	 */
 	struct negotiate_t {
 		enum telnet_event_type_t _type; /*!< alias for type */
-		unsigned char telopt;           /*!< option being negotiated */
+		int telopt_extended;          /*!< option being negotiated (either EXOPL or regular) */
+		unsigned char telopt;           /*!< (deprecated) option being negotiated, or TELNET_TELOPT_EXOPL if an EXOPL option */
 	} neg; /*!< WILL, WONT, DO, DONT */
 
 	/*! 
@@ -289,7 +290,8 @@ union telnet_event_t {
 		enum telnet_event_type_t _type; /*!< alias for type */
 		const char *buffer;             /*!< data of sub-negotiation */
 		size_t size;                    /*!< number of bytes in buffer */
-		unsigned char telopt;           /*!< option code for negotiation */
+		int telopt_extended;          /*!< option code for subnegotiation (either EXOPL or regular) */
+		unsigned char telopt;           /*!< (deprecated) option code for subnegotiation, or TELNET_TELOPT_EXOPL if an EXOPL option */
 	} sub; /*!< SB */
 
 	/*! 
@@ -430,7 +432,7 @@ extern void telnet_iac(telnet_t *telnet, unsigned char cmd);
  * \param opt    One of the TELNET_TELOPT_* values.
  */
 extern void telnet_negotiate(telnet_t *telnet, unsigned char cmd,
-		unsigned char opt);
+		int opt);
 
 /*!
  * Send non-command data (escapes IAC bytes).
@@ -464,7 +466,7 @@ extern void telnet_send_text(telnet_t *telnet,
  * \param telopt One of the TELNET_TELOPT_* values.
  */
 extern void telnet_begin_sb(telnet_t *telnet,
-		unsigned char telopt);
+		int telopt);
 
 /*!
  * \brief Finish a sub-negotiation command.
@@ -489,7 +491,7 @@ extern void telnet_begin_sb(telnet_t *telnet,
  * \param buffer Byte buffer for sub-negotiation data.
  * \param size   Number of bytes to use for sub-negotiation data.
  */
-extern void telnet_subnegotiation(telnet_t *telnet, unsigned char telopt,
+extern void telnet_subnegotiation(telnet_t *telnet, int telopt,
 		const char *buffer, size_t size);
 
 /*!

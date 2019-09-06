@@ -1,0 +1,12 @@
+# Test EXOPL 
+
+# enable EXOPL (expect DO to be output)
+%FF%FD%FF
+
+# enable our dummy EXOPL option 300
+# expect DO 300
+%FF%FA%FF%FD%2C%FF%F0
+
+# send EXOPL subnegotiation for dummy option 300
+# expect SUB 300 [6]
+%FF%FA%FF%FA%2CFOOBAR%F0%FF%F0

@@ -28,6 +28,9 @@ static const telnet_telopt_t telopts[] = {
  { TELNET_TELOPT_MSSP,		TELNET_WILL, TELNET_DONT },
  { TELNET_TELOPT_NEW_ENVIRON, TELNET_WILL, TELNET_DONT },
  { TELNET_TELOPT_TTYPE,		TELNET_WILL, TELNET_DONT },
+ { TELNET_TELOPT_EXOPL,		TELNET_WILL, TELNET_DONT },
+ { 300,						TELNET_WILL, TELNET_DONT }, /* a dummy EXOPL telopt */
+ { 511,						TELNET_WILL, TELNET_DONT }, /* another dummy EXOPL telopt */
  { -1, 0, 0 }
 };
 
@@ -61,7 +64,7 @@ static const char *get_cmd(unsigned char cmd) {
 	}
 }
 
-static const char *get_opt(unsigned char opt) {
+static const char *get_opt(int opt) {
 	switch (opt) {
 	case 0: return "BINARY";
 	case 1: return "ECHO";
@@ -108,6 +111,8 @@ static const char *get_opt(unsigned char opt) {
 	case 86: return "COMPRESS2";
 	case 93: return "ZMP";
 	case 255: return "EXOPL";
+	case 300: return "LIBTELNET-TEST-EXOPL-TELOPT-1"; /* our custom dummy EXOPL option */
+	case 511: return "LIBTELNET-TEST-EXOPL-TELOPT-2"; /* our other custom dummy EXOPL option */
 	default: return "unknown";
 	}
 }
@@ -221,28 +226,29 @@ static void event_print(telnet_t *telnet, telnet_event_t *ev, void *ud) {
 		stprintf(state, "IAC %d (%s)\n", (int)ev->iac.cmd, get_cmd(ev->iac.cmd));
 		break;
 	case TELNET_EV_WILL:
-		stprintf(state, "WILL %d (%s)\n", (int)ev->neg.telopt, get_opt(ev->neg.telopt));
+		stprintf(state, "WILL %d (%s)\n", (int)ev->neg.telopt_extended, get_opt(ev->neg.telopt_extended));
 		break;
 	case TELNET_EV_WONT:
-		stprintf(state, "WONT %d (%s)\n", (int)ev->neg.telopt, get_opt(ev->neg.telopt));
+		stprintf(state, "WONT %d (%s)\n", (int)ev->neg.telopt_extended, get_opt(ev->neg.telopt_extended));
 		break;
 	case TELNET_EV_DO:
-		stprintf(state, "DO %d (%s)\n", (int)ev->neg.telopt, get_opt(ev->neg.telopt));
+		stprintf(state, "DO %d (%s)\n", (int)ev->neg.telopt_extended, get_opt(ev->neg.telopt_extended));
 		break;
 	case TELNET_EV_DONT:
-		stprintf(state, "DONT %d (%s)\n", (int)ev->neg.telopt, get_opt(ev->neg.telopt));
+		stprintf(state, "DONT %d (%s)\n", (int)ev->neg.telopt_extended, get_opt(ev->neg.telopt_extended));
 		break;
 	case TELNET_EV_SUBNEGOTIATION:
-		switch (ev->sub.telopt) {
+		switch (ev->sub.telopt_extended) {
 		case TELNET_TELOPT_ENVIRON:
 		case TELNET_TELOPT_NEW_ENVIRON:
 		case TELNET_TELOPT_TTYPE:
 		case TELNET_TELOPT_ZMP:
 		case TELNET_TELOPT_MSSP:
+		case TELNET_TELOPT_EXOPL:
 			/* print nothing */
 			break;
 		default:
-			stprintf(state, "SUB %d (%s) [%zi]\n", (int)ev->sub.telopt, get_opt(ev->sub.telopt), ev->sub.size);
+			stprintf(state, "SUB %d (%s) [%zi]\n", (int)ev->sub.telopt_extended, get_opt(ev->sub.telopt_extended), ev->sub.size);
 			break;
 		}
 		break;
