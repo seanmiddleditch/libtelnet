@@ -1,10 +1,15 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(libtelnet
     VERSION 0.30.0
     LANGUAGES C
 )
 set(PROJECT_DESCRIPTION "TELNET protocol handling library")
 set(PROJECT_HOMEPAGE_URL https://github.com/seanmiddleditch/libtelne)
+
+# Enable CMAKE Policy
+if(${CMAKE_VERSION} VERSION_LESS 3.10)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
 
 if (MSVC)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
@@ -26,6 +31,13 @@ target_include_directories(libtelnet
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+find_package(ZLIB)
+if(${ZLIB_FOUND})
+      target_compile_definitions(libtelnet PUBLIC HAVE_ZLIB)
+      target_include_directories(libtelnet PRIVATE ${ZLIB_INCLUDE_DIRS})
+      target_link_libraries(libtelnet PRIVATE ${ZLIB_LIBRARIES})
+endif()
 
 add_subdirectory(util)
 add_subdirectory(doc)
