@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
 		}
 
 		/* new connection */
-		if (pfd[MAX_USERS].revents & POLLIN) {
+		if (pfd[MAX_USERS].revents & (POLLIN | POLLERR | POLLHUP)) {
 			/* acept the sock */
 			addrlen = sizeof(addr);
 			if ((client_sock = accept(listen_sock, (struct sockaddr *)&addr,
@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
 			if (users[i].sock == -1)
 				continue;
 
-			if (pfd[i].revents & POLLIN) {
+			if (pfd[i].revents & (POLLIN | POLLERR | POLLHUP)) {
 				if ((rs = recv(users[i].sock, buffer, sizeof(buffer), 0)) > 0) {
 					telnet_recv(users[i].telnet, buffer, rs);
 				} else if (rs == 0) {
