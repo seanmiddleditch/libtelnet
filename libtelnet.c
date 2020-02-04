@@ -553,7 +553,7 @@ static int _environ_telnet(telnet_t *telnet, unsigned char type,
 		ev.type = TELNET_EV_ENVIRON;
 		telnet->eh(telnet, &ev, telnet->ud);
 
-		return 1;
+		return 0;
 	}
 
 	/* very second byte must be VAR or USERVAR, if present */
@@ -657,7 +657,7 @@ static int _environ_telnet(telnet_t *telnet, unsigned char type,
 
 	/* clean up */
 	free(values);
-	return 1;
+	return 0;
 }
 
 /* process an MSSP subnegotiation buffer */
@@ -849,17 +849,14 @@ static int _subnegotiate(telnet_t *telnet) {
 	 * start handling the compressed stream if it's not already.
 	 */
 	case TELNET_TELOPT_COMPRESS2:
-		if (telnet->sb_telopt == TELNET_TELOPT_COMPRESS2) {
-			if (_init_zlib(telnet, 0, 1) != TELNET_EOK)
-				return 0;
+		if (_init_zlib(telnet, 0, 1) != TELNET_EOK)
+			return 0;
 
-			/* notify app that compression was enabled */
-			ev.type = TELNET_EV_COMPRESS;
-			ev.compress.state = 1;
-			telnet->eh(telnet, &ev, telnet->ud);
-			return 1;
-		}
-		return 0;
+		/* notify app that compression was enabled */
+		ev.type = TELNET_EV_COMPRESS;
+		ev.compress.state = 1;
+		telnet->eh(telnet, &ev, telnet->ud);
+		return 1;
 #endif /* defined(HAVE_ZLIB) */
 
 	/* specially handled subnegotiation telopt types */
