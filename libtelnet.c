@@ -1609,6 +1609,9 @@ void telnet_ttype_send(telnet_t *telnet) {
 void telnet_ttype_is(telnet_t *telnet, const char* ttype) {
 	static const unsigned char IS[] = { TELNET_IAC, TELNET_SB,
 			TELNET_TELOPT_TTYPE, TELNET_TTYPE_IS };
+	if (!ttype) {
+		ttype = "NVT";
+	}
 	_sendu(telnet, IS, sizeof(IS));
 	_send(telnet, ttype, strlen(ttype));
 	telnet_finish_sb(telnet);
