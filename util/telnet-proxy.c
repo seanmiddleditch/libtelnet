@@ -464,7 +464,7 @@ int main(int argc, char **argv) {
 		/* loop while both connections are open */
 		while (poll(pfd, 2, -1) != -1) {
 			/* read from server */
-			if (pfd[0].revents & POLLIN) {
+			if (pfd[0].revents & (POLLIN | POLLERR | POLLHUP)) {
 				if ((rs = recv(server.sock, buffer, sizeof(buffer), 0)) > 0) {
 					telnet_recv(server.telnet, buffer, rs);
 				} else if (rs == 0) {
@@ -480,7 +480,7 @@ int main(int argc, char **argv) {
 			}
 
 			/* read from client */
-			if (pfd[1].revents & POLLIN) {
+			if (pfd[1].revents & (POLLIN | POLLERR | POLLHUP)) {
 				if ((rs = recv(client.sock, buffer, sizeof(buffer), 0)) > 0) {
 					telnet_recv(client.telnet, buffer, rs);
 				} else if (rs == 0) {

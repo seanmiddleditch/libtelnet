@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
 	/* loop while both connections are open */
 	while (poll(pfd, 2, -1) != -1) {
 		/* read from stdin */
-		if (pfd[0].revents & POLLIN) {
+		if (pfd[0].revents & (POLLIN | POLLERR | POLLHUP)) {
 			if ((rs = read(STDIN_FILENO, buffer, sizeof(buffer))) > 0) {
 				_input(buffer, rs);
 			} else if (rs == 0) {
@@ -238,7 +238,7 @@ int main(int argc, char **argv) {
 		}
 
 		/* read from client */
-		if (pfd[1].revents & POLLIN) {
+		if (pfd[1].revents & (POLLIN | POLLERR | POLLHUP)) {
 			if ((rs = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
 				telnet_recv(telnet, buffer, rs);
 			} else if (rs == 0) {
