@@ -167,6 +167,7 @@ static void _online(const char *line, size_t overflow, void *ud) {
 		_message(user->name, "** HAS QUIT **");
 		free(user->name);
 		user->name = 0;
+		telnet_free(user->telnet);
 		return;
 	}
 
@@ -177,7 +178,7 @@ static void _online(const char *line, size_t overflow, void *ud) {
 static void _input(struct user_t *user, const char *buffer,
 		size_t size) {
 	unsigned int i;
-	for (i = 0; i != size; ++i)
+	for (i = 0; user->sock != -1 && i != size; ++i)
 		linebuffer_push(user->linebuf, sizeof(user->linebuf), &user->linepos,
 				(char)buffer[i], _online, user);
 }
@@ -307,7 +308,7 @@ int main(int argc, char **argv) {
 		}
 
 		/* new connection */
-		if (pfd[MAX_USERS].revents & POLLIN) {
+		if (pfd[MAX_USERS].revents & (POLLIN | POLLERR | POLLHUP)) {
 			/* acept the sock */
 			addrlen = sizeof(addr);
 			if ((client_sock = accept(listen_sock, (struct sockaddr *)&addr,
@@ -345,20 +346,19 @@ int main(int argc, char **argv) {
 			if (users[i].sock == -1)
 				continue;
 
-			if (pfd[i].revents & POLLIN) {
+			if (pfd[i].revents & (POLLIN | POLLERR | POLLHUP)) {
 				if ((rs = recv(users[i].sock, buffer, sizeof(buffer), 0)) > 0) {
 					telnet_recv(users[i].telnet, buffer, rs);
 				} else if (rs == 0) {
 					printf("Connection closed.\n");
 					close(users[i].sock);
+					users[i].sock = -1;
 					if (users[i].name != 0) {
 						_message(users[i].name, "** HAS DISCONNECTED **");
 						free(users[i].name);
 						users[i].name = 0;
 					}
 					telnet_free(users[i].telnet);
-					users[i].sock = -1;
-					break;
 				} else if (errno != EINTR) {
 					fprintf(stderr, "recv(client) failed: %s\n",
 							strerror(errno));
