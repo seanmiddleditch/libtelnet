@@ -674,7 +674,7 @@ servers and clients.
 To use telnet-proxy, you must first compile it using:
 
 ```
- $ make
+ $ (mkdir -p build && cd build && cmake .. && make)
 ```
 
 If you do not have zlib installed and wish to disable MCCP2 support
@@ -687,7 +687,7 @@ telnet-proxy should listen on.  For example, to connect to the server
 on mud.example.com port 7800 and to listen on port 5000, run:
 
 ```
- $ ./telnet-proxy mud.example.com 7800 5000
+ $ ./build/util/telnet-proxy mud.example.com 7800 5000
 ```
 
 You can then connect to the host telnet-proxy is running on (e.g.
