@@ -212,6 +212,10 @@ enum telnet_event_type_t {
 	TELNET_EV_DO,              /*!< DO option negotiation received */
 	TELNET_EV_DONT,            /*!< DONT option negotiation received */
 	TELNET_EV_SUBNEGOTIATION,  /*!< sub-negotiation data received */
+	TELNET_EV_ENABLE_US,       /*!< telopt enabled for us */
+	TELNET_EV_ENABLE_HIM,      /*!< telopt enabled for him */
+	TELNET_EV_DISABLE_US,      /*!< telopt disabled for us */
+	TELNET_EV_DISABLE_HIM,     /*!< telopt disabled for him */
 	TELNET_EV_COMPRESS,        /*!< compression has been enabled */
 	TELNET_EV_ZMP,             /*!< ZMP command has been received */
 	TELNET_EV_TTYPE,           /*!< TTYPE command has been received */
