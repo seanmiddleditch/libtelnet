@@ -432,6 +432,20 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    Note that in PROXY mode libtelnet will do no processing of its
    own for you.
 
+* TELNET_EV_ENABLE_US / TELNET_EV_DISABLE_US / TELNET_EV_ENABLE_HIM / TELNET_EV_ENABLE_HIM
+
+   Triggered when the server alters the state of a telopt for the
+   application. ENABLE_US is triggered when the server sends WILL
+   and receives DO, DISABLE_US is triggered when the server
+   receives an arbitrary DONT after enabling an option.
+   
+   ENABLE_HIM is triggered when the server sends DO and receives
+   a WILL. DISABLE_HIM is triggered when a telopt is remotely
+   enabled but we sent a DONT.
+   
+   These are triggered in addition to TELNET_EV_WILL / WONT / DO
+   / DONT.
+
 * TELNET_EV_SUBNEGOTIATION
 
    Triggered whenever a TELNET sub-negotiation has been received.
