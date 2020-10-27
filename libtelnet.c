@@ -393,9 +393,11 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 		switch (Q_HIM(q)) {
 		case Q_NO:
 			if (_check_telopt(telnet, telopt, 0)) {
+			    /* we received a WILL without having first sent a DO, but support this remote option. */
 				_set_rfc1143(telnet, telopt, Q_US(q), Q_YES);
 				_send_negotiate(telnet, TELNET_DO, telopt);
 				NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
+				NEGOTIATE_EVENT(telnet, TELNET_EV_ENABLE_HIM, telopt);
 			} else
 				_send_negotiate(telnet, TELNET_DONT, telopt);
 			break;
@@ -411,8 +413,10 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 					"DONT answered by WILL");
 			break;
 		case Q_WANTYES:
+            /* we received a WILL after sending a DO. enable this remote option. */
 			_set_rfc1143(telnet, telopt, Q_US(q), Q_YES);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WILL, telopt);
+			NEGOTIATE_EVENT(telnet, TELNET_EV_ENABLE_HIM, telopt);
 			break;
 		case Q_WANTYES_OP:
 			_set_rfc1143(telnet, telopt, Q_US(q), Q_WANTNO);
@@ -429,6 +433,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
 			_send_negotiate(telnet, TELNET_DONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_WONT, telopt);
+			NEGOTIATE_EVENT(telnet, TELNET_EV_DISABLE_HIM, telopt);
 			break;
 		case Q_WANTNO:
 			_set_rfc1143(telnet, telopt, Q_US(q), Q_NO);
@@ -454,6 +459,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 				_set_rfc1143(telnet, telopt, Q_YES, Q_HIM(q));
 				_send_negotiate(telnet, TELNET_WILL, telopt);
 				NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
+                NEGOTIATE_EVENT(telnet, TELNET_EV_ENABLE_US, telopt);
 			} else
 				_send_negotiate(telnet, TELNET_WONT, telopt);
 			break;
@@ -471,6 +477,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 		case Q_WANTYES:
 			_set_rfc1143(telnet, telopt, Q_YES, Q_HIM(q));
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DO, telopt);
+			NEGOTIATE_EVENT(telnet, TELNET_EV_ENABLE_US, telopt);
 			break;
 		case Q_WANTYES_OP:
 			_set_rfc1143(telnet, telopt, Q_WANTNO, Q_HIM(q));
@@ -487,6 +494,7 @@ static void _negotiate(telnet_t *telnet, unsigned char telopt) {
 			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
 			_send_negotiate(telnet, TELNET_WONT, telopt);
 			NEGOTIATE_EVENT(telnet, TELNET_EV_DONT, telopt);
+			NEGOTIATE_EVENT(telnet, TELNET_EV_DISABLE_US, telopt);
 			break;
 		case Q_WANTNO:
 			_set_rfc1143(telnet, telopt, Q_NO, Q_HIM(q));
