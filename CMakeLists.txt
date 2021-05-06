@@ -32,20 +32,26 @@ add_subdirectory(doc)
 add_subdirectory(test)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 configure_file(libtelnet.pc.in libtelnet.pc)
 
 install(TARGETS libtelnet
-    EXPORT libtelnet-export
+    EXPORT libtelnetConfig
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install(FILES libtelnet.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-install(EXPORT libtelnet-export
-    FILE libtelnet.cmake
+install(EXPORT libtelnetConfig
+    FILE libtelnetConfig.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libtelnet
 )
+write_basic_package_version_file(
+    "${CMAKE_BINARY_DIR}/libtelnetConfigVersion.cmake"
+    COMPATIBILITY AnyNewerVersion)
+install(FILES "${CMAKE_BINARY_DIR}/libtelnetConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libtelnet")
 
 include(CPack)
