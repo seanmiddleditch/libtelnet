@@ -18,6 +18,10 @@ else ()
 endif ()
 
 add_library(libtelnet libtelnet.c)
+set_target_properties(libtelnet
+  PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION 2)
 
 target_include_directories(libtelnet
     PUBLIC
