@@ -14,5 +14,5 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/telnet_event_t_zmp_t.3
         ${CMAKE_CURRENT_BINARY_DIR}/telnet_event_t_mssp_t.3
         ${CMAKE_CURRENT_BINARY_DIR}/telnet_telopt_t.3
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/man/man3
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man3
 )
