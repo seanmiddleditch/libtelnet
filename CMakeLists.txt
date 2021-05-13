@@ -51,5 +51,8 @@ install(EXPORT libtelnet-export
     FILE libtelnet.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libtelnet
 )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libtelnet.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
 
 include(CPack)
