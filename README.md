@@ -61,7 +61,7 @@ reference.
  supported option.  Each entry specifies the option supported,
  whether the option is supported locally or remotely.
 
-```
+```cpp
 struct telnet_telopt_t {
     short telopt;
     unsigned char us;
@@ -79,7 +79,7 @@ struct telnet_telopt_t {
  entry, which is simply an entry with telopt set to -1.  For
  example:
 
-```
+```cpp
 static const telnet_telopt_t my_telopts[] = {
     { TELNET_TELOPT_ECHO,      TELNET_WILL, TELNET_DONT },
     { TELNET_TELOPT_TTYPE,     TELNET_WILL, TELNET_DONT },
@@ -271,7 +271,7 @@ static const telnet_telopt_t my_telopts[] = {
  telnet_event_t data type.  Please see the libtelnet manual pages or
  HTML document for a complete reference.
 
-```
+```cpp
 union telnet_event_t {
   enum telnet_event_type_t type;
 
@@ -321,7 +321,7 @@ union telnet_event_t {
  Here is an example event handler implementation which includes
  handlers for several important events.
 
-```
+```cpp
 void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
     void *user_data) {
   struct user_info *user = (struct user_info *)user_data;
@@ -492,7 +492,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
    in the event->environ.values field.  This is an array of
    structures with the following format:
 
-   ```
+   ```cpp
      struct telnet_environ_t {
        unsigned char type;
        const char *var;
@@ -686,7 +686,7 @@ address, the server's port number, and the port number that
 telnet-proxy should listen on.  For example, to connect to the server
 on mud.example.com port 7800 and to listen on port 5000, run:
 
-```
+```bash
  $ ./build/util/telnet-proxy mud.example.com 7800 5000
 ```
 
