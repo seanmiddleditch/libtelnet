@@ -38,6 +38,10 @@
 # include <zlib.h>
 #endif
 
+#ifndef VPRINTF_STACK
+# define VPRINTF_STACK 1024
+#endif
+
 #include "libtelnet.h"
 
 /* inlinable functions */
@@ -1465,7 +1469,7 @@ void telnet_begin_compress2(telnet_t *telnet) {
 /* send formatted data with \r and \n translation in addition to IAC IAC */
 int telnet_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 	va_list va_temp;
-	char buffer[1024];
+	char buffer[VPRINTF_STACK];
 	char *output = buffer;
 	unsigned int rs, i, l;
 
@@ -1537,7 +1541,7 @@ int telnet_printf(telnet_t *telnet, const char *fmt, ...) {
 /* send formatted data through telnet_send */
 int telnet_raw_vprintf(telnet_t *telnet, const char *fmt, va_list va) {
 	va_list va_temp;
-	char buffer[1024];
+	char buffer[VPRINTF_STACK];
 	char *output = buffer;
 	unsigned int rs;
 
