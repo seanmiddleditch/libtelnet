@@ -310,7 +310,7 @@ union telnet_event_t {
 ```
 
  The enumeration values of telnet_event_type_t are described in
- detail below.  Whenever the the event handler is invoked, the
+ detail below.  Whenever the event handler is invoked, the
  application must look at the event->type value and do any necessary
  processing.
 
@@ -359,7 +359,7 @@ void my_event_handler(telnet_t *telnet, telnet_event_t *ev,
 * TELNET_EV_SEND
 
    This event is sent whenever libtelnet has generated data that must
-   be sent over the wire to the remove end.  Generally that means
+   be sent over the wire to the remote end.  Generally that means
    calling send() or adding the data to your application's output
    buffer.
 
