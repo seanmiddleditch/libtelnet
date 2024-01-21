@@ -15,7 +15,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include <string.h>
 #include <stdarg.h>
 
 /* Win32 compatibility */
